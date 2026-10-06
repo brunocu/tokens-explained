@@ -1,0 +1,62 @@
+---
+title: "What is a token?"
+deck: "AI models do not read words. They read tokens. Here is what that means, and you can try it yourself."
+order: 1
+terms: [token]
+---
+
+## A token is a piece of text
+
+A token is a small piece of text that a language model reads and writes. It can be a whole word, part of a word, a single character, a space plus a word, or a piece of punctuation.
+
+A language model is the kind of AI program behind chat assistants. Before it can work with your message, your text has to be cut into tokens.
+
+## Tokens are not words
+
+Tokens are not the same thing as words. The same sentence can contain more tokens than words.
+
+Common words are often a single token, while rare words are split into several. A space can be part of a token.
+
+A tokenizer is the program that cuts text into tokens. The one on this page is small and built for teaching, so a real chat model may cut some of this text differently.
+
+Here is one sentence, cut up by it. Count the chips, then compare your count with the caption underneath.
+
+<ToyTokens
+  text="Tokenization splits unusual words into pieces, but common words stay whole."
+  legend
+  expect={["more-tokens-than-words", "has-word-split", "has-leading-space-token", "has-whole-common-word"]}
+/>
+
+Notice that many chips start with a small symbol. It marks a space, and the space is part of the token, not a gap between tokens.
+
+<PlaygroundSection>Type or paste anything, or pick an example, and watch it split into tokens.</PlaygroundSection>
+
+## What you just saw
+
+Three things are worth remembering from your experiments.
+
+- Spaces belong to tokens. A word with a space in front of it is often a single token.
+- Rare words split into several tokens, while common words often stay whole.
+- Some characters, such as emoji, are too big for one piece. A byte is a unit of computer storage; most English letters take one byte, many other characters take several. An emoji takes several bytes, and the tokenizer can cut between them. That is why hatched chips appear, and why you never see a garbled symbol: a piece of a character is shown as its raw bytes instead. Hatched chips inside one frame are the bytes of a single character, which is shown in front of them. For example, the character 男 is stored as the bytes E7 94 B7, and the tokenizer may cut between them.
+
+Here is a short sentence with an emoji, to look at the hatched chips again.
+
+<ToyTokens text="Great job 🎉" expect={["has-split-character"]} />
+
+Each token also has a number, called its id, and the model works with those numbers, not with the letters. Switch the playground above to Token IDs to see them.
+
+These numbers are only labels in a list. A bigger number does not mean a rarer or more important word, and a different tokenizer would number the same piece differently.
+
+## How this tokenizer works
+
+A tokenizer works from a vocabulary, which is the list of pieces it knows.
+
+This is a small toy tokenizer, trained on a small amount of English text. Real tokenizers follow the same steps, but their vocabularies are far bigger, so their splits will differ from the ones you see here.
+
+It works in three steps. First, it splits your text into pieces such as words and punctuation. Second, it turns each piece into bytes, the small units of storage described above. Third, it merges pairs of bytes that were common in the training text, so frequent pieces end up as a single token.
+
+It reads exactly what you typed and does not tidy up your text first.
+
+Many popular models use a method called byte-pair encoding, though not all do.
+
+The counts above cover only the text you type; chat apps add extra formatting tokens of their own.

@@ -1,0 +1,3 @@
+term: Token
+definition: A small piece of text that a language model reads and writes.
+order: 1

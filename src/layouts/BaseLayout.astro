@@ -1,0 +1,54 @@
+---
+import { Font } from "astro:assets";
+import SiteHeader from "../components/SiteHeader.astro";
+import "../styles/tokens.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: string;
+}
+
+const { title, description, canonical } = Astro.props;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    <Font cssVariable="--font-serif" preload={[{ weight: 400, style: "normal" }]} />
+    <Font cssVariable="--font-mono" />
+  </head>
+  <body>
+    <SiteHeader />
+    <main id="main"><slot /></main>
+    <!-- Failed-to-load watcher (D-09). Inline on purpose: it must not depend on any bundled asset
+         that could itself fail to load. The timer starts when the card first enters the viewport,
+         not at page load, because the island only hydrates once the card is near the viewport. -->
+    <script is:inline>
+      (function () {
+        var card = document.querySelector("[data-playground]");
+        if (!card) return;
+        card.addEventListener("click", function (e) {
+          var t = e.target;
+          if (t && t.closest && t.closest("[data-reload]")) location.reload();
+        });
+        if (!("IntersectionObserver" in window)) return;
+        var io = new IntersectionObserver(function (entries) {
+          var seen = false;
+          for (var i = 0; i < entries.length; i++) if (entries[i].isIntersecting) seen = true;
+          if (!seen) return;
+          io.disconnect();
+          setTimeout(function () {
+            if (card.getAttribute("data-state") === "loading") card.setAttribute("data-state", "failed");
+          }, 8000);
+        });
+        io.observe(card);
+      })();
+    </script>
+  </body>
+</html>

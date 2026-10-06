@@ -1,0 +1,3 @@
+term: Embedding
+definition: The list of numbers a model looks up for each token.
+order: 2

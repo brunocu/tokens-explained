@@ -1,0 +1,13 @@
+---
+// The home page is the post until the Phase 4 hub replaces this file (PD-01, D-14).
+// It renders the same content entry as /what-is-a-token/ through the same layout;
+// nothing is copied. The canonical link points at the post's own root-level URL.
+import { getEntry } from "astro:content";
+import PostLayout from "../layouts/PostLayout.astro";
+
+const post = await getEntry("posts", "what-is-a-token");
+if (!post) throw new Error('posts entry "what-is-a-token" is missing');
+const canonical = new URL(import.meta.env.BASE_URL + "what-is-a-token/", Astro.site).href;
+---
+
+<PostLayout post={post} canonical={canonical} />

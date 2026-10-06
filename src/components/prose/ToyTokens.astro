@@ -1,0 +1,55 @@
+---
+// Build-time static token display for prose (TOK-10, Pitfall 4). Every split and every
+// count in the post comes from the shipped tokenizer here; no number is typed into prose.
+// A false claim fails the build. Rendered without a client directive: static HTML, no script.
+import TokenDisplay from "../TokenDisplay.svelte";
+import { tokenize } from "../../core/toy.ts";
+import { groupBytes } from "../../core/chars.ts";
+import { countCompositeCharacters, countSplitCharacters, countWords } from "../../core/counts.ts";
+import { describeTokens } from "../../core/display.ts";
+import { assertClaims, type Claim } from "../../core/claims.ts";
+
+interface Props {
+  text: string;
+  expect?: Claim[];
+  legend?: boolean;
+}
+
+const { text, expect: claims, legend = false } = Astro.props;
+
+const tokens = tokenize(text);
+assertClaims(text, claims ?? []);
+
+const splitCount = countSplitCharacters(text, tokens);
+// Prose figures never show the byte peek, so showBytes is false here, same rule as the playground.
+const compositeCount = countCompositeCharacters(text, groupBytes(tokens), false);
+const words = countWords(text);
+const caption = `${tokens.length} ${tokens.length === 1 ? "token" : "tokens"}, ${words} ${words === 1 ? "word" : "words"}`;
+---
+
+<figure class="toy-tokens">
+  <TokenDisplay tokens={tokens} mode="text" showBytes={false} splitCount={splitCount} compositeCount={compositeCount} legend={legend} emptyState={false} />
+  <figcaption>{caption}</figcaption>
+  <p class="sr-only">Tokens for the example: {describeTokens(tokens)}</p>
+</figure>
+
+<style>
+  .toy-tokens {
+    box-sizing: border-box;
+    margin: var(--space-lg) 0;
+    padding: var(--space-md);
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  @media (min-width: 640px) {
+    .toy-tokens {
+      padding: var(--space-lg);
+    }
+  }
+  figcaption {
+    margin-top: var(--space-md);
+    font: 600 14px/1.4 var(--font-sans);
+    color: var(--muted);
+  }
+</style>

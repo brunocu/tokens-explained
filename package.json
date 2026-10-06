@@ -1,0 +1,40 @@
+{
+  "name": "tokenizer-vis",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "check:svelte": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "vitest run",
+    "test:e2e": "node scripts/check-env.mjs --playwright && playwright test",
+    "test:e2e:secondary": "node scripts/check-env.mjs --playwright && E2E_SECONDARY=1 playwright test",
+    "check:env": "node scripts/check-env.mjs",
+    "check:core": "node scripts/check-core.mjs",
+    "check:deps": "node scripts/check-deps.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "check:repo": "node scripts/check-repo.mjs",
+    "check:base": "node scripts/check-base.mjs",
+    "train:toy": "node scripts/train-toy-bpe.ts",
+    "prepare:corpus": "node scripts/prepare-corpus.ts"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "8.0.2",
+    "@astrojs/svelte": "9.0.1",
+    "astro": "7.3.5",
+    "svelte": "5.57.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
+    "svelte-check": "4.7.6",
+    "typescript": "~6.0.3",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,12 @@
+.direnv/
+result
+result-*
+node_modules/
+dist/
+dist-base-check/
+.astro/
+test-results/
+playwright-report/
+.env
+.env.*
+*.log

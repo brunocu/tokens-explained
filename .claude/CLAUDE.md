@@ -42,7 +42,7 @@ An interactive blog that helps a general audience (no programming background ass
 | **TypeScript** | **`~6.0.3` (pin below 7)** | Type safety for toy BPE, adapters and components | npm `latest` is now 7.0.2, but `@astrojs/svelte`, `@astrojs/check` and `svelte-check` declare peers `^5 \|\| ^6` only. Installing TS 7 gives peer conflicts or broken checks. Pin 6.0.x and revisit when those peers add 7. | HIGH (peer ranges read from the registry) |
 | **@huggingface/tokenizers** | `^0.2.0` (Apache-2.0, ~8.3 kB gz, zero deps) | **Run real tokenizers in the browser** | HF's standalone JS tokenizer library, also the tokenization engine inside `@huggingface/transformers` v4. It loads any HF `tokenizer.json` plus `tokenizer_config.json` and supports BPE, WordPiece and Unigram, with ByteLevel and Metaspace pre-tokenizers. One code path covers every model family. Returns `{ids, tokens, attention_mask}` and exposes `tokenize`, `encode`, `decode`, `token_to_id`, `id_to_token`. Verified here by loading GPT-2, cl100k, o200k, Llama 3, Mistral, BERT and Qwen, and by checking cl100k and o200k ids exactly match `gpt-tokenizer` on a test string. Caveat: the 0.x version means the API may still shift, so pin exactly (see Installation) and wrap it behind an adapter. | HIGH (works), MEDIUM (API stability) |
 | **Toy BPE: hand-written TypeScript** | n/a (~100 lines, no dependency) | Teaching tokenizer and trainer; powers the step-through trainer | Do not use a library. Write a pure function `trainBPE(corpus, nMerges) -> Step[]` that returns the whole trace (pair counts, chosen pair, new vocab, updated word splits). The Svelte stepper just indexes into that trace, so stepping back and forth is trivial. Pure TS is unit-testable (Vitest), shared by every post, and honest to the "toy for teaching" decision. | HIGH |
-| **Cloudflare Workers static assets** (via `wrangler`) | wrangler `4.147.0` | Hosting | Astro's deploy docs say Cloudflare now recommends Workers (not Pages) for new projects. No adapter is needed for a static site: `wrangler.jsonc` with `assets.directory: ./dist`, then `astro build && wrangler deploy`. Static asset requests are free and unlimited, with automatic TLS and free custom domains. Limits to design around: 20,000 files and 25 MiB per file on the free plan. | MEDIUM-HIGH (docs fetched; free-plan limits come from search snippets that quote Cloudflare's limits page) |
+| **GitHub Pages (project site)** | n/a | Hosting | **Decided in Phase 1 discussion (D-15), replacing the earlier Cloudflare recommendation.** A project site is served from a sub-path (`https://<user>.github.io/<repo>/`), so set Astro `site` and `base` in `astro.config`, and make every link and asset URL (including `/tokenizers/…` fetches) base-aware. Deploy with a GitHub Actions workflow (`withastro/action` plus `actions/deploy-pages`). No adapter is needed for a static site. Limits: published site <= 1 GB, ~100 GB/month soft bandwidth, 10 builds/hour soft limit, and a personal/non-commercial use policy (verified on docs.github.com). Re-verify the current Astro deploy guide at https://docs.astro.build/en/guides/deploy/github/ before writing the workflow. | MEDIUM (limits verified earlier; workflow details not yet verified) |
 
 ### Tokenizers to ship (curated set, all self-hosted as static files)
 
@@ -55,7 +55,7 @@ An interactive blog that helps a general audience (no programming background ass
 | GPT-4o / o200k (200k) | HF mirror `Xenova/gpt-4o`, or `gpt-tokenizer` | 9.7 MB | 2.1 / 2.9 MB | ~250 ms | Load only on explicit click ("bigger tokenizer, ~2 MB"). |
 | Qwen2.5 (multilingual, CJK-heavy vocab) | `Qwen/Qwen2.5-0.5B` (Apache-2.0, verified) | 7.0 MB | 1.5 / 1.9 MB | ~180 ms | Optional. Shows how vocab design changes non-English token counts. |
 | Llama 3 | `Xenova/llama-3-tokenizer` mirror (gated upstream) | 9.1 MB | 1.6 / 2.3 MB | ~200 ms | **Skip live; precompute only, or omit.** Redistribution runs through Meta's license and a third-party mirror. Check terms before self-hosting. |
-| gpt-oss | `openai/gpt-oss-20b` | **27.9 MB** | n/a | n/a | **Do not self-host:** exceeds Cloudflare's 25 MiB per-file limit. Precompute only if wanted. |
+| gpt-oss | `openai/gpt-oss-20b` | **27.9 MB** | n/a | n/a | **Do not self-host:** 27.9 MB is far larger than the other tokenizers and is not worth the weight (GitHub Pages also warns on files over 100 MB, so this is a choice, not a hard limit). Precompute only if wanted. |
 
 ### Supporting Libraries
 
@@ -79,7 +79,6 @@ An interactive blog that helps a general audience (no programming background ass
 | **Vitest** | `5.0.3` | Unit tests for toy BPE, token-to-text display layer, adapters | Peers `vite ^6.4 \|\| ^7 \|\| ^8`, Node `^22.12 \|\| ^24 \|\| >=26`. Compatible with Astro 7's Vite 8. Extract all widget logic into plain `.ts` so it is testable without a DOM. |
 | **Playwright** (`@playwright/test`) | `1.63.0` | Smoke tests of the built site | Run against `astro preview`. Check: islands hydrate, a tokenizer loads, typing changes the chips, no console errors, hub links resolve. Catches SSR-vs-browser mistakes unit tests can't. |
 | Prettier | `3.9.9` + `prettier-plugin-astro@1.1.0` + `prettier-plugin-svelte@4.1.1` | Formatting | Plugin peer is `prettier ^3.5.3`. ESLint is optional and not recommended for v1. |
-| `wrangler` | `4.147.0` | Deploy to Cloudflare | Dev dependency, not a runtime one. |
 
 ## Installation
 
@@ -107,8 +106,8 @@ An interactive blog that helps a general audience (no programming background ass
 | `@huggingface/tokenizers` | `js-tiktoken` 1.0.21 | Pure JS and fine, but last published 2025-08-09, OpenAI encodings only, no strings. `gpt-tokenizer` is more current (Aug 2026) and has the same limits. |
 | Plain CSS (scoped styles + CSS variables) | Tailwind 4.3.3 via `@tailwindcss/vite` | If the author prefers utility classes. Not required: Astro and Svelte scoped styles plus a palette in CSS variables are enough. Tailwind adds a dependency but little here. |
 | Plain static files, no search | Pagefind 1.5.2 | Only if the site grows well beyond ~10 pages. Four posts, a hub and a glossary don't need search. |
-| Cloudflare Workers static assets | GitHub Pages | Zero-cost fallback. Limits: published site <= 1 GB, ~100 GB/month soft bandwidth, 10 builds/hour soft limit, and a personal/non-commercial use policy (verified on docs.github.com). Tokenizer files are well under these. |
-| Cloudflare Workers static assets | Netlify / Vercel | Equally fine for static output. Cloudflare picked because static asset bandwidth is free and unlimited, which matters with multi-MB tokenizer files. |
+| GitHub Pages (project site) | Cloudflare Workers static assets (`wrangler`) | Original recommendation: free, unlimited static asset bandwidth, free custom domains at the root. Limits: 20,000 files and 25 MiB per file on the free plan. Switch if a custom domain, higher bandwidth or per-file headers are needed. |
+| GitHub Pages (project site) | Netlify / Vercel | Equally fine for static output. |
 
 ## What NOT to Use
 
@@ -157,14 +156,14 @@ An interactive blog that helps a general audience (no programming background ass
 | `vitest@5.0.3` | `vite ^6.4 \|\| ^7 \|\| ^8`, Node `^22.12 \|\| ^24 \|\| >=26` | OK with Astro 7. |
 | `@huggingface/tokenizers@0.2.0` | any HF `tokenizer.json` + `tokenizer_config.json` | Some Oniguruma regex features can't be fully reproduced in JS (`\G`, full Unicode case folding, some split behaviours), so **parity-test each tokenizer you ship** against known ids. Parity verified for GPT-2-family on cl100k and o200k only. Mistral, BERT and Qwen loaded and tokenized sensibly but their ids were not cross-checked. |
 | `gpt-tokenizer@4.0.0` | `@huggingface/tokenizers` output for cl100k and o200k | Ids identical on a mixed-script test string. |
-| Cloudflare Workers static assets (free) | files <= 25 MiB, <= 20,000 files | `gpt-oss` tokenizer.json (27.9 MB) would fail to deploy. |
+| GitHub Pages | site <= 1 GB, sub-path `base` required for project sites | Keep all internal URLs base-aware. |
 | `npm audit` | `astro@7.3.5` depends on `http-cache-semantics@4.2.0` | Audit flagged a high-severity advisory (GHSA-ch52-4w7c-c8xp) on this transitive dependency. Its suggested "fix" (downgrading to astro 2.x) is nonsensical. It is a build-time dependency, not shipped to readers. Re-check at project start, and don't `npm audit fix --force`. |
 
 ## Sources
 
 - npm registry (`npm view`, read 2026-10-02): versions, `engines`, `peerDependencies`, publish dates for all packages named above. HIGH.
 - https://docs.astro.build/en/guides/upgrade-to/v7/: Astro 7 breaking changes (Vite 8, Rust compiler, Sätteri, `compressHTML`). HIGH.
-- https://docs.astro.build/en/guides/deploy/cloudflare/: Workers recommended over Pages; static sites need no adapter; `wrangler.jsonc` shape. HIGH.
+- https://docs.astro.build/en/guides/deploy/cloudflare/: (superseded by the GitHub Pages decision) Workers recommended over Pages; static sites need no adapter. HIGH.
 - https://docs.astro.build/en/concepts/islands/: `client:load|idle|visible|only`, islands share state. HIGH.
 - https://docs.astro.build/en/guides/markdown-content/: Sätteri vs remark; plugin configuration; GFM and smartypants defaults. MEDIUM (MDX-on-Sätteri details thin; the scratch build passed).
 - https://docs.astro.build/en/guides/fonts/: built-in Fonts API. MEDIUM (not exercised).
@@ -172,7 +171,7 @@ An interactive blog that helps a general audience (no programming background ass
 - https://github.com/huggingface/tokenizers.js (README, also shipped in the npm package): API, size, supported components, regex-compatibility caveats. HIGH.
 - https://github.com/anthropics/anthropic-tokenizer-typescript: accuracy warning for Claude 3+. HIGH.
 - https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits: Pages limits and use policy. HIGH.
-- Web search on Cloudflare limits (20,000 files, 25 MiB per file, Pages in maintenance mode since April 2025): secondary sources quoting Cloudflare's limits page. MEDIUM. Re-verify at deploy time at https://developers.cloudflare.com/workers/static-assets/ (limits).
+- Web search on Cloudflare limits (20,000 files, 25 MiB per file, Pages in maintenance mode since April 2025): secondary sources, kept only for the Cloudflare alternative. MEDIUM.
 - Hands-on probes (scratchpad, 2026-10-02):
 - HF model API (license field) for Mistral-7B-v0.1, Qwen2.5-0.5B and GPT-2. HIGH. BERT's license (Apache-2.0) was not verified (LOW).
 

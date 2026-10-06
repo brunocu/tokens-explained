@@ -1,0 +1,38 @@
+---
+// One post through the shared shell: H1, deck, the MDX body with its closed component
+// vocabulary (PlaygroundSection, ToyTokens), then space at the end. No footer, no
+// next-post link (UI-SPEC post end, D-12, D-14).
+import type { CollectionEntry } from "astro:content";
+import { render } from "astro:content";
+import BaseLayout from "./BaseLayout.astro";
+import PlaygroundSection from "../components/wrappers/PlaygroundSection.astro";
+import ToyTokens from "../components/prose/ToyTokens.astro";
+
+interface Props {
+  post: CollectionEntry<"posts">;
+  canonical: string;
+}
+
+const { post, canonical } = Astro.props;
+const { Content } = await render(post);
+---
+
+<BaseLayout title={post.data.title} description={post.data.deck} canonical={canonical}>
+  <article>
+    <header>
+      <h1>{post.data.title}</h1>
+      <p class="deck">{post.data.deck}</p>
+    </header>
+    <Content components={{ PlaygroundSection, ToyTokens }} />
+  </article>
+</BaseLayout>
+
+<style>
+  .deck {
+    margin: 0;
+    color: var(--muted);
+  }
+  article {
+    padding-bottom: var(--space-3xl);
+  }
+</style>

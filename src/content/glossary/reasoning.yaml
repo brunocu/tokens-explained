@@ -1,0 +1,3 @@
+term: Reasoning
+definition: Extra text a model generates before its final answer, which counts as tokens like any other output.
+order: 4

@@ -1,0 +1,154 @@
+/* Global design tokens and base typography (UI-SPEC: Color, Spacing, Typography).
+   The site follows the system colour scheme; there is no manual toggle (D-13). */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #FFFFFF;
+  --bg-2: #F5F4F0;
+  --text: #1A1A1A;
+  --muted: #5C5C5C;
+  --border: #767676;
+  --accent: #2A3FB8;
+  --accent-text: #FFFFFF;
+  --error: #B3261E;
+
+  --chip-0-fill: #CFE3FF;
+  --chip-0-line: #3366B3;
+  --chip-1-fill: #FFD9B8;
+  --chip-1-line: #B35C14;
+  --chip-2-fill: #CDEFD2;
+  --chip-2-line: #2F7A3B;
+  --chip-3-fill: #E6D4FA;
+  --chip-3-line: #7A4BB3;
+
+  --partial-fill: #E9E7E1;
+  --partial-line: #6B6B6B;
+  --partial-hatch: rgba(0, 0, 0, 0.08);
+  --ws-color: #5C5C5C;
+
+  /* R-01 character frame: aliases only, so each theme resolves them through --text and --bg. */
+  --char-frame: var(--text);
+  --char-label-bg: var(--bg);
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --bg-2: #1E1E1E;
+    --text: #ECECEC;
+    --muted: #A8A8A8;
+    --border: #8A8A8A;
+    --accent: #9FAEFF;
+    --accent-text: #121212;
+    --error: #F2B8B5;
+
+    --chip-0-fill: #1F3A5F;
+    --chip-0-line: #7FB0F0;
+    --chip-1-fill: #5A3515;
+    --chip-1-line: #E0954F;
+    --chip-2-fill: #1E4A2A;
+    --chip-2-line: #6CC27C;
+    --chip-3-fill: #46306B;
+    --chip-3-line: #B794E8;
+
+    --partial-fill: #2A2A2A;
+    --partial-line: #9A9A9A;
+    --partial-hatch: rgba(255, 255, 255, 0.10);
+    --ws-color: #BDBDBD;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+}
+
+h1 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: var(--space-3xl) 0 var(--space-md);
+  overflow-wrap: break-word;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: var(--space-2xl) 0 var(--space-md);
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+p {
+  text-align: left;
+  hyphens: manual;
+  overflow-wrap: break-word;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+main {
+  box-sizing: border-box;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 0 var(--space-md) var(--space-3xl);
+}
+
+@media (min-width: 640px) {
+  main {
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* FOUND-05, D-09: no transition or animation survives a reduced-motion request. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

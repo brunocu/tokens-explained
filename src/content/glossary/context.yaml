@@ -1,0 +1,3 @@
+term: Context
+definition: "Everything the model can see when it writes its next token: your messages, its own earlier output and any hidden instructions."
+order: 3

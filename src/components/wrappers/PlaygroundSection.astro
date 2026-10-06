@@ -1,0 +1,11 @@
+---
+// The playground section of a post. The heading id is fixed here because ids generated
+// for headings inside MDX are fragile (research Pattern 4).
+import Playground from "../Playground.svelte";
+---
+
+<section aria-labelledby="try-heading" class="playground-section">
+  <h2 id="try-heading">Try it yourself</h2>
+  <p><slot /></p>
+  <Playground client:visible />
+</section>

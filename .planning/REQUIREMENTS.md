@@ -9,26 +9,26 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FOUND-01**: Reader can open the site as a static, deployed web page that works without any setup or account
-- [ ] **FOUND-02**: Reader sees tokens in a shared colored-token display that shows token boundaries without relying on color alone (separators/outlines)
-- [ ] **FOUND-03**: Reader can see whitespace inside tokens made visible (e.g. a glyph for a leading space)
-- [ ] **FOUND-04**: Reader using a screen reader or keyboard can access the token display through a text/table alternative and keyboard-operable controls
-- [ ] **FOUND-05**: Reader who prefers reduced motion sees no animated transitions in the token display or steppers
-- [ ] **FOUND-06**: Reader sees tokens that split a single character (e.g. an emoji) shown as partial-character chips, never as a replacement symbol
-- [ ] **FOUND-07**: Reader sees toy tokenizer output produced from bytes with a pre-split step, so the toy teaches the same pipeline real tokenizers use
+- [x] **FOUND-01**: Reader can open the site as a static, deployed web page that works without any setup or account
+- [x] **FOUND-02**: Reader sees tokens in a shared colored-token display that shows token boundaries without relying on color alone (separators/outlines)
+- [x] **FOUND-03**: Reader can see whitespace inside tokens made visible (e.g. a glyph for a leading space)
+- [x] **FOUND-04**: Reader using a screen reader or keyboard can access the token display through a text/table alternative and keyboard-operable controls
+- [x] **FOUND-05**: Reader who prefers reduced motion sees no animated transitions in the token display or steppers
+- [x] **FOUND-06**: Reader sees tokens that split a single character (e.g. an emoji) shown as partial-character chips, never as a replacement symbol
+- [x] **FOUND-07**: Reader sees toy tokenizer output produced from bytes with a pre-split step, so the toy teaches the same pipeline real tokenizers use
 
 ### Post 1: What is a token?
 
-- [ ] **TOK-01**: Reader can type text into a live playground and see it split into colored tokens
-- [ ] **TOK-02**: Reader can see token, character and word counts for their text
-- [ ] **TOK-03**: Reader can toggle the playground between token text and token IDs
-- [ ] **TOK-04**: Reader can pick example texts and reset the playground to its default
+- [x] **TOK-01**: Reader can type text into a live playground and see it split into colored tokens
+- [x] **TOK-02**: Reader can see token, character and word counts for their text
+- [x] **TOK-03**: Reader can toggle the playground between token text and token IDs
+- [x] **TOK-04**: Reader can pick example texts and reset the playground to its default
 - [ ] **TOK-05**: Reader can step through BPE merges one at a time with Next, Back and Reset on a small corpus
 - [ ] **TOK-06**: Reader can see pair counts and the tie-break rule at each BPE step
 - [ ] **TOK-07**: Reader can compare toy tokenizer output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages, code)
 - [ ] **TOK-08**: Reader can see the same sentence in many languages and how token counts differ
 - [ ] **TOK-09**: Reader gets a short plain-language note on each comparison saying what to notice
-- [ ] **TOK-10**: Reader reads a post that defines "token" in plain language and corrects the "token = word" misconception, with no code or math required
+- [x] **TOK-10**: Reader reads a post that defines "token" in plain language and corrects the "token = word" misconception, with no code or math required
 
 ### Embeddings
 
@@ -106,23 +106,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 | Pending |
-| FOUND-02 | Phase 1 | Pending |
-| FOUND-03 | Phase 1 | Pending |
-| FOUND-04 | Phase 1 | Pending |
-| FOUND-05 | Phase 1 | Pending |
-| FOUND-06 | Phase 1 | Pending |
-| FOUND-07 | Phase 1 | Pending |
-| TOK-01 | Phase 1 | Pending |
-| TOK-02 | Phase 1 | Pending |
-| TOK-03 | Phase 1 | Pending |
-| TOK-04 | Phase 1 | Pending |
+| FOUND-01 | Phase 1 (static build), Phase 5 (deployed verification) | Complete |
+| FOUND-02 | Phase 1 | Complete |
+| FOUND-03 | Phase 1 | Complete |
+| FOUND-04 | Phase 1 | Complete |
+| FOUND-05 | Phase 1 | Complete |
+| FOUND-06 | Phase 1 | Complete |
+| FOUND-07 | Phase 1 | Complete |
+| TOK-01 | Phase 1 | Complete |
+| TOK-02 | Phase 1 | Complete |
+| TOK-03 | Phase 1 | Complete |
+| TOK-04 | Phase 1 | Complete |
 | TOK-05 | Phase 2 | Pending |
 | TOK-06 | Phase 2 | Pending |
 | TOK-07 | Phase 2 | Pending |
 | TOK-08 | Phase 2 | Pending |
 | TOK-09 | Phase 2 | Pending |
-| TOK-10 | Phase 1 | Pending |
+| TOK-10 | Phase 1 | Complete |
 | EMB-01 | Phase 3 | Pending |
 | EMB-02 | Phase 3 | Pending |
 | EMB-03 | Phase 3 | Pending |
