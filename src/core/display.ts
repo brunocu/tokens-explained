@@ -130,6 +130,25 @@ export function speakToken(token: Token, groups?: TokenGroups): string {
   return out.includes("�") ? hexBytes(token.bytes) : out;
 }
 
+const UNKNOWN_TEXT = "[UNK]";
+const lenient = new TextDecoder("utf-8");
+
+/**
+ * Which special-chip sentences the legend needs. A special token spelled [UNK] means the tokenizer
+ * had no piece for something; any other special token (GPT-2's end-of-text marker, for example) is
+ * a signal kept whole. One rule, so every caller shows the legend sentence only for chips on screen.
+ */
+export function specialKinds(tokens: ReadonlyArray<Token>): { unknown: boolean; marker: boolean } {
+  let unknown = false;
+  let marker = false;
+  for (const token of tokens) {
+    if (token.special !== true) continue;
+    if (lenient.decode(token.bytes) === UNKNOWN_TEXT) unknown = true;
+    else marker = true;
+  }
+  return { unknown, marker };
+}
+
 /** One sentence summarising a token list for a screen reader. */
 export function describeTokens(tokens: ReadonlyArray<Token>): string {
   if (tokens.length === 0) return "no tokens";

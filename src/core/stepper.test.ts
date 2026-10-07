@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { trainOnPieces } from "./bpe.ts";
 import type { BpePiece } from "./bpe.ts";
 import { GLYPH_SPACE } from "./display.ts";
-import { presplit } from "./presplit.ts";
 import {
   SAMPLE_SENTENCE,
   SAMPLE_TRACE,
@@ -24,7 +23,6 @@ import {
   trainSentence,
 } from "./stepper.ts";
 import type { SentenceMerge } from "./stepper.ts";
-import { trainMerges } from "../../scripts/lib/bpe-train.ts";
 
 const S = GLYPH_SPACE;
 const trace = SAMPLE_TRACE;
@@ -298,22 +296,27 @@ describe("stages and sentences", () => {
   });
 });
 
-describe("one comparator for the stepper and the Phase 1 trainer", () => {
+describe("the stepper's one tie-break comparator", () => {
   it("(x) trainOnPieces without a hook returns exactly the trace's chosen id pairs", () => {
     const encoder = new TextEncoder();
     const pieces: BpePiece[] = splitWords(SAMPLE_SENTENCE).map((w) => ({ ids: Array.from(encoder.encode(w)), weight: 1 }));
     expect(trainOnPieces(pieces, STEPPER_MERGES)).toEqual(mergePairs(trace));
   });
 
-  it("(y) trainMerges equals trainOnPieces on the same byte pieces built from presplit", () => {
-    const text = "the cat sat on the mat. the cat ate the rat, and the rat ran off the mat.";
+  // The expected pairs are hand-computed from the Sennrich corpus (low lower newest widest),
+  // where five pairs tie on a count of 2 (es, lo, ow, st, we). They are decided by the shared
+  // tie-break (the smaller numeric pair wins), so a change of the comparator fails here:
+  // e+s (101, 115) goes first, and once it is merged l+o (108, 111) beats o+w and es+t.
+  it("(y) the Sennrich corpus (low lower newest widest) learns e+s first, then l+o", () => {
     const encoder = new TextEncoder();
-    const frequency = new Map<string, number>();
-    for (const piece of presplit(text)) frequency.set(piece, (frequency.get(piece) ?? 0) + 1);
-    const pieces: BpePiece[] = Array.from(frequency, ([piece, weight]) => ({ ids: Array.from(encoder.encode(piece)), weight }));
-    const direct = trainOnPieces(pieces, 20);
-    expect(direct.length).toBeGreaterThan(0);
-    expect(trainMerges(text, 20)).toEqual(direct);
+    const pieces: BpePiece[] = splitWords("low lower newest widest").map((w) => ({
+      ids: Array.from(encoder.encode(w)),
+      weight: 1,
+    }));
+    expect(trainOnPieces(pieces, 2)).toEqual([
+      [101, 115],
+      [108, 111],
+    ]);
   });
 
   it("(z) a hook does not change the merges", () => {

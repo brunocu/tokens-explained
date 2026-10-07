@@ -1,5 +1,6 @@
 // Default text and the five example chips (D-07 as amended by R-01).
-// src/core/toy.golden.test.ts checks the default text against the trained merge list.
+// src/core/realTokenizer.test.ts (the adapter parity golden) checks the default text and the
+// examples against real GPT-2 output.
 export const DEFAULT_TEXT =
   "Tokenization splits unusual words into pieces, but common words stay whole.";
 

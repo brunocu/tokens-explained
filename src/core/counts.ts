@@ -33,6 +33,17 @@ function utf8Length(codePoint: number): number {
 }
 
 /**
+ * The raw size of the text in bytes (its UTF-8 length), worked out from the text alone and never
+ * from a tokenizer, so it is the same whichever tokenizer is loaded. It sums the same per-code-point
+ * rule the display uses, so it always equals the bytes the chips show.
+ */
+export function countBytes(text: string): number {
+  let n = 0;
+  for (const ch of text) n += utf8Length(ch.codePointAt(0) as number);
+  return n;
+}
+
+/**
  * How many characters have a token boundary inside the bytes of one of their code
  * points. Boundaries come from the real token bytes, so this always agrees with the
  * hatched (partial) chips the reader sees.
@@ -107,13 +118,15 @@ export function countCompositeCharacters(text: string, grouping: Grouping, showB
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 
-/** The live-region sentence, for example "12 tokens, 26 characters, 5 words". */
-export function describeCounts(tokens: number, characters: number, words: number): string {
-  return [
-    plural(tokens, "token", "tokens"),
-    plural(characters, "character", "characters"),
-    plural(words, "word", "words"),
-  ].join(", ");
+/**
+ * The live-region sentence, for example "12 tokens, 26 characters, 26 bytes, 5 words". The bytes
+ * part is left out when no byte count is given.
+ */
+export function describeCounts(tokens: number, characters: number, words: number, bytes?: number): string {
+  const parts = [plural(tokens, "token", "tokens"), plural(characters, "character", "characters")];
+  if (bytes !== undefined) parts.push(plural(bytes, "byte", "bytes"));
+  parts.push(plural(words, "word", "words"));
+  return parts.join(", ");
 }
 
 /** The note shown under the chips when characters were split; empty for none. */

@@ -1,15 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openPlaygroundReady as openReady } from "./helpers.ts";
 
 // Task 1 contract: the shared display, counts, legend, split note and empty state.
 // Also run by the secondary phone profile; it never gates there.
-
-async function openReady(page: Page) {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
-  return card;
-}
 
 const statValue = (page: Page, name: string) => page.locator(`[data-stat="${name}"] [data-stat-value]`);
 
@@ -21,19 +14,48 @@ test("(a) without JavaScript the card shows chips, the legend and numeric counts
   await expect(page.locator("[data-playground] [data-legend]")).toContainText(
     "Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them.",
   );
-  for (const name of ["tokens", "characters", "words"]) {
+  for (const name of ["tokens", "characters", "bytes", "words"]) {
     await expect(statValue(page, name)).toHaveText(/^\d+$/);
   }
   await context.close();
 });
 
-test("(b) typing updates characters, words and a token count equal to the chip count", async ({ page }) => {
+test("(b) typing updates characters, bytes, words and a token count equal to the chip count", async ({ page }) => {
   await openReady(page);
   await page.locator("#t").fill("hello world");
   await expect(statValue(page, "characters")).toHaveText("11");
+  await expect(statValue(page, "bytes")).toHaveText("11");
   await expect(statValue(page, "words")).toHaveText("2");
   const chips = await page.locator("[data-playground] [data-chip]").count();
   await expect(statValue(page, "tokens")).toHaveText(String(chips));
+});
+
+test("(b2) the Bytes count is the raw UTF-8 size of the text: it differs from the character count for non-English text and is the same in every tokenizer state", async ({
+  page,
+}) => {
+  await openReady(page);
+  const cases: Array<[string, number, number]> = [
+    ["hello", 5, 5],
+    ["\u{E9}", 1, 2],
+    ["\u{7537}", 1, 3],
+    ["\u{1F642}", 1, 4],
+    ["Caf\u{E9} \u{7537}\u{5B50} \u{1F389}", 9, 17],
+  ];
+  for (const [text, characters, bytes] of cases) {
+    await page.locator("#t").fill(text);
+    await expect(statValue(page, "characters"), text).toHaveText(String(characters));
+    await expect(statValue(page, "bytes"), text).toHaveText(String(bytes));
+    // The same number the browser's own encoder gives for this exact text.
+    const real = await page.evaluate((value) => new TextEncoder().encode(value).length, text);
+    expect(real, text).toBe(bytes);
+  }
+  // The label is plain: the word Bytes, next to Characters.
+  await expect(page.locator('[data-stat="bytes"] .stat-label')).toHaveText("Bytes");
+  // The default text: bytes are at least the characters, and the bytes match the encoder.
+  await page.locator("[data-playground] [data-reset]").click();
+  const typed = await page.locator("#t").inputValue();
+  const expected = await page.evaluate((value) => new TextEncoder().encode(value).length, typed);
+  await expect(statValue(page, "bytes")).toHaveText(String(expected));
 });
 
 test("(c) a leading space shows as a whitespace glyph span", async ({ page }) => {
@@ -50,6 +72,7 @@ test("(d) an emoji gives hatched hex chips, a split note and never U+FFFD", asyn
   const texts = await partial.allInnerTexts();
   for (const t of texts) expect(t.trim()).toMatch(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
   await expect(statValue(page, "characters")).toHaveText("1");
+  await expect(statValue(page, "bytes")).toHaveText("4");
   await expect(page.locator("[data-playground] [data-split-note]")).toBeVisible();
   await expect(page.locator("[data-playground] [data-split-note]")).toContainText(
     "1 character was split across several tokens. Each hatched chip holds a piece of it.",
@@ -63,7 +86,7 @@ test("(e) empty text shows the empty state and zero counts", async ({ page }) =>
   await page.locator("#t").fill("");
   await expect(page.locator("[data-empty]")).toBeVisible();
   await expect(page.locator("[data-empty]")).toContainText("Nothing to split yet");
-  for (const name of ["tokens", "characters", "words"]) {
+  for (const name of ["tokens", "characters", "bytes", "words"]) {
     await expect(statValue(page, name)).toHaveText("0");
   }
 });

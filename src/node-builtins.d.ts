@@ -15,6 +15,9 @@ declare module "node:crypto" {
   export function createHash(algorithm: "sha256"): Hash;
 }
 
+// The one global src/core/buildTokenizer.ts reads: the working directory (the project root).
+declare const process: { cwd(): string };
+
 declare module "node:zlib" {
   export function gzipSync(data: Uint8Array, options?: { level?: number }): Uint8Array;
 }

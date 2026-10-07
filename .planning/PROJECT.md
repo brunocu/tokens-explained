@@ -17,16 +17,16 @@ A non-programmer can play with a tokenizer in the browser and come away with a c
 ### Active
 
 - [ ] Post 1 "What is a token?" — explains tokens as algorithm-chosen subword pieces (not words/characters), with live interactives
-- [ ] Live playground: reader types text and sees it split into colored tokens with IDs
+- [ ] Live playground: reader types text and sees it split into colored tokens with IDs (real GPT-2 tokenizer; amended by Phase 2.1)
 - [ ] Step-through BPE trainer: reader watches merges happen one at a time on a small corpus
-- [ ] Toy tokenizers built for teaching, used to show the insides of the algorithm
-- [ ] Side-by-side comparison of toy tokenizer output against real model tokenizers (and across languages/odd inputs like emoji and numbers)
+- [ ] The BPE stepper, a miniature that learns from one sentence, teaches the insides of the algorithm (amended by Phase 2.1)
+- [ ] Side-by-side comparison of two real tokenizers, GPT-2 and BERT (and across languages/odd inputs like emoji and numbers) (amended by Phase 2.1)
 - [ ] Post on embeddings — a token is an ID; an embedding is the vector looked up for it
 - [ ] Post on context — the context window is what is in the prompt right now, not memory
 - [ ] Post on reasoning — "reasoning" tokens are more generated tokens, not a separate mechanism
 - [ ] Disambiguation page placing the four terms side by side as a quick reference
 - [ ] "Start here" hub page linking the posts in recommended reading order
-- [ ] Shared reusable components (toy tokenizer, colored-token display) across all posts
+- [ ] Shared reusable components (real-tokenizer adapter, colored-token display) across all posts
 - [ ] Plain-language writing accessible to a general audience, no programming knowledge required
 
 ### Out of Scope
@@ -39,7 +39,7 @@ A non-programmer can play with a tokenizer in the browser and come away with a c
 
 - Motivation: teach others. The author has seen people confused by these terms and wants a clear, trustworthy resource.
 - Format decision (discussed): a single long scrollable essay was considered and rejected as too large for the scope (heavy interactives on one page, hard to maintain, forces readers past unrelated content). A series of separate posts plus a hub was chosen: one idea per post, reusable components, readable in order or entered directly from search.
-- Toy tokenizers are for teaching the internals; real tokenizers are used for comparison so readers see real-world behavior.
+- The BPE stepper teaches the internals; real tokenizers (GPT-2, BERT) serve everything the reader types into, so readers see real-world behavior. Amended by Phase 2.1 (2026-10-07): the earlier toy tokenizer was retired.
 - Real-tokenizer comparison approach (in-browser vs precomputed) is not yet decided — to be settled during research.
 
 ## Constraints
@@ -53,7 +53,7 @@ A non-programmer can play with a tokenizer in the browser and come away with a c
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Series of posts + hub instead of one long essay | Scope too large for one page; one concept per post; shippable and maintainable in pieces | — Pending |
-| Toy tokenizers for internals, real tokenizers for comparison | Toy ones are easy to explain step by step; real ones show convincing real-world behavior | — Pending |
+| The BPE stepper for internals, real tokenizers (GPT-2, BERT) for everything the reader types into | A miniature is easy to explain step by step, but a toy tokenizer in the playground gave readers ids and splits that contradict every real tool; real ones show convincing real-world behavior | Resolved 2026-10-07 (Phase 2.1): toy tokenizer, its trainer and its corpus deleted; stepper kept as a labelled miniature |
 | Start with "What is a token?" as the flagship post | Foundation for every other term; reusable components originate here | — Pending |
 | First release = all four posts | Author's definition of done | — Pending |
 
@@ -75,4 +75,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-10-02 after initialization*
+*Last updated: 2026-10-07 after Phase 2.1 replaced the toy tokenizer with GPT-2*

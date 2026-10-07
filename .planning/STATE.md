@@ -3,17 +3,17 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Embeddings, Context & Reasoning Posts
 status: planning
-stopped_at: Phase 02 complete, ready to plan Phase 3
-last_updated: "2026-10-07T01:34:44.168Z"
-last_activity: 2026-10-06
-last_activity_desc: Phase 02 complete, transitioned to Phase 3
-state_head: cf82ff16ed0db018e5bf0a1b37ce02d58358bd93
+stopped_at: Phase 2.1 complete, ready to plan Phase 3
+last_updated: "2026-10-07T20:50:27.673Z"
+last_activity: 2026-10-07
+last_activity_desc: Phase 2.1 complete, transitioned to Phase 3
+state_head: 836a3819ec3dc2e7760a8f9e4372328637b31bb0
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 17
-  completed_plans: 17
-  percent: 40
+  total_phases: 6
+  completed_phases: 3
+  total_plans: 27
+  completed_plans: 27
+  percent: 50
 ---
 
 # Project State
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** A non-programmer can play with a tokenizer in the browser and come away with a correct mental model of what a token is, and how it differs from a word, an embedding, context, and reasoning.
-**Current focus:** Phase 02 — BPE Stepper & Real-Tokenizer Comparison
+**Current focus:** Phase 2.1 — Replace toy tokenizer with GPT-2 in playground and examples
 
 ## Current Position
 
 Phase: 3 — Embeddings, Context & Reasoning Posts
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-06 — Phase 02 complete, transitioned to Phase 3
+Last activity: 2026-10-07 — Phase 2.1 complete, transitioned to Phase 3
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 27
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -47,6 +47,7 @@ Progress: [████░░░░░░] 40%
 |-------|-------|-------|----------|
 | 01 | 7 | - | - |
 | 02 | 10 | - | - |
+| 2.1 | 10 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -72,6 +73,14 @@ Progress: [████░░░░░░] 40%
 | Phase 02 P06 | 8min | 3 tasks | 16 files |
 | Phase 02 P07 | 9min | 3 tasks | 10 files |
 | Phase 02 P08 | 10min | 3 tasks | 10 files |
+| Phase 2.1 P01 | 6 min | 2 tasks | 11 files |
+| Phase 2.1 P02 | 8 min | 2 tasks | 13 files |
+| Phase 2.1 P03 | 17min | 3 tasks | 12 files |
+| Phase 2.1 P04 | 8 min | 3 tasks | 11 files |
+| Phase 2.1 P05 | 15 min | 2 tasks | 15 files |
+| Phase 2.1 P06 | 7 min | 2 tasks | 9 files |
+| Phase 02.1 P07 | 14 min | 2 tasks | 4 files |
+| Phase 02.1 P08 | 12 min | 2 tasks | 23 files |
 
 ## Accumulated Context
 
@@ -112,6 +121,18 @@ Recent decisions affecting current work:
 - [Phase 02]: 02-07: check-dist allows only https anchors to www.ohchr.org and www.un.org, matched by count so an identical script URL still fails
 - [Phase 02]: 02-07: languages table is static HTML (works with JavaScript off); only the Look inside picker is an island
 - [Phase 02]: 02-08: network-call lint exempted for exactly src/components/loadTokenizer.ts (exact path, self-tested); load button is the only trigger for tokenizer downloads
+- [Phase 2.1]: 02.1-01: Fixture change is additive (defaultText plus per-tokenizer download sizes); toy rows and combined size stay until plans 05 and 06
+- [Phase 2.1]: 02.1-01: Playground island has two-level state: data-state (island, ready on hydration) and data-tokenizer (GPT-2 download); loader memoised per URL with failed attempts evicted
+- [Phase 2.1]: 02.1-02: TokenLegend keeps special for [UNK] and gains marker; specialKinds decides which legend sentences show
+- [Phase 2.1]: 02.1-02: buildGpt2 is Node-only (process.cwd, dynamic import, memoised) and never imported by an island; focus moves to Try again only after a reader-started retry fails
+- [Phase 2.1]: 02.1-03: openPlaygroundReady in e2e/helpers.ts waits for data-state then data-tokenizer; every playground spec uses it
+- [Phase 2.1]: 02.1-03: privacy request budget pinned: the post page makes exactly one gpt2.json request and none for BERT; expected spec numbers are re-derived from buildGpt2, never copied
+- [Phase 2.1]: Plan 04: post word ceiling raised 2750 to 2850 (measured 2566 before, 2767 after); reference 20 carries its own read date Oct. 7, 2026; no non-English claim added for lack of a primary source
+- [Phase 2.1]: 02.1-05: BERT rows are not byte round-trip tested (lower-case, no spaces, [UNK]); GPT-2 rows are
+- [Phase 2.1]: 02.1-06: own-text block requests GPT-2 on mount through the shared memoised loader and BERT only from its sized button; playground and own block retry independently (second retry is instant via the memo)
+- [Phase 2.1]: 02.1-06: fixture download metadata is per-tokenizer only (combined figure removed); manifest.json keeps combinedGzipBytes for the hosted-files test
+- [Phase 02.1]: 02.1-07: curated comparison locators start at the card's direct children because the own-text block repeats rows, legend and tables inside the same card
+- [Phase 02.1]: 02.1-08: Sennrich tie-break golden re-homed on trainOnPieces in stepper.test.ts (verified to fail when the comparator is flipped); isValidUtf8 now lives in chars.ts; check-core smoke-tests GPT-2 natively
 
 ### Pending Todos
 
@@ -124,6 +145,16 @@ None yet.
 - [Phase 3]: Re-verify reasoning, context-size and Claude tokenizer vendor facts from primary docs right before writing; date every vendor claim.
 - [All]: No non-programmer has tested any of this yet; research-flagged hardening checks (axe/Lighthouse, keyboard and screen-reader pass, mobile performance, fact-check) have no standalone phase and belong in each phase's verification.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 261006-riu | Evaluate dropping the toy tokenizer from the article, and just using GPT-2 tokenizer for the examples and playground | 2026-10-07 | 6ec64b6 | [261006-riu-evaluate-dropping-the-toy-tokenizer-from](./quick/261006-riu-evaluate-dropping-the-toy-tokenizer-from/) |
+
+### Roadmap Evolution
+
+- Phase 02.1 inserted after Phase 2: Replace toy tokenizer with GPT-2 in playground and examples (from quick task 261006-riu evaluation) (URGENT)
+
 ## Deferred Items
 
 Items acknowledged and deferred at milestone close, most recent first:
@@ -134,6 +165,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-06T16:45:02.263Z
-Stopped at: Phase 02 complete, ready to plan Phase 3
+Last session: 2026-10-07T16:06:25.005Z
+Stopped at: Phase 2.1 complete, ready to plan Phase 3
 Resume file: None

@@ -1,14 +1,23 @@
 ---
-// A number in the post's prose that comes from the stepper's engine (plan 02-10). It reads one
-// named figure from STEPPER_FACTS at build time, so the sentence cannot drift from the trace; an
-// unknown name fails the build. Rendered inline, as plain text.
-import { fact } from "../../core/stepper.ts";
+// A number in the post's prose that comes from an engine (plan 02-10, D-13, D-14). It reads one
+// named figure at build time, so the sentence cannot drift: first from the stepper's STEPPER_FACTS,
+// then from the GPT-2 facts (gpt2Facts). An unknown name fails the build. Rendered inline, as plain text.
+import { STEPPER_FACTS, fact } from "../../core/stepper.ts";
+import { GPT2_FACT_KEYS, gpt2Facts } from "../../core/gpt2Facts.ts";
+import type { Gpt2FactKey } from "../../core/gpt2Facts.ts";
 
 interface Props {
   of: string;
 }
 
 const { of } = Astro.props;
-const value = fact(of);
+let value: number | string;
+if (Object.hasOwn(STEPPER_FACTS, of)) {
+  value = fact(of);
+} else if ((GPT2_FACT_KEYS as readonly string[]).includes(of)) {
+  value = (await gpt2Facts())[of as Gpt2FactKey];
+} else {
+  throw new Error(`Unknown fact "${of}" (not a stepper fact and not a GPT-2 fact)`);
+}
 ---
 {value}

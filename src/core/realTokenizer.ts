@@ -8,7 +8,7 @@
 // a single token can hold only part of a character, and a per-token conversion would
 // show a replacement character (PITFALLS.md pitfall 2, FOUND-06). GPT-2 writes its
 // tokens with a byte-to-unicode table, so the table is inverted here to get true bytes.
-import { isValidUtf8 } from "./toy.ts";
+import { isValidUtf8 } from "./chars.ts";
 import type { Token } from "./types.ts";
 
 export type RealTokenizerId = "gpt2" | "bert";

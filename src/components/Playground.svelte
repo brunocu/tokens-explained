@@ -1,10 +1,19 @@
 <script lang="ts">
-  // The playground island. Server-rendered as "loading", flipped to "ready" in onMount.
-  // Reader text only ever reaches the DOM through text interpolation.
-  import { onMount } from "svelte";
-  import { tokenize } from "../core/toy.ts";
+  // The playground island, running on GPT-2. Two levels of state (as in Comparison.svelte):
+  //   phase    the island itself: server-rendered as "loading", flipped to "ready" in onMount, so the
+  //            layout's 8-second failure watcher never fires on a slow connection (D-07).
+  //   download the GPT-2 file: "loading" until it arrives, then "ready", or "failed". It is fetched
+  //            in onMount at page load (D-04), never imported, so it stays out of the script bundle.
+  // Until the file arrives the tokens come from `preTokens`, a build-time lookup (text to rows) that
+  // the wrapper passes in for the default text and the five examples (D-05). Reader text only ever
+  // reaches the DOM through text interpolation.
+  import { onMount, tick } from "svelte";
+  import type { RealTokenizer } from "../core/realTokenizer.ts";
+  import { fixtureTokens } from "../core/compare/fixture.ts";
+  import type { FixtureToken } from "../core/compare/fixture.ts";
   import type { Token } from "../core/types.ts";
   import {
+    countBytes,
     countCompositeCharacters,
     countGraphemes,
     countSplitCharacters,
@@ -16,11 +25,23 @@
   import { DEFAULT_TEXT, EXAMPLES, LIMIT } from "../core/examples.ts";
   import TokenDisplay from "./TokenDisplay.svelte";
   import TokenTable from "./TokenTable.svelte";
+  import { createTokenizerDownload } from "./tokenizerDownload.ts";
+  import type { TokenizerDownload } from "./tokenizerDownload.ts";
+
+  let { preTokens, sizeLabel }: { preTokens: Record<string, FixtureToken[]>; sizeLabel: string } = $props();
+
+  // The site base always ends with a slash here; the guard keeps the loader's address right if not.
+  // Kept in this file so the base expression stays out of src/core.
+  const rawBase: string = import.meta.env.BASE_URL;
+  const baseUrl = rawBase.endsWith("/") ? rawBase : `${rawBase}/`;
 
   const ERROR_COPY = "The tokenizer could not run. Reload the page to try again. Your text stays in your browser.";
 
   // Not named `state`: a variable called `state` makes `$state` read as a store subscription.
   let phase = $state<"loading" | "ready" | "failed">("loading");
+  let download = $state<"loading" | "ready" | "failed">("loading");
+  // Raw: the tokenizer is a plain object with internal tables that must not be wrapped in a proxy.
+  let tokenizer = $state.raw<RealTokenizer | null>(null);
   let text = $state(DEFAULT_TEXT);
   // View toggles (D-04, D-08). Examples and Reset never touch them (TOK-04).
   let mode = $state<"text" | "ids">("text");
@@ -30,6 +51,8 @@
     ok: boolean;
     tokens: Token[];
     characters: number;
+    /** The raw size of the text in bytes, counted from the text itself and not from the tokenizer. */
+    bytes: number;
     words: number;
     split: number;
   };
@@ -37,16 +60,18 @@
   // One derivation for everything the reader sees; any exception becomes the error state.
   const result: Result = $derived.by(() => {
     try {
-      const tokens = tokenize(text);
+      // The loaded tokenizer when there is one; otherwise the build-time rows for the six known texts.
+      const tokens: Token[] = tokenizer !== null ? tokenizer.tokenize(text) : fixtureTokens(preTokens[text] ?? []);
       return {
         ok: true,
         tokens,
         characters: countGraphemes(text),
+        bytes: countBytes(text),
         words: countWords(text),
         split: countSplitCharacters(text, tokens),
       };
     } catch {
-      return { ok: false, tokens: [], characters: 0, words: 0, split: 0 };
+      return { ok: false, tokens: [], characters: 0, bytes: 0, words: 0, split: 0 };
     }
   });
 
@@ -75,7 +100,7 @@
         liveMessage = ERROR_COPY;
         return;
       }
-      const counts = describeCounts(result.tokens.length, result.characters, result.words);
+      const counts = describeCounts(result.tokens.length, result.characters, result.words, result.bytes);
       liveMessage = result.split > 0 ? `${counts} ${splitNote(result.split)}` : counts;
     }, 500);
   }
@@ -97,14 +122,56 @@
     scheduleLive();
   }
 
+  let retryButton: HTMLButtonElement | undefined = $state();
+  // Said once, when the download turns ready after this widget's own attempt, in its own region so
+  // the debounced count message (data-live) is untouched.
+  let readyMessage = $state("");
+  // Plain variable: created in onMount (never at component top level, the component also runs on a
+  // server) and disposed in its cleanup.
+  let gpt2Download: TokenizerDownload | undefined;
+
+  // One download attempt, through the controller shared with the comparison card. `retried` is true
+  // only for an attempt the reader started with Try again: then a second failure moves focus to the
+  // button. A failure at page load never moves focus, since the reader has not acted yet and focusing
+  // would scroll the page. The loader memoises a success and evicts a failure, so a retry fetches
+  // again. When a retry in another widget succeeds, the controller clears this widget silently
+  // (origin "other"): state only, no ready message, no focus.
+  function startDownload(retried: boolean): void {
+    void gpt2Download?.start(retried);
+  }
+
   onMount(() => {
     // Also recovers a late hydration from "failed" (the layout script may have set it).
     phase = "ready";
-    return () => clearTimeout(liveTimer);
+    gpt2Download = createTokenizerDownload("gpt2", baseUrl, {
+      onLoading: () => {
+        download = "loading";
+      },
+      onReady: (loaded, origin) => {
+        tokenizer = loaded;
+        download = "ready";
+        if (origin === "own") readyMessage = "The tokenizer is ready. You can type now.";
+      },
+      onFailed: async (retried) => {
+        download = "failed";
+        if (retried) {
+          await tick();
+          retryButton?.focus();
+        }
+      },
+    });
+    // The download starts now, at page load (D-04). Typing never causes a request. A failure leaves
+    // the textbox locked, with a message and a Try again button, until a retry succeeds (D-06).
+    startDownload(false);
+    return () => {
+      gpt2Download?.dispose();
+      gpt2Download = undefined;
+      clearTimeout(liveTimer);
+    };
   });
 </script>
 
-<div class="card" data-playground data-island data-state={phase}>
+<div class="card" data-playground data-island data-state={phase} data-tokenizer={download}>
   <!-- Lifecycle line. Shown and hidden purely by CSS on the card's data-state, so the failed state
        works even though this island never hydrated. The Reload button has no Svelte handler: the
        layout script delegates its click (research Pitfall 7). -->
@@ -133,7 +200,8 @@
       id="t"
       bind:this={ta}
       value={text}
-      readonly={phase !== "ready"}
+      readonly={phase !== "ready" || download !== "ready"}
+      aria-busy={download === "loading" ? "true" : undefined}
       maxlength={LIMIT}
       autocapitalize="off"
       autocorrect="off"
@@ -147,6 +215,25 @@
         commit();
       }}
     ></textarea>
+    {#if phase === "ready" && download === "loading"}
+      <p class="tokenizer-status" role="status" data-tokenizer-status>
+        Loading the tokenizer, about {sizeLabel} MB. You can already try the example buttons.
+      </p>
+    {/if}
+    <!-- Distinct from the runtime error below (data-tokenizer-error): that one means tokenising threw,
+         this one means the file never arrived. The region is always present so the message is announced. -->
+    <div role="status" class="load-error-wrap">
+      {#if download === "failed"}
+        <p class="tokenizer-load-error" data-tokenizer-load-error>
+          The GPT-2 tokenizer could not be downloaded. Check your connection and try again. Your text stays in your browser.
+        </p>
+      {/if}
+    </div>
+    {#if download === "failed"}
+      <button type="button" class="btn retry" data-tokenizer-retry bind:this={retryButton} onclick={() => startDownload(true)}
+        >Try again</button
+      >
+    {/if}
     <p class="privacy" id="privacy-note">Your text stays in your browser. Nothing is sent anywhere.</p>
     {#if text.length >= LIMIT}
       <!-- text.length counts UTF-16 units, like maxlength; emoji-heavy input reaches it sooner. -->
@@ -211,6 +298,10 @@
       <span class="value" data-stat-value>{result.characters}</span>
       <span class="stat-label">Characters</span>
     </div>
+    <div class="stat" data-stat="bytes">
+      <span class="value" data-stat-value>{result.bytes}</span>
+      <span class="stat-label">Bytes</span>
+    </div>
     <div class="stat" data-stat="words">
       <span class="value" data-stat-value>{result.words}</span>
       <span class="stat-label">Words</span>
@@ -229,6 +320,8 @@
 
   <!-- Announces the counts, debounced. Empty on load, so nothing is announced then. -->
   <div class="sr-only" role="status" data-live>{liveMessage}</div>
+  <!-- Announces once that typing is possible. Empty until then. -->
+  <div class="sr-only" role="status" data-tokenizer-live>{readyMessage}</div>
 </div>
 
 <style>
@@ -278,7 +371,8 @@
     font: 400 14px/1.4 var(--font-sans);
     color: var(--muted);
   }
-  .status {
+  .status,
+  .tokenizer-status {
     margin: 0;
     font: 400 14px/1.4 var(--font-sans);
     color: var(--muted);
@@ -309,6 +403,14 @@
     margin: 0;
     font: 400 14px/1.4 var(--font-sans);
     color: var(--error);
+  }
+  .tokenizer-load-error {
+    margin: 0;
+    font: 400 14px/1.4 var(--font-sans);
+    color: var(--error);
+  }
+  .retry {
+    align-self: flex-start;
   }
   .tokenizer-error {
     margin: 0;

@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // SECONDARY, never gating (D-15 amended). Runs only through `npm run test:e2e:secondary`
 // (the phone project); the three desktop projects ignore files named *.secondary.spec.ts.
@@ -12,10 +13,7 @@ const EMOJI_TEXT = "Great job \u{1F389} see you soon \u{1F642}";
 const LONG_WORD = "The word floccinaucinihilipilification is almost never used.";
 
 async function openReady(page: Page): Promise<void> {
-  await page.goto("what-is-a-token/");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page, "what-is-a-token/");
 }
 
 const overflowX = (page: Page) =>
@@ -41,7 +39,7 @@ test("(b) the long word and 1,000 CJK characters cause no horizontal page scroll
   await expect(page.locator("[data-playground] [data-chip]").first()).toBeVisible();
   expect(await overflowX(page)).toBeLessThanOrEqual(0);
   await page.locator("#t").fill("日本語".repeat(333) + "日");
-  await expect.poll(() => page.locator("[data-playground] [data-chip]").count(), { timeout: 20_000 }).toBe(3000);
+  await expect.poll(() => page.locator("[data-playground] [data-chip]").count(), { timeout: 20_000 }).toBe(2000);
   expect(await overflowX(page)).toBeLessThanOrEqual(0);
 });
 

@@ -3,11 +3,10 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { buildComparison, formatComparison } from "../../../scripts/lib/comparison-build.ts";
 import type { Manifest } from "../../../scripts/lib/comparison-build.ts";
 import { chipText } from "../display.ts";
-import { EXAMPLES } from "../examples.ts";
+import { DEFAULT_TEXT, EXAMPLES } from "../examples.ts";
 import { createRealTokenizer } from "../realTokenizer.ts";
 import type { RealTokenizer, TokenizerCtor } from "../realTokenizer.ts";
 import { TOKENIZER_FILES, sizeLabelMb } from "../tokenizerFiles.ts";
-import { toy } from "../toy.ts";
 import type { Token } from "../types.ts";
 import { COMPARISON } from "./comparison.ts";
 import { LANGUAGES, SOURCE_PAGE } from "./languages.ts";
@@ -20,7 +19,6 @@ const C_DOT = String.fromCodePoint(0x010a);
 
 const loadJson = (path: string): object => JSON.parse(readFileSync(path, "utf8")) as object;
 const manifest = loadJson("public/tokenizers/manifest.json") as Manifest;
-const mergesText = readFileSync("src/core/toy/merges.json", "utf8");
 
 let gpt2: RealTokenizer;
 let bert: RealTokenizer;
@@ -57,15 +55,14 @@ describe("comparison fixture", () => {
     expect(COMPARISON.meta.generatedAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("is fresh: a recomputation with the toy and both real tokenizers equals the committed file (RESEARCH Gap 6)", () => {
+  it("is fresh: a recomputation with GPT-2 and BERT equals the committed file (RESEARCH Gap 6)", () => {
     const fresh = buildComparison({
+      defaultText: DEFAULT_TEXT,
       examples: EXAMPLES,
       languages: LANGUAGES.map((l) => ({ id: l.id, sentence: l.sentence })),
-      toy,
       gpt2,
       bert,
       manifest,
-      mergesText,
       generatedAt: COMPARISON.meta.generatedAt,
     });
     expect(withoutDate(fresh)).toEqual(withoutDate(COMPARISON));
@@ -73,7 +70,7 @@ describe("comparison fixture", () => {
     expect(formatComparison(fresh)).toBe(readFileSync("src/core/compare/comparison.json", "utf8"));
   });
 
-  it("records commits, licences, hashes and the download label that the manifest records", () => {
+  it("records commits, licences and hashes that the manifest records", () => {
     for (const id of ["gpt2", "bert"] as const) {
       const entry = manifest.files.find((f) => f.id === id);
       expect(entry).toBeDefined();
@@ -84,21 +81,47 @@ describe("comparison fixture", () => {
         sha256: entry?.sha256,
       });
     }
-    expect(COMPARISON.meta.download.combinedGzipBytes).toBe(manifest.combinedGzipBytes);
-    expect(COMPARISON.meta.download.sizeLabelMb).toBe(sizeLabelMb(manifest.combinedGzipBytes));
   });
 
-  it("round-trips: the toy and GPT-2 rows rebuild exactly the UTF-8 bytes of the text", () => {
+  it("holds download sizes per tokenizer only: the combined figure is gone (D-09)", () => {
+    expect(Object.keys(COMPARISON.meta.download).sort()).toEqual(["bert", "gpt2"]);
+  });
+
+  it("carries the playground default text and its GPT-2 tokens (D-07, D-10)", () => {
+    expect(COMPARISON.defaultText.text).toBe(DEFAULT_TEXT);
+    // The row rebuilds exactly the UTF-8 bytes of the text, and has the count the engine produces.
+    expect(join(fixtureTokens(COMPARISON.defaultText.gpt2))).toEqual(Array.from(encoder.encode(DEFAULT_TEXT)));
+    expect(COMPARISON.defaultText.gpt2).toHaveLength(gpt2.tokenize(DEFAULT_TEXT).length);
+    expect(COMPARISON.defaultText.gpt2.length).toBeGreaterThan(0);
+  });
+
+  it("records one download size per tokenizer, equal to the manifest figures (D-04, D-09)", () => {
+    for (const id of ["gpt2", "bert"] as const) {
+      const entry = manifest.files.find((f) => f.id === id);
+      expect(entry).toBeDefined();
+      expect(COMPARISON.meta.download[id]).toEqual({
+        gzipBytes: entry?.gzipBytes,
+        sizeLabelMb: sizeLabelMb(entry?.gzipBytes ?? 0),
+      });
+    }
+  });
+
+  it("pins the two size labels once, so a change of unit or rounding is noticed (D-09)", () => {
+    expect(COMPARISON.meta.download.gpt2.sizeLabelMb).toBe("0.5");
+    expect(COMPARISON.meta.download.bert.sizeLabelMb).toBe("0.2");
+  });
+
+  it("round-trips: the GPT-2 rows rebuild exactly the UTF-8 bytes of the text", () => {
+    // BERT is not listed: it lower-cases, drops spaces and writes [UNK], so its pieces are not the text's bytes.
     for (const example of COMPARISON.examples) {
       const expected = Array.from(encoder.encode(example.text));
-      expect(join(fixtureTokens(example.rows.toy)), `toy ${example.id}`).toEqual(expected);
       expect(join(fixtureTokens(example.rows.gpt2)), `gpt2 ${example.id}`).toEqual(expected);
     }
   });
 
   it("never shows a replacement character or a raw GPT-2 byte glyph in any chip", () => {
     for (const { where, rows } of allRows()) {
-      for (const name of ["toy", "gpt2", "bert"] as const) {
+      for (const name of ["gpt2", "bert"] as const) {
         for (const token of fixtureTokens(rows[name])) {
           const shown = chipText(token);
           expect(shown.includes(REPLACEMENT), `${where} ${name}`).toBe(false);
@@ -161,11 +184,10 @@ describe("six-language Article 1 (D-14, TOK-08)", () => {
     }
   });
 
-  it("round-trips: the toy and GPT-2 rows rebuild exactly the UTF-8 bytes of each sentence", () => {
+  it("round-trips: the GPT-2 rows rebuild exactly the UTF-8 bytes of each sentence", () => {
     for (const language of LANGUAGES) {
       const rows = COMPARISON.languages.find((l) => l.id === language.id)?.rows;
       const expected = Array.from(encoder.encode(language.sentence));
-      expect(join(fixtureTokens(rows?.toy ?? [])), `toy ${language.id}`).toEqual(expected);
       expect(join(fixtureTokens(rows?.gpt2 ?? [])), `gpt2 ${language.id}`).toEqual(expected);
     }
   });

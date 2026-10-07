@@ -1,14 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEFAULT_TEXT, EXAMPLES } from "../src/core/examples.ts";
+import { openPlaygroundReady as openReady } from "./helpers.ts";
 
 // Task 2 contract: example buttons, Reset text, the Show control and the Peek switch.
-
-async function openReady(page: Page) {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
-}
 
 const statValues = async (page: Page) =>
   page.locator("[data-stat-value]").allInnerTexts();
@@ -102,7 +96,9 @@ test("(e) with empty text both views keep the empty state and raise no console e
 
 test("(f) Peek adds a hex line to normal chips; partial chips always show hex", async ({ page }) => {
   await openReady(page);
-  await page.locator("#t").fill("hi \u{1F642}");
+  // GPT-2 keeps " 🙂" whole (one token), but cuts " 🎉" into three partial pieces, so the party
+  // popper gives the mix of a whole chip ("hi") and partial chips this test needs.
+  await page.locator("#t").fill("hi \u{1F389}");
   await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
 
   // Text mode, peek off: partial chips show hex once, as their main line.

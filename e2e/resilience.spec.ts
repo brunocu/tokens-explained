@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { REGRESSION_CORPUS } from "../src/core/fixtures/regression-corpus.ts";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // The hostile-input corpus through the real DOM (FOUND-06, UI-SPEC backstop row) and
 // the CPU-throttled freeze guard (T-01-17).
@@ -7,21 +8,23 @@ import { REGRESSION_CORPUS } from "../src/core/fixtures/regression-corpus.ts";
 const FFFD = "�";
 
 async function openReady(page: Page): Promise<void> {
-  await page.goto("what-is-a-token/");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page, "what-is-a-token/");
 }
 
 const SET_IN_PAGE = new Set(["lone-surrogate", "control-chars"]);
 
-/** Exact counts for the entries whose result does not depend on the merge list. */
+/**
+ * Exact counts, re-derived from GPT-2's real output (D-01): the numbers belong to its merge list,
+ * so they change if the tokenizer file ever does. The lone surrogate is the exception worth a
+ * word: the browser turns it into U+FFFD (bytes EF BF BD) and GPT-2 holds that as one whole token.
+ */
 const EXACT: Record<string, { chips: number; partial?: number; characters?: number; splitNote?: boolean }> = {
-  // Three characters of three bytes each; the toy has no merge for them, so nine one-byte pieces.
-  japanese: { chips: 9, partial: 9 },
-  "zwj-family": { chips: 18, partial: 18, characters: 1 },
-  "lone-surrogate": { chips: 3, partial: 3 },
-  "emoji-example": { chips: 0, partial: 8, splitNote: true },
+  // Three characters of three bytes each, cut by GPT-2 into six pieces: two bytes, then one, three times.
+  japanese: { chips: 6, partial: 6 },
+  "zwj-family": { chips: 10, partial: 10, characters: 1 },
+  "lone-surrogate": { chips: 1, partial: 0 },
+  // "Great job 🎉 see you soon 🙂": only the party popper is cut up; GPT-2 keeps " 🙂" whole.
+  "emoji-example": { chips: 9, partial: 3, splitNote: true },
 };
 
 const SINGULAR_NOTE =
@@ -36,25 +39,27 @@ const FRAMES: Record<
   string,
   { frames: number; chips?: number; labels?: string[]; note?: boolean; noteText?: string; ltr?: boolean }
 > = {
-  japanese: { frames: 3, chips: 9, labels: ["日", "本", "語"] },
-  chinese: { frames: 5, chips: 15 },
-  flag: { frames: 2, chips: 8, note: true },
-  "zwj-family": { frames: 5, chips: 18, note: true, noteText: SINGULAR_NOTE },
-  devanagari: { frames: 6, chips: 18 },
-  "lone-surrogate": { frames: 1, labels: ["placeholder"] },
+  japanese: { frames: 3, chips: 6, labels: ["日", "本", "語"] },
+  chinese: { frames: 5, chips: 11 },
+  flag: { frames: 2, chips: 6, note: true },
+  "zwj-family": { frames: 5, chips: 10, note: true, noteText: SINGULAR_NOTE },
+  devanagari: { frames: 6, chips: 12 },
+  // GPT-2 holds U+FFFD, the zero-width space and the precomposed é as single whole tokens, so a
+  // character that is a frame under a byte-per-chip display is not one here.
+  "lone-surrogate": { frames: 0, chips: 1 },
   bom: { frames: 1, labels: ["hidden mark"] },
-  "zero-width": { frames: 1, labels: ["hidden space"] },
-  "emoji-example": { frames: 2 },
-  "cafe-precomposed": { frames: 1, note: false },
+  "zero-width": { frames: 0, chips: 3 },
+  "emoji-example": { frames: 1, labels: ["🎉"] },
+  "cafe-precomposed": { frames: 0, chips: 3, note: false },
   // the dotted circle followed by the combining acute accent
   "cafe-decomposed": { frames: 1, labels: ["◌́"], note: true },
-  "arabic-rtl": { frames: 5, ltr: true },
-  "hebrew-rtl": { frames: 4, ltr: true },
+  // Only the last letter of each is cut: the earlier letters are whole two-byte tokens.
+  "arabic-rtl": { frames: 1, labels: ["ح"], ltr: true },
+  "hebrew-rtl": { frames: 1, labels: ["ם"], ltr: true },
 };
 
 const TABLE_FIRST_ROW: Record<string, string> = {
-  japanese: "Byte 1 of 3 of 日",
-  "lone-surrogate": "Byte 1 of 3 of placeholder",
+  japanese: "Bytes 1 to 2 of 3 of 日",
   bom: "Byte 1 of 3 of hidden mark",
 };
 
@@ -163,7 +168,7 @@ test("freeze guard: 1,000 CJK characters render within the guard time under 4x C
 
   const started = Date.now();
   await page.locator("#t").fill(text);
-  await expect.poll(() => page.locator("[data-playground] [data-chip]").count(), { timeout: 20_000 }).toBe(3000);
+  await expect.poll(() => page.locator("[data-playground] [data-chip]").count(), { timeout: 20_000 }).toBe(2000);
   const elapsed = Date.now() - started;
   console.log(`throttled-render-ms: ${elapsed}`);
   test.info().annotations.push({ type: "throttled-render-ms", description: String(elapsed) });

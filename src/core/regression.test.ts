@@ -3,7 +3,12 @@ import { countGraphemes, countSplitCharacters, countWords } from "./counts.ts";
 import { groupBytes } from "./chars.ts";
 import { chipText, describeTokens, speakToken, tableCell } from "./display.ts";
 import { REGRESSION_CORPUS } from "./fixtures/regression-corpus.ts";
-import { tokenize } from "./toy.ts";
+import { buildGpt2 } from "./buildTokenizer.ts";
+import type { Token } from "./types.ts";
+
+// Every case runs on real GPT-2 output (D-01). Top-level await keeps describe-time tokenising working.
+const gpt2 = await buildGpt2();
+const tokenize = (text: string): Token[] => gpt2.tokenize(text);
 
 // The forbidden character, built from its code point so this file never contains it.
 const REPLACEMENT = String.fromCodePoint(0xfffd);
@@ -84,41 +89,49 @@ describe("exact expectations", () => {
     expect(countSplitCharacters("", tokens)).toBe(0);
   });
 
-  it("emoji example: 8 partial tokens, 2 split characters, 26 characters, 5 words", () => {
+  it("emoji example: 9 tokens, 3 of them partial, 1 split character, 26 characters, 5 words", () => {
+    // Under GPT-2 the party popper is cut into 3 pieces and the other emoji arrives whole.
     const text = entry("emoji-example");
     const tokens = tokenize(text);
-    expect(tokens.filter((t) => t.isPartial)).toHaveLength(8);
-    expect(countSplitCharacters(text, tokens)).toBe(2);
+    expect(tokens).toHaveLength(9);
+    expect(tokens.filter((t) => t.isPartial)).toHaveLength(3);
+    expect(countSplitCharacters(text, tokens)).toBe(1);
     expect(countGraphemes(text)).toBe(26);
     expect(countWords(text)).toBe(5);
   });
 
-  it("ZWJ family: 18 partial tokens, 1 split character, 1 character", () => {
+  it("ZWJ family: 10 partial tokens, 1 split character, 1 character", () => {
     const text = entry("zwj-family");
     const tokens = tokenize(text);
-    expect(tokens).toHaveLength(18);
+    expect(tokens).toHaveLength(10);
     expect(tokens.every((t) => t.isPartial)).toBe(true);
     expect(countSplitCharacters(text, tokens)).toBe(1);
     expect(countGraphemes(text)).toBe(1);
   });
 
-  it("Japanese: 9 tokens, 3 split characters, 1 word", () => {
+  it("Japanese: 6 partial tokens, 3 split characters, 1 word", () => {
+    // Each character is cut into a two-byte piece and a one-byte piece.
     const text = entry("japanese");
     const tokens = tokenize(text);
-    expect(tokens).toHaveLength(9);
+    expect(tokens).toHaveLength(6);
+    expect(tokens.every((t) => t.isPartial)).toBe(true);
     expect(countSplitCharacters(text, tokens)).toBe(3);
     expect(countWords(text)).toBe(1);
   });
 
-  it("lone surrogate: exactly 3 partial tokens", () => {
+  it("lone surrogate under GPT-2 becomes one whole replacement-character token (EF BF BD), not three partial pieces", () => {
+    // The text reaches the tokenizer as a valid replacement character, which GPT-2 keeps whole.
     const tokens = tokenize(entry("lone-surrogate"));
-    expect(tokens).toHaveLength(3);
-    expect(tokens.every((t) => t.isPartial)).toBe(true);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.isPartial).toBe(false);
+    expect(Array.from(tokens[0]?.bytes ?? [])).toEqual([0xef, 0xbf, 0xbd]);
   });
 
-  it("special-token text is tokenized as plain text", () => {
+  it("the typed end-of-text string under GPT-2 becomes one special token, not plain text", () => {
     const tokens = tokenize(entry("special-token-string"));
-    expect(tokens.some((t) => t.isPartial)).toBe(false);
+    expect(tokens).toHaveLength(1);
+    expect(tokens[0]?.special).toBe(true);
+    expect(tokens[0]?.isPartial).toBe(false);
     expect(tokens.flatMap((t) => Array.from(t.bytes))).toEqual(
       Array.from(new TextEncoder().encode("<|endoftext|>")),
     );
@@ -138,15 +151,16 @@ describe("worst-case performance (T-01-11)", () => {
     ["U+65E5 x 333", "日".repeat(333)],
     ["U+1F642 x 500", "\u{1F642}".repeat(500)],
   ];
-  it("groups and words 1,000 CJK characters (3,000 tokens) in under 100 ms (T-01-21)", () => {
+  it("groups and words 1,000 CJK characters (2,000 tokens) in under 100 ms (T-01-21)", () => {
     const tokens = tokenize("日本語".repeat(333) + "日");
-    expect(tokens).toHaveLength(3000);
+    expect(tokens).toHaveLength(2000);
     const start = performance.now();
     const grouping = groupBytes(tokens);
     const wording = tokens.map((t, i) => tableCell(t, grouping.tokens[i]));
     const elapsed = performance.now() - start;
-    expect(wording).toHaveLength(3000);
-    expect(wording[0]).toBe("Byte 1 of 3 of 日");
+    expect(wording).toHaveLength(2000);
+    expect(wording[0]).toBe("Bytes 1 to 2 of 3 of 日");
+    expect(wording[1]).toBe("Byte 3 of 3 of 日");
     expect(elapsed).toBeLessThan(100);
   });
   for (const [label, text] of cases) {

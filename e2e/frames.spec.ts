@@ -1,14 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EXAMPLES } from "../src/core/examples.ts";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // UI-SPEC revision R-01: character frames, label cells and dashed token cuts in the
 // shared display, as the reader sees them in the playground.
 
-async function openReady(page: Page) {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+async function openReady(page: Page): Promise<void> {
+  await openPlaygroundReady(page);
 }
 
 const statValue = (page: Page, name: string) => page.locator(`[data-stat="${name}"] [data-stat-value]`);
@@ -20,7 +18,8 @@ const peekLabel = (page: Page) => page.locator("label", { hasText: "Peek under t
 const css = (locator: ReturnType<Page["locator"]>, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
-test("(a) typing 男 shows one frame: label 男, three hatched chips, dashed token cuts", async ({ page }) => {
+// GPT-2 cuts 男 (bytes E7 94 B7) after the second byte: one chip with two bytes, one with one.
+test("(a) typing 男 shows one frame: label 男, two hatched chips, one dashed token cut", async ({ page }) => {
   await openReady(page);
   await page.locator("#t").fill("男");
   await expect(frames(page)).toHaveCount(1);
@@ -31,8 +30,8 @@ test("(a) typing 男 shows one frame: label 男, three hatched chips, dashed tok
   await expect(firstChild).toHaveText("男");
 
   const partial = frame.locator('[data-chip][data-partial="true"]');
-  await expect(partial).toHaveCount(3);
-  expect((await partial.allInnerTexts()).map((t) => t.trim())).toEqual(["E7", "94", "B7"]);
+  await expect(partial).toHaveCount(2);
+  expect((await partial.allInnerTexts()).map((t) => t.trim())).toEqual(["E7 94", "B7"]);
 
   // The frame and the label are never chips.
   await expect(page.locator("[data-char-frame][data-chip]")).toHaveCount(0);
@@ -46,15 +45,13 @@ test("(a) typing 男 shows one frame: label 男, three hatched chips, dashed tok
 
   expect(await css(partial.nth(0), "border-left-width")).toBe("0px");
   expect(await css(partial.nth(0), "border-top-width")).toBe("0px");
-  for (const i of [1, 2]) {
-    expect(await css(partial.nth(i), "border-left-width")).toBe("2px");
-    expect(await css(partial.nth(i), "border-left-style")).toBe("dashed");
-  }
+  expect(await css(partial.nth(1), "border-left-width")).toBe("2px");
+  expect(await css(partial.nth(1), "border-left-style")).toBe("dashed");
 
-  await expect(statValue(page, "tokens")).toHaveText("3");
+  await expect(statValue(page, "tokens")).toHaveText("2");
   await expect(statValue(page, "characters")).toHaveText("1");
   // Every token is exactly one chip, and every partial chip sits inside a frame.
-  await expect(chips(page)).toHaveCount(3);
+  await expect(chips(page)).toHaveCount(2);
   await expect(page.locator('[data-playground] [data-char-frame] [data-chip][data-partial="true"]')).toHaveCount(
     await page.locator('[data-playground] [data-chip][data-partial="true"]').count(),
   );
@@ -66,7 +63,8 @@ test("(b) 日本語 gives three frames labelled 日, 本, 語 with the 4px chip 
   await expect(frames(page)).toHaveCount(3);
   const labels = await page.locator("[data-playground] [data-char-label]").allInnerTexts();
   expect(labels.map((l) => l.trim())).toEqual(["日", "本", "語"]);
-  await expect(chips(page)).toHaveCount(9);
+  // Six tokens: GPT-2 cuts each of the three characters into a two-byte piece and a one-byte piece.
+  await expect(chips(page)).toHaveCount(6);
 
   const boxes = await frames(page).evaluateAll((els) =>
     els.map((el) => {
@@ -96,7 +94,7 @@ test("(c) the default text and plain ASCII show no frames at all", async ({ page
   await expect(page.locator("[data-playground] [data-char-label]")).toHaveCount(0);
 });
 
-test("(e) the non-English example gives seven frames, 21 hatched chips and one space chip, keeping the settings", async ({
+test("(e) the non-English example gives three frames, six hatched chips and four whole chips, keeping the settings", async ({
   page,
 }) => {
   await openReady(page);
@@ -112,18 +110,20 @@ test("(e) the non-English example gives seven frames, 21 hatched chips and one s
   });
   expect(state).toEqual({ active: true, start: state.length, end: state.length, length: state.length });
 
-  await expect(frames(page)).toHaveCount(7);
+  // GPT-2 holds 女, ん, に and は as whole tokens and cuts only 男, こ and ち (the space is
+  // swallowed by the first piece of こ, a hatched chip of bytes 20 E3 81).
+  await expect(frames(page)).toHaveCount(3);
   const labels = await page.locator("[data-playground] [data-char-label]").allInnerTexts();
-  expect(labels.map((l) => l.trim())).toEqual(["男", "女", "こ", "ん", "に", "ち", "は"]);
+  expect(labels.map((l) => l.trim())).toEqual(["男", "こ", "ち"]);
 
   const partial = page.locator('[data-playground] [data-chip][data-partial="true"]');
-  await expect(partial).toHaveCount(21);
-  await expect(page.locator('[data-playground] [data-char-frame] [data-chip][data-partial="true"]')).toHaveCount(21);
+  await expect(partial).toHaveCount(6);
+  await expect(page.locator('[data-playground] [data-char-frame] [data-chip][data-partial="true"]')).toHaveCount(6);
   const plain = page.locator('[data-playground] [data-chip]:not([data-partial="true"])');
-  await expect(plain).toHaveCount(1);
-  await expect(plain).not.toHaveAttribute("data-partial", "true");
-  // Token IDs mode is kept: the one normal chip is the space token (byte 20).
-  await expect(plain.locator("[data-chip-bytes]")).toHaveText("20");
+  await expect(plain).toHaveCount(4);
+  await expect(plain.first()).not.toHaveAttribute("data-partial", "true");
+  // Token IDs mode is kept: the four whole chips show the bytes of 女, ん, に and は.
+  await expect(plain.locator("[data-chip-bytes]")).toHaveText(["E5 A5 B3", "E3 82 93", "E3 81 AB", "E3 81 AF"]);
 
   await expect(statValue(page, "characters")).toHaveText("8");
   await expect(page.locator("[data-composite-note]")).toHaveCount(0);
@@ -139,10 +139,10 @@ test("(d) Token IDs mode and Peek leave the frames unchanged, with the label cen
   await idsLabel(page).click();
   await expect(frames(page)).toHaveCount(1);
   const inner = page.locator("[data-playground] [data-char-frame] [data-chip]");
-  await expect(inner).toHaveCount(3);
+  await expect(inner).toHaveCount(2);
   for (const chip of await inner.all()) {
     await expect(chip.locator("[data-chip-id]")).toHaveText(/^\d+$/);
-    await expect(chip.locator("[data-chip-bytes]")).toHaveText(/^[0-9A-F]{2}$/);
+    await expect(chip.locator("[data-chip-bytes]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
   }
   const centres = await frames(page).first().evaluate((frame) => {
     const label = frame.querySelector("[data-char-label]") as HTMLElement;
@@ -154,5 +154,5 @@ test("(d) Token IDs mode and Peek leave the frames unchanged, with the label cen
 
   await peekLabel(page).click();
   await expect(frames(page)).toHaveCount(1);
-  await expect(chips(page)).toHaveCount(3);
+  await expect(chips(page)).toHaveCount(2);
 });

@@ -3,7 +3,10 @@
   // this component, so the wording has a single source (UI-SPEC section 4).
   import { GLYPH_NEWLINE, GLYPH_SPACE, GLYPH_TAB } from "../core/display.ts";
 
-  let { special = false }: { special?: boolean } = $props();
+  // `special` is the [UNK] sentence; `marker` is the sentence for any other special chip, such as
+  // GPT-2's end-of-text token. Callers pass the flags from `specialKinds` so a sentence only shows
+  // when its chip is on screen.
+  let { special = false, marker = false }: { special?: boolean; marker?: boolean } = $props();
 </script>
 
 <p class="legend" data-legend>
@@ -14,6 +17,9 @@
   <span class="item long">Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them.</span>
   {#if special}
     <span class="item long">[UNK] means the tokenizer had no piece for that word or character and gave up.</span>
+  {/if}
+  {#if marker}
+    <span class="item long">A chip marked special, such as &lt;|endoftext|&gt;, is one token the tokenizer keeps whole as a signal to the model instead of cutting it into pieces.</span>
   {/if}
 </p>
 

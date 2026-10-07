@@ -8,10 +8,10 @@ import { countUnk, fixtureTokens } from "../core/compare/fixture.ts";
 import type { ComparisonFixture } from "../core/compare/fixture.ts";
 import { LANGUAGES, SOURCE_PAGE } from "../core/compare/languages.ts";
 import { LANGUAGES_NOTE } from "../core/compare/notes.ts";
+import { countBytes } from "../core/counts.ts";
 
 const fixture = fixtureJson as unknown as ComparisonFixture;
 const COLUMNS = [
-  { id: "toy", label: "Toy tokenizer" },
   { id: "gpt2", label: "GPT-2" },
   { id: "bert", label: "BERT (uncased)" },
 ] as const;
@@ -21,8 +21,9 @@ const rows = LANGUAGES.map((language) => {
   if (entry === undefined) throw new Error(`comparison.json has no entry for language "${language.id}"`);
   return {
     language,
+    // The raw size of the sentence in bytes, counted from the sentence itself, not from a tokenizer.
+    bytes: countBytes(language.sentence),
     counts: {
-      toy: entry.rows.toy.length,
       gpt2: entry.rows.gpt2.length,
       bert: entry.rows.bert.length,
     },
@@ -43,17 +44,19 @@ const generatedAt = fixture.meta.generatedAt;
 <div class="scroll" role="region" aria-label="Token counts by language, scrollable" tabindex="0">
   <table data-languages-table>
     <caption>
-      The same sentence in six languages. Token counts for three tokenizers (a lower number means fewer pieces).
+      The same sentence in six languages. The size of the text in bytes, then token counts for two tokenizers (a lower number
+      means fewer pieces).
     </caption>
     <thead>
       <tr>
         <th scope="col">Language</th>
+        <th scope="col">Bytes</th>
         {COLUMNS.map((column) => <th scope="col">{column.label}</th>)}
       </tr>
     </thead>
     <tbody>
       {
-        rows.map(({ language, counts, unk }) => (
+        rows.map(({ language, bytes, counts, unk }) => (
           <tr data-lang-row={language.id}>
             <th scope="row">
               <span class="name">{language.name}</span>
@@ -61,6 +64,9 @@ const generatedAt = fixture.meta.generatedAt;
                 {language.sentence}
               </span>
             </th>
+            <td data-bytes>
+              <span class="number">{bytes}</span>
+            </td>
             {COLUMNS.map((column) => (
               <td data-count={column.id}>
                 <span class="number">{counts[column.id]}</span>
@@ -87,8 +93,8 @@ const generatedAt = fixture.meta.generatedAt;
 <div class="provenance">
   <p class="island-muted source-line" data-source data-source-line>
     Sentence: <a href={SOURCE_PAGE} rel="noopener noreferrer">Universal Declaration of Human Rights</a>, Article 1 (the whole article),
-    official translations from the United Nations human rights office (OHCHR), retrieved {retrieved}. Counts precomputed on {generatedAt}
-    with the toy tokenizer, GPT-2 and BERT (uncased); see where the tokenizer files come from above.
+    official translations from the United Nations human rights office (OHCHR), retrieved {retrieved}. Counts precomputed on {generatedAt}{" "}
+    with GPT-2 and BERT (uncased); see where the tokenizer files come from above.
   </p>
   <details class="island-details" data-source data-sentence-sources>
     <summary>Where the sentences come from</summary>
@@ -127,15 +133,15 @@ const generatedAt = fixture.meta.generatedAt;
   }
   table {
     width: 100%;
-    min-width: 520px;
+    min-width: 600px;
     border-collapse: collapse;
-    /* Fixed layout gives the three count columns the same width, so one bar length means the
-       same count in every cell. */
+    /* Fixed layout gives the two token-count columns the same width, so one bar length means the
+       same count in every cell. The bytes column has no bar: it is not a token count. */
     table-layout: fixed;
     font: 400 14px/1.4 var(--font-sans);
   }
   thead th:first-child {
-    width: 40%;
+    width: 37%;
   }
   caption {
     padding: var(--space-sm) var(--space-md);

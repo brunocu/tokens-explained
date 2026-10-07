@@ -1,8 +1,7 @@
 // The BPE stepper's pure trace (D-04, D-05; plan 02-10): real byte-level BPE on one sample
 // sentence, from raw text to the finished pieces. The component only indexes into the trace
 // and the post's numbers come from STEPPER_FACTS, so neither can drift from the engine. The
-// merge loop and the tie rule are not written here; they come from src/core/bpe.ts, the same
-// code the offline toy trainer runs.
+// merge loop and the tie rule are not written here; they come from src/core/bpe.ts.
 import { rankPairs, trainOnPieces } from "./bpe.ts";
 import type { BpePiece, MergeStepInfo } from "./bpe.ts";
 import { GLYPH_SPACE } from "./display.ts";
@@ -222,7 +221,7 @@ export const SAMPLE_TRACE: SentenceTrace = trainSentence(SAMPLE_SENTENCE, STEPPE
 const byteValue = (character: string): number => new TextEncoder().encode(character)[0] as number;
 
 /**
- * Every number the post quotes about the toy, derived from the trace. The post reads these
+ * Every number the post quotes about the stepper, derived from the trace. The post reads these
  * through a <Fact> component, so a prose figure cannot drift from the engine.
  */
 export const STEPPER_FACTS = {

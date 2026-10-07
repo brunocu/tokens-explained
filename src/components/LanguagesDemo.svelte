@@ -1,6 +1,6 @@
 <script lang="ts">
   // The optional "Look inside" part of the languages section. The counts table above is static
-  // and works without this island. Choosing a language reveals the same three tokenizer rows the
+  // and works without this island. Choosing a language reveals the same two tokenizer rows the
   // comparison shows, for that language's sentence. Every token comes from the committed fixture
   // (src/core/compare/comparison.json); nothing is computed or downloaded in the browser. Text
   // reaches the DOM through interpolation only.
@@ -17,16 +17,15 @@
   import TokenRows from "./TokenRows.svelte";
   import TokenTable from "./TokenTable.svelte";
 
-  type RowSet = { toy: Token[]; gpt2: Token[]; bert: Token[] };
+  type RowSet = { gpt2: Token[]; bert: Token[] };
 
   const fixture = fixtureJson as unknown as ComparisonFixture;
 
-  // Converted once at module level: language id -> three Token arrays.
+  // Converted once at module level: language id -> two Token arrays.
   const ROWS_BY_ID = new Map<string, RowSet>(
     fixture.languages.map((entry) => [
       entry.id,
       {
-        toy: fixtureTokens(entry.rows.toy),
         gpt2: fixtureTokens(entry.rows.gpt2),
         bert: fixtureTokens(entry.rows.bert),
       },
@@ -54,7 +53,7 @@
     const entry = ROWS_BY_ID.get(id);
     const name = LANGUAGES.find((item) => item.id === id)?.name ?? "";
     if (entry === undefined) return;
-    announcement = `Showing ${name}. Toy tokenizer: ${entry.toy.length} tokens. GPT-2: ${entry.gpt2.length} tokens. BERT: ${entry.bert.length} tokens.`;
+    announcement = `Showing ${name}. GPT-2: ${entry.gpt2.length} tokens. BERT: ${entry.bert.length} tokens.`;
   }
 
   onMount(() => {
@@ -93,7 +92,6 @@
     <details class="island-details" data-alt-tables>
       <summary>View these results as tables</summary>
       <div class="tables">
-        <TokenTable tokens={rows.toy} bare caption="Tokens for the toy tokenizer" />
         <TokenTable tokens={rows.gpt2} bare caption="Tokens for GPT-2" />
         <TokenTable tokens={rows.bert} bare caption="Tokens for BERT" />
       </div>

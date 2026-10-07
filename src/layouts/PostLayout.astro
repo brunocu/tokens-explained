@@ -1,6 +1,6 @@
 ---
 // One post through the shared shell: H1, deck, the MDX body with its closed component
-// vocabulary (PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, ToyTokens,
+// vocabulary (PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, TokenFigure,
 // and, from plan 02-10, Fact, Cite, References, Reference, TextAsNumbers), then space at the end. No footer, no
 // next-post link (UI-SPEC post end, D-12, D-14).
 import type { CollectionEntry } from "astro:content";
@@ -10,7 +10,7 @@ import PlaygroundSection from "../components/wrappers/PlaygroundSection.astro";
 import StepperSection from "../components/wrappers/StepperSection.astro";
 import ComparisonSection from "../components/wrappers/ComparisonSection.astro";
 import LanguagesSection from "../components/wrappers/LanguagesSection.astro";
-import ToyTokens from "../components/prose/ToyTokens.astro";
+import TokenFigure from "../components/prose/TokenFigure.astro";
 import Fact from "../components/prose/Fact.astro";
 import Cite from "../components/prose/Cite.astro";
 import References from "../components/prose/References.astro";
@@ -33,7 +33,7 @@ const { Content } = await render(post);
       <p class="deck">{post.data.deck}</p>
     </header>
     <Content
-      components={{ PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, ToyTokens, Fact, Cite, References, Reference, TextAsNumbers }}
+      components={{ PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, TokenFigure, Fact, Cite, References, Reference, TextAsNumbers }}
     />
   </article>
 </BaseLayout>

@@ -271,7 +271,7 @@
 
   <p class="island-muted legend" data-stepper-legend>
     Each box shows a token on top and its id below. A plain outline is a single byte; a coloured box is a token the tokenizer
-    learned; a double border marks the token made by the latest merge. {@render marked(GLYPH_SPACE)} stands for a space.
+    learned; a double border marks the token made by the latest merge. {@render marked(GLYPH_SPACE)} represents a space.
   </p>
 </div>
 

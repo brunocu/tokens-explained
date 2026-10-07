@@ -2,12 +2,13 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import fixture from "../src/core/compare/comparison.json" with { type: "json" };
 import { LANGUAGES } from "../src/core/compare/languages.ts";
 import { LANGUAGES_NOTE } from "../src/core/compare/notes.ts";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // The six-language counts table in the built post (TOK-08, TOK-09). The table is static HTML, so
 // the tracer and the static-part checks run with JavaScript off.
 
 const ORDER = ["en", "es", "fr", "ru", "ar", "zh"] as const;
-const TOKENIZERS = ["toy", "gpt2", "bert"] as const;
+const TOKENIZERS = ["gpt2", "bert"] as const;
 
 type Rows = Record<(typeof TOKENIZERS)[number], Array<{ special?: true }>>;
 const languageById = new Map(
@@ -39,7 +40,7 @@ async function expectStaticParts(page: Page): Promise<void> {
       };
     }),
   );
-  expect(cells).toHaveLength(18);
+  expect(cells).toHaveLength(12);
   for (const cell of cells) expect(cell.hidden).toBe("true");
   const widest = cells.reduce((best, cell) => (cell.width > best.width ? cell : best));
   const largest = Math.max(...cells.map((cell) => cell.count));
@@ -53,7 +54,6 @@ async function expectStaticParts(page: Page): Promise<void> {
   const unkLines = table.locator("[data-unk-line]");
   await expect(unkLines).toHaveCount(1);
   const zhBert = table.locator('[data-lang-row="zh"] [data-count="bert"]');
-  await expect(zhBert.locator("[data-unk-line]")).toHaveText("25 of these are [UNK]");
   await expect(zhBert.locator("[data-unk-line]")).toHaveText(`${unkOf("zh")} of these are [UNK]`);
   expect(await zhBert.locator(".number").textContent()).toBe(String(countOf("zh", "bert")));
   for (const id of ORDER) {
@@ -80,7 +80,7 @@ async function expectStaticParts(page: Page): Promise<void> {
   await expect(details.locator('a[href$=".pdf"]')).toHaveCount(5);
 }
 
-test("(tracer) six languages in order, each with three counts from the fixture, readable without JavaScript", async ({
+test("(tracer) six languages in order, each with two counts from the fixture, readable without JavaScript", async ({
   browser,
   baseURL,
 }) => {
@@ -94,7 +94,7 @@ test("(tracer) six languages in order, each with three counts from the fixture, 
 
   for (const id of ORDER) {
     const row = page.locator(`[data-lang-row="${id}"]`);
-    await expect(row.locator("[data-count]")).toHaveCount(3);
+    await expect(row.locator("[data-count]")).toHaveCount(2);
     for (const tokenizer of TOKENIZERS) {
       const text = (await row.locator(`[data-count="${tokenizer}"] .number`).textContent()) ?? "";
       expect(text.trim(), `${id} ${tokenizer}`).toBe(String(countOf(id, tokenizer)));
@@ -107,6 +107,39 @@ test("(tracer) six languages in order, each with three counts from the fixture, 
   await context.close();
 });
 
+test("(bytes) a Bytes column gives each sentence's raw UTF-8 size, counted from the sentence itself, and it works without JavaScript", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
+  const page = await context.newPage();
+  await page.goto("what-is-a-token/");
+  const table = page.locator("[data-languages-table]");
+  // Columns, in order: Language, Bytes, then the two tokenizers.
+  await expect(table.locator("thead th")).toHaveText(["Language", "Bytes", "GPT-2", "BERT (uncased)"]);
+  await expect(table.locator("caption")).toContainText("The size of the text in bytes, then token counts for two tokenizers");
+
+  const encoder = new TextEncoder();
+  const sizes: number[] = [];
+  const characters: number[] = [];
+  for (const language of LANGUAGES) {
+    const row = table.locator(`[data-lang-row="${language.id}"]`);
+    const text = ((await row.locator("[data-bytes] .number").textContent()) ?? "").trim();
+    const expected = encoder.encode(language.sentence).length;
+    expect(text, language.id).toBe(String(expected));
+    // The bytes cell is not a token count: no bar and no [UNK] line live in it.
+    await expect(row.locator("[data-bytes] [data-bar]"), language.id).toHaveCount(0);
+    sizes.push(expected);
+    characters.push(Array.from(new Intl.Segmenter("en", { granularity: "grapheme" }).segment(language.sentence)).length);
+  }
+  // Non-English text needs more bytes than characters, which is what the column is there to show;
+  // and the number comes from the text, so Chinese (3 bytes a character) differs from the token counts.
+  const byId = new Map(LANGUAGES.map((language, i) => [language.id, { bytes: sizes[i] as number, characters: characters[i] as number }]));
+  expect((byId.get("zh") as { bytes: number; characters: number }).bytes).toBeGreaterThan((byId.get("zh") as { bytes: number; characters: number }).characters);
+  expect((byId.get("ru") as { bytes: number; characters: number }).bytes).toBeGreaterThan((byId.get("ru") as { bytes: number; characters: number }).characters);
+  await context.close();
+});
+
 test("(a) bars are hidden from assistive technology and the widest belongs to the largest count", async ({ page }) => {
   await page.goto("what-is-a-token/");
   const cells = await page.locator("[data-languages-table] td[data-count]").evaluateAll((tds) =>
@@ -116,17 +149,19 @@ test("(a) bars are hidden from assistive technology and the widest belongs to th
       width: td.querySelector("[data-bar]")?.getBoundingClientRect().width ?? -1,
     })),
   );
-  expect(cells).toHaveLength(18);
+  expect(cells).toHaveLength(12);
   for (const cell of cells) expect(cell.hidden).toBe("true");
   const widest = cells.reduce((best, cell) => (cell.width > best.width ? cell : best));
   expect(widest.count).toBe(Math.max(...cells.map((cell) => cell.count)));
 });
 
-test("(b) only the Chinese BERT cell has an [UNK] line, and it reads '25 of these are [UNK]'", async ({ page }) => {
+test("(b) only the Chinese BERT cell has an [UNK] line, and it reads the fixture's count", async ({ page }) => {
   await page.goto("what-is-a-token/");
   const lines = page.locator("[data-languages-table] [data-unk-line]");
   await expect(lines).toHaveCount(1);
-  await expect(page.locator('[data-lang-row="zh"] [data-count="bert"] [data-unk-line]')).toHaveText("25 of these are [UNK]");
+  // The fixture was regenerated for GPT-2 and BERT; 25 of the 43 Chinese BERT pieces are [UNK].
+  expect(unkOf("zh")).toBe(25);
+  await expect(page.locator('[data-lang-row="zh"] [data-count="bert"] [data-unk-line]')).toHaveText(`${unkOf("zh")} of these are [UNK]`);
 });
 
 test("(c) the note under the table is the hand-written note", async ({ page }) => {
@@ -140,6 +175,7 @@ test("(d) the source line carries both dates from the data and a link that opens
   const source = card(page).locator("[data-source-line]");
   await expect(source).toContainText(`retrieved ${RETRIEVED}`);
   await expect(source).toContainText(`precomputed on ${fixture.meta.generatedAt}`);
+  await expect(source).toContainText(`precomputed on ${fixture.meta.generatedAt} with GPT-2 and BERT (uncased)`);
   await expect(source).toContainText("see where the tokenizer files come from above");
   const link = source.getByRole("link", { name: "Universal Declaration of Human Rights" });
   expect(await link.getAttribute("rel")).toContain("noopener");
@@ -177,7 +213,7 @@ test("(g) with JavaScript the same static parts are present", async ({ page }) =
 
 // ---- The optional "Look inside" picker (island) ----
 
-const ROW_ORDER = ["toy", "gpt2", "bert"] as const;
+const ROW_ORDER = ["gpt2", "bert"] as const;
 // U+FFFD, and the byte-map glyphs for a space and a new line that must never reach the page.
 const FORBIDDEN = ["\u{FFFD}", "\u{0120}", "\u{010A}"];
 const UNK_SENTENCE = "[UNK] means the tokenizer had no piece for that word or character and gave up.";
@@ -208,7 +244,7 @@ test("(inside a) at load no language is chosen and no token row is shown", async
   await expect(island.locator("[data-announce]")).toHaveText("");
 });
 
-test("(inside b) choosing Chinese by keyboard shows three rows, 25 [UNK] chips, the legend sentence and the announcement", async ({
+test("(inside b) choosing Chinese by keyboard shows two rows, the fixture's [UNK] chips, the legend sentence and the announcement", async ({
   page,
 }) => {
   const island = await openInside(page);
@@ -219,17 +255,17 @@ test("(inside b) choosing Chinese by keyboard shows three rows, 25 [UNK] chips, 
   await expect(chinese).toBeChecked();
 
   const rows = island.locator("[data-row]");
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(2);
   expect(await rows.evaluateAll((els) => els.map((el) => el.getAttribute("data-row")))).toEqual([...ROW_ORDER]);
   await expect(island.locator("[data-languages-text]")).toHaveText(LANGUAGES.find((l) => l.id === "zh")?.sentence as string);
   for (const row of ROW_ORDER) {
     await expect(island.locator(`[data-row="${row}"] [data-row-count]`), row).toHaveText(String(countOf("zh", row)));
   }
-  await expect(island.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(25);
-  await expect(island.locator('[data-row="toy"] [data-special="true"]')).toHaveCount(0);
+  await expect(island.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(unkOf("zh"));
+  await expect(island.locator('[data-row="gpt2"] [data-special="true"]')).toHaveCount(0);
   await expect(island.locator("[data-legend]")).toContainText(UNK_SENTENCE);
 
-  const expected = `Showing Chinese (Simplified). Toy tokenizer: ${countOf("zh", "toy")} tokens. GPT-2: ${countOf("zh", "gpt2")} tokens. BERT: ${countOf("zh", "bert")} tokens.`;
+  const expected = `Showing Chinese (Simplified). GPT-2: ${countOf("zh", "gpt2")} tokens. BERT: ${countOf("zh", "bert")} tokens.`;
   await expect(island.locator("[data-announce]")).toHaveAttribute("role", "status");
   await expect(island.locator("[data-announce]")).toHaveText(expected);
 });
@@ -259,9 +295,9 @@ test("(inside d) every language shows the fixture counts, and the table alternat
     }
     if (!(await details.evaluate((el) => (el as HTMLDetailsElement).open))) await details.locator("summary").click();
     const tables = details.locator("table");
-    await expect(tables).toHaveCount(3);
-    await expect(tables.locator("caption")).toHaveText(["Tokens for the toy tokenizer", "Tokens for GPT-2", "Tokens for BERT"]);
-    for (let i = 0; i < 3; i++) {
+    await expect(tables).toHaveCount(2);
+    await expect(tables.locator("caption")).toHaveText(["Tokens for GPT-2", "Tokens for BERT"]);
+    for (let i = 0; i < 2; i++) {
       const row = ROW_ORDER[i] as (typeof ROW_ORDER)[number];
       const chips = await island.locator(`[data-row="${row}"] [data-chip]`).count();
       expect(await tables.nth(i).locator("tbody tr").count(), `${id} ${row}`).toBe(chips);
@@ -276,9 +312,9 @@ test("(inside e) each choice announces once; the [UNK] sentence shows only where
   const announce = island.locator("[data-announce]");
   for (const id of ORDER) {
     await choose(island, id);
-    const expected = `Showing ${nameOf(id)}. Toy tokenizer: ${countOf(id, "toy")} tokens. GPT-2: ${countOf(id, "gpt2")} tokens. BERT: ${countOf(id, "bert")} tokens.`;
+    const expected = `Showing ${nameOf(id)}. GPT-2: ${countOf(id, "gpt2")} tokens. BERT: ${countOf(id, "bert")} tokens.`;
     await expect(announce, id).toHaveText(expected);
-    if (id === "zh") await expect(island.locator("[data-legend]")).toContainText("[UNK]");
+    if (unkOf(id) > 0) await expect(island.locator("[data-legend]")).toContainText(UNK_SENTENCE);
     else await expect(island.locator("[data-legend]"), id).not.toContainText("[UNK]");
   }
 });
@@ -328,12 +364,27 @@ test("(inside g) without JavaScript the counts table is there and the pieces vie
   await context.close();
 });
 
-test("(inside h) choosing languages never requests a tokenizer file", async ({ page }) => {
+test("(inside h) after the page's GPT-2 download, choosing languages requests nothing, and BERT is never requested", async ({
+  page,
+  baseURL,
+}) => {
   const urls: string[] = [];
   page.on("request", (request) => urls.push(request.url()));
-  const island = await openInside(page);
+  const tokenizerUrls = () => urls.filter((url) => url.includes("/tokenizers/"));
+  const gpt2Url = new URL("tokenizers/gpt2.json", baseURL).href;
+
+  // The playground downloads GPT-2 at page load; the languages view only reads the fixture.
+  await openPlaygroundReady(page, "what-is-a-token/");
+  const island = page.locator("[data-languages]");
+  await island.scrollIntoViewIfNeeded();
+  await expect(island).toHaveAttribute("data-state", "ready");
+  await page.waitForLoadState("networkidle");
+  const settled = urls.length;
+  expect(tokenizerUrls()).toEqual([gpt2Url]);
+
   for (const id of ORDER) await choose(island, id);
   await page.waitForTimeout(500);
-  expect(urls.length).toBeGreaterThan(0);
-  expect(urls.filter((url) => url.includes("/tokenizers/"))).toEqual([]);
+  expect(urls.slice(settled)).toEqual([]);
+  expect(tokenizerUrls()).toEqual([gpt2Url]);
+  expect(urls.filter((url) => url.includes("bert"))).toEqual([]);
 });

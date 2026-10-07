@@ -1,14 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openPlaygroundReady as openReady } from "./helpers.ts";
 
 // Task 3 contract: table alternative, live region, limit, error and lifecycle states, keyboard order.
-
-async function openReady(page: Page) {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
-  return card;
-}
 
 const statValue = (page: Page, name: string) => page.locator(`[data-stat="${name}"] [data-stat-value]`);
 const EMOJI = "\u{1F642}";
@@ -29,13 +22,14 @@ test("(a) the table alternative is a native details with a real table that follo
   await expect(details.locator("tbody tr")).toHaveCount(chips);
 
   // Partial rows say which byte of which character they hold (UI-SPEC R-01).
+  // GPT-2 cuts the four bytes of 🙂 (F0 9F 99 82) into two tokens of two bytes each.
   await page.locator("#t").fill(EMOJI);
   const rows = details.locator("tbody tr");
-  await expect(rows).toHaveCount(4);
-  for (let k = 0; k < 4; k++) {
-    await expect(rows.nth(k).locator("td").nth(1)).toHaveText(`Byte ${k + 1} of 4 of ${EMOJI}`);
-  }
-  await expect(rows.first().locator("td").nth(3)).toHaveText("F0");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0).locator("td").nth(1)).toHaveText(`Bytes 1 to 2 of 4 of ${EMOJI}`);
+  await expect(rows.nth(1).locator("td").nth(1)).toHaveText(`Bytes 3 to 4 of 4 of ${EMOJI}`);
+  await expect(rows.nth(0).locator("td").nth(3)).toHaveText("F0 9F");
+  await expect(rows.nth(1).locator("td").nth(3)).toHaveText("99 82");
 
   // Empty text: exactly one row.
   await page.locator("#t").fill("");
@@ -54,8 +48,16 @@ test("(a2) the table names the byte and the character for each piece of 日本�
   await details.locator("summary").click();
   await page.locator("#t").fill("日本語");
   const rows = details.locator("tbody tr");
-  await expect(rows).toHaveCount(9);
-  const expected = ["Byte 1 of 3 of 日", "Byte 2 of 3 of 日", "Byte 3 of 3 of 日", "Byte 1 of 3 of 本"];
+  // GPT-2 cuts each character into a two-byte piece and a one-byte piece: six rows.
+  await expect(rows).toHaveCount(6);
+  const expected = [
+    "Bytes 1 to 2 of 3 of 日",
+    "Byte 3 of 3 of 日",
+    "Bytes 1 to 2 of 3 of 本",
+    "Byte 3 of 3 of 本",
+    "Bytes 1 to 2 of 3 of 語",
+    "Byte 3 of 3 of 語",
+  ];
   for (let k = 0; k < expected.length; k++) {
     await expect(rows.nth(k).locator("td").nth(1)).toHaveText(expected[k] as string);
   }
@@ -76,10 +78,10 @@ test("(c) the live region is empty on load and announces one debounced message",
   await expect(live).toHaveText("");
 
   await page.locator("#t").fill("a");
-  await expect(live).toHaveText("1 token, 1 character, 1 word", { timeout: 3000 });
+  await expect(live).toHaveText("1 token, 1 character, 1 byte, 1 word", { timeout: 3000 });
 
   await page.locator("#t").fill("hello world");
-  await expect(live).toHaveText(/^\d+ tokens?, 11 characters, 2 words$/, { timeout: 3000 });
+  await expect(live).toHaveText(/^\d+ tokens?, 11 characters, 11 bytes, 2 words$/, { timeout: 3000 });
 
   // Two edits within 200 ms announce only the final message.
   await page.evaluate(() => {
@@ -95,11 +97,11 @@ test("(c) the live region is empty on load and announces one debounced message",
   await page.locator("#t").fill("x");
   await page.waitForTimeout(100);
   await page.locator("#t").fill("hello");
-  await expect(live).toHaveText(/^\d+ tokens?, 5 characters, 1 word$/, { timeout: 3000 });
+  await expect(live).toHaveText(/^\d+ tokens?, 5 characters, 5 bytes, 1 word$/, { timeout: 3000 });
   await page.waitForTimeout(700);
   const seen = await page.evaluate(() => (window as unknown as { __seen: string[] }).__seen);
   expect(seen.length).toBe(1);
-  expect(seen[0]).toMatch(/5 characters, 1 word$/);
+  expect(seen[0]).toMatch(/5 characters, 5 bytes, 1 word$/);
 });
 
 test("(c2) the split-character note is part of the announcement", async ({ page }) => {
@@ -156,6 +158,7 @@ test("(e) lifecycle: loading, failed after 8 s in view, recovery on late hydrati
 
   release();
   await expect(card).toHaveAttribute("data-state", "ready");
+  await expect(card).toHaveAttribute("data-tokenizer", "ready");
   await expect(page.locator("[data-playground] [data-status]")).toBeHidden();
   await expect(page.locator("#t")).toBeEditable();
 });
@@ -179,8 +182,9 @@ test("(f) without JavaScript the no-JS note shows and the loading line is hidden
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   const page = await context.newPage();
   await page.goto("./");
-  // getByText skips <noscript> content, so address the note by its class.
-  const note = page.locator(".nojs");
+  // getByText skips <noscript> content, so address the note by its class. The page also holds the
+  // own-text block, which has its own .nojs note, so start at the playground.
+  const note = page.locator("[data-playground] .nojs");
   await expect(note).toBeVisible();
   await expect(note).toHaveText("Typing needs JavaScript. The example below shows the default text.");
   await expect(page.locator("[data-playground] [data-status]")).toBeHidden();
@@ -189,6 +193,9 @@ test("(f) without JavaScript the no-JS note shows and the loading line is hidden
 });
 
 test("(g) an unexpected tokenizer failure shows the error state and recovers", async ({ page }) => {
+  // The patched encoder only throws once __breakEncoder is set, which happens after openReady has
+  // seen data-tokenizer="ready" (RESEARCH G6). That keeps this test on the runtime error path
+  // (data-tokenizer-error), not the download-failure path (data-tokenizer-load-error).
   await page.addInitScript(() => {
     const original = TextEncoder.prototype.encode;
     TextEncoder.prototype.encode = function (this: TextEncoder, input?: string) {
@@ -204,7 +211,7 @@ test("(g) an unexpected tokenizer failure shows the error state and recovers", a
   await expect(page.locator("[data-tokenizer-error]")).toHaveText(
     "The tokenizer could not run. Reload the page to try again. Your text stays in your browser.",
   );
-  for (const name of ["tokens", "characters", "words"]) {
+  for (const name of ["tokens", "characters", "bytes", "words"]) {
     await expect(statValue(page, name)).toHaveText("0");
   }
   await expect(page.locator("#t")).toBeEditable();

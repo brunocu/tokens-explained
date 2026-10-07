@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // The post at its root-level URL (PD-01) and as the home page. Paths are relative to the
 // configured baseURL, so the same spec works under any base.
@@ -8,15 +9,17 @@ const SECTION_HEADINGS = [
   "How does a computer store text?",
   "What is a language model, and why numbers?",
   "Why not feed in raw bytes?",
+  "Why not whole words?",
+  "Why not cut words into meaningful parts?",
+  "A practical compromise: tokens",
   "Tokens are not words",
   "How the numbers are assigned",
-  "Why not just split on spaces, or on meaning?",
   "Build a vocabulary yourself",
   "What the step by step example showed",
-  "The tokenizer behind the demos",
+  "A real tokenizer: GPT-2",
   "Try it yourself",
-  "What you just saw",
-  "How do real tokenizers compare?",
+  "Takeaways",
+  "How does GPT-2 compare with other models?",
   "The same sentence in other languages",
   "References",
 ];
@@ -26,6 +29,11 @@ function expectedPostPath(baseURL: string | undefined): string {
   return new URL("what-is-a-token/", baseURL).pathname;
 }
 
+// The post holds one GPT-2 figure: the bridge figure (the stepper's own sentence), inside "A real
+// tokenizer: GPT-2", before the playground. (The emoji figure after the playground was cut by the
+// author in the final edits of plan 02.1-09.)
+const BRIDGE_FIGURE = 'figure[data-figure="sample"]';
+
 test("(a) the post has one H1 and, without JavaScript, prose chips and a text alternative", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   const page = await context.newPage();
@@ -33,7 +41,7 @@ test("(a) the post has one H1 and, without JavaScript, prose chips and a text al
   expect(response?.status()).toBe(200);
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1")).toHaveText("What is a token?");
-  const figure = page.locator("figure.toy-tokens").first();
+  const figure = page.locator(BRIDGE_FIGURE);
   expect(await figure.locator("[data-chip]").count()).toBeGreaterThan(0);
   const alt = figure.locator(".sr-only");
   expect(((await alt.textContent()) ?? "").startsWith("Tokens for the example:")).toBe(true);
@@ -47,6 +55,7 @@ test("(b) the playground section holds the island and it hydrates when scrolled 
   const card = section.locator("[data-playground]");
   await card.scrollIntoViewIfNeeded();
   await expect(card).toHaveAttribute("data-state", "ready");
+  await expect(card).toHaveAttribute("data-tokenizer", "ready");
 });
 
 test("(c) no response with status 400 or above and no console error", async ({ page }) => {
@@ -58,10 +67,7 @@ test("(c) no response with status 400 or above and no console error", async ({ p
   page.on("console", (m) => {
     if (m.type() === "error") errors.push(m.text());
   });
-  await page.goto("what-is-a-token/");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page, "what-is-a-token/");
   expect(failed).toEqual([]);
   expect(errors).toEqual([]);
 });
@@ -100,20 +106,20 @@ test("(f) the headings are the four sections plus the playground, in order, with
     return (box as { y: number }).y;
   };
   const stepper = await y(page.locator("[data-stepper]"));
-  const demoTokenizer = await y(page.getByRole("heading", { name: "The tokenizer behind the demos", level: 2 }));
-  // The first tokenizer visualization comes after the algorithm explanation and before the playground.
-  const firstChips = await y(page.locator("figure.toy-tokens").first());
+  const demoTokenizer = await y(page.getByRole("heading", { name: "A real tokenizer: GPT-2", level: 2 }));
+  // The bridge figure comes after the GPT-2 heading and before the playground.
+  const bridge = await y(page.locator(BRIDGE_FIGURE));
   const card = await y(page.locator("[data-playground]"));
-  const saw = await y(page.getByRole("heading", { name: "What you just saw", level: 2 }));
+  const takeaways = await y(page.getByRole("heading", { name: "Takeaways", level: 2 }));
   expect(demoTokenizer).toBeGreaterThan(stepper);
-  expect(firstChips).toBeGreaterThan(demoTokenizer);
-  expect(firstChips).toBeLessThan(card);
-  expect(card).toBeLessThan(saw);
+  expect(bridge).toBeGreaterThan(demoTokenizer);
+  expect(bridge).toBeLessThan(card);
+  expect(card).toBeLessThan(takeaways);
 
-  // The comparison card sits below "What you just saw" and above "References".
+  // The comparison card sits below "Takeaways" and above "References".
   const compare = await y(page.locator("[data-compare]"));
   const references = await y(page.getByRole("heading", { name: "References", level: 2 }));
-  expect(compare).toBeGreaterThan(saw);
+  expect(compare).toBeGreaterThan(takeaways);
   expect(compare).toBeLessThan(references);
 
   // The languages table sits after the comparison card and before "References".
@@ -134,7 +140,7 @@ test("(g) the post column has no links outside source notes, numbered cites and 
         (a) =>
           a.closest("[data-source]") === null &&
           a.closest("ol.references") === null &&
-          // The one dictionary link on the character 男 in "What you just saw".
+          // The one dictionary link on the character 男 in "Takeaways".
           a.getAttribute("href") !== "https://en.wiktionary.org/wiki/%E7%94%B7" &&
           !(a.classList.contains("cite") && /^#ref-\d+$/.test(a.getAttribute("href") ?? "")),
       )
@@ -183,39 +189,92 @@ test("(h) without JavaScript the article text, prose chips and default playgroun
   const page = await context.newPage();
   await page.goto("what-is-a-token/");
   await expect(page.getByText("A token is a small piece of text that a language model reads and writes.")).toBeVisible();
-  expect(await page.locator("figure.toy-tokens [data-chip]").count()).toBeGreaterThan(0);
+  expect(await page.locator(`${BRIDGE_FIGURE} [data-chip]`).count()).toBeGreaterThan(0);
   expect(await page.locator("[data-playground] [data-chip]").count()).toBeGreaterThan(0);
   await context.close();
 });
 
-test("(j) without JavaScript the emoji figure shows one frame labelled with the emoji and the default figure none", async ({
+test("(j) without JavaScript the post holds exactly one figure, the bridge figure, and it shows no character frame", async ({
   browser,
   baseURL,
 }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   const page = await context.newPage();
   await page.goto("what-is-a-token/");
-  const figures = page.locator("figure.toy-tokens");
-  await expect(figures.locator("[data-char-frame]")).toHaveCount(1);
-  await expect(figures.locator("[data-char-frame] [data-char-label]")).toHaveText("\u{1F389}");
-  await expect(figures.first().locator("[data-char-frame]")).toHaveCount(0);
+  await expect(page.locator("figure.token-figure")).toHaveCount(1);
+  await expect(page.locator(BRIDGE_FIGURE)).toHaveCount(1);
+  await expect(page.locator(`${BRIDGE_FIGURE} [data-char-frame]`)).toHaveCount(0);
   await context.close();
 });
 
-test("(k) the visible post text explains the frames in plain words", async ({ page }) => {
+test("(k) the visible post text explains the split character in plain words", async ({ page }) => {
   await page.goto("what-is-a-token/");
   await expect(
-    page.getByText("Hatched chips inside one frame are the bytes of a single character, which is shown in front of them."),
+    page.getByText("An emoji takes several bytes, and the tokenizer can cut between them."),
   ).toBeVisible();
 });
 
 test("(l) the visible post text carries the softened claim and the three differences", async ({ page }) => {
   await page.goto("what-is-a-token/");
   await expect(
-    page.getByText("Many everyday words are a single token, while rare words are split into several."),
+    page.getByText("Rare words split into several tokens, while many everyday words stay whole."),
   ).toBeVisible();
   // The Markdown pipeline turns the straight apostrophe into a curly one, so match either.
-  await expect(page.getByText(/Compared with the tiny toy in the step by step example, real tokenizers differ in three ways\./)).toBeVisible();
+  await expect(page.getByText(/Compared with the miniature in the step by step example, real tokenizers differ in three ways\./)).toBeVisible();
+  await expect(page.getByText("Newer models cut text differently.")).toBeVisible();
+  await expect(
+    page.getByText(/GPT-2.s list of tokens is far longer, so it already has a token for every word of this sentence\./),
+  ).toBeVisible();
+  // The stepper's lead-in says the example learns from one sentence and stops after ten merges.
+  await expect(page.getByText("that learns from a single sentence and stops after ten merges.")).toBeVisible();
+});
+
+test("(l3) the bridge figure cuts the stepper's own sentence by GPT-2: one token per word, inside the real-tokenizer section before the playground", async ({
+  page,
+}) => {
+  await page.goto("what-is-a-token/");
+  const sample = page.locator('figure[data-figure="sample"]');
+  await expect(sample).toHaveCount(1);
+  await expect(sample.locator("[data-chip]").first()).toBeVisible();
+  // Read both numbers from the caption and compare them; none is pinned here.
+  const caption = ((await sample.locator("figcaption").textContent()) ?? "").trim();
+  const match = /^(\d+) tokens?, (\d+) words?$/.exec(caption);
+  expect(match, caption).not.toBeNull();
+  const [, tokenCount, wordCount] = match as unknown as [string, string, string];
+  expect(Number(tokenCount)).toBe(Number(wordCount));
+  const box = async (locator: ReturnType<typeof page.locator>) => {
+    const b = await locator.boundingBox();
+    expect(b).not.toBeNull();
+    return (b as { y: number }).y;
+  };
+  const stepper = await box(page.locator("[data-stepper]"));
+  const sampleY = await box(sample);
+  const heading = await box(page.getByRole("heading", { name: "A real tokenizer: GPT-2", level: 2 }));
+  const playgroundY = await box(page.locator("[data-playground]"));
+  expect(sampleY).toBeGreaterThan(stepper);
+  expect(sampleY).toBeGreaterThan(heading);
+  expect(sampleY).toBeLessThan(playgroundY);
+  // The bridge figure is the only figure in the post.
+  await expect(page.locator("figure.token-figure")).toHaveCount(1);
+});
+
+test("(l4) the id sentence gives the letter t two different ids, both read from the engines", async ({ page }) => {
+  await page.goto("what-is-a-token/");
+  const paragraph = page.locator("p", { hasText: "each tokenizer may have its own list of starting values" });
+  await expect(paragraph).toBeVisible();
+  const text = ((await paragraph.textContent()) ?? "").replace(/\s+/g, " ");
+  const match = /the letter t gets the id (\d+), but each tokenizer .* gives the letter t the id (\d+)\./.exec(text);
+  expect(match, text).not.toBeNull();
+  const [, stepperId, gpt2Id] = match as unknown as [string, string, string];
+  expect(Number(stepperId)).not.toBe(Number(gpt2Id));
+});
+
+test("(l5) the post says why GPT-2 was chosen and that it is an older tokenizer", async ({ page }) => {
+  await page.goto("what-is-a-token/");
+  const paragraph = page.locator("p", { hasText: "GPT-2 is an older tokenizer." });
+  await expect(paragraph).toBeVisible();
+  await expect(paragraph).toContainText("I chose it because its tokenizer file is only about");
+  await expect(paragraph).toContainText("permissive licence");
 });
 
 test("(l2) the visible post shows the Garnett line with its credit, and the engine's numbers", async ({ page }) => {
@@ -237,10 +296,12 @@ test("(l2) the visible post shows the Garnett line with its credit, and the engi
   await expect(page.locator("main")).not.toContainText("§");
 });
 
-test("(i) the failed-to-load message never shows while the card is below the viewport", async ({ page }) => {
+test("(i) the failed-to-load message never shows while the comparison card is below the viewport", async ({ page }) => {
+  // The playground hydrates at page load now (D-04), so the card that waits to be scrolled to is
+  // the comparison card, which still hydrates only when it becomes visible.
   await page.setViewportSize({ width: 1280, height: 400 });
   await page.goto("what-is-a-token/");
-  const card = page.locator("[data-playground]");
+  const card = page.locator("[data-compare]");
   const box = await card.boundingBox();
   expect(box).not.toBeNull();
   expect((box as { y: number }).y).toBeGreaterThan(400);
@@ -248,5 +309,17 @@ test("(i) the failed-to-load message never shows while the card is below the vie
   // 8 s without scrolling must leave the card loading and the failure message hidden.
   await page.waitForTimeout(9500);
   await expect(card).toHaveAttribute("data-state", "loading");
-  await expect(page.locator('[data-playground] [data-msg="failed"]')).toBeHidden();
+  await expect(page.locator('[data-compare] [data-msg="failed"]')).toBeHidden();
+});
+
+test("(m) the playground card is ready without scrolling to it (D-04)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await page.goto("what-is-a-token/");
+  const card = page.locator("[data-playground]");
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  // The card starts below the fold, and nothing here scrolls to it.
+  expect((box as { y: number }).y).toBeGreaterThan(400);
+  await expect(card).toHaveAttribute("data-state", "ready");
+  await expect(card).toHaveAttribute("data-tokenizer", "ready");
 });

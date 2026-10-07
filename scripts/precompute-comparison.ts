@@ -1,5 +1,5 @@
 // CLI: runs the playground examples (and the six language sentences) through
-// the toy tokenizer, GPT-2 and BERT, and writes the dated fixture the comparison page reads
+// GPT-2 and BERT, and writes the dated fixture the comparison page reads
 // (D-10: instant, no download).
 //   npm run precompute:comparison                write src/core/compare/comparison.json
 //   npm run precompute:comparison -- --check     exit non-zero when the committed file differs,
@@ -7,12 +7,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildComparison, formatComparison } from "./lib/comparison-build.ts";
 import type { Manifest } from "./lib/comparison-build.ts";
-import { EXAMPLES } from "../src/core/examples.ts";
+import { DEFAULT_TEXT, EXAMPLES } from "../src/core/examples.ts";
 import { LANGUAGES } from "../src/core/compare/languages.ts";
 import { createRealTokenizer } from "../src/core/realTokenizer.ts";
 import type { TokenizerCtor } from "../src/core/realTokenizer.ts";
 import { TOKENIZER_FILES } from "../src/core/tokenizerFiles.ts";
-import { toy } from "../src/core/toy.ts";
 import type { ComparisonFixture } from "../src/core/compare/fixture.ts";
 
 const here = (rel: string): URL => new URL(rel, import.meta.url);
@@ -21,7 +20,6 @@ const target = here("../src/core/compare/comparison.json");
 
 const loadJson = (rel: string): object => JSON.parse(readFileSync(here(rel), "utf8")) as object;
 const manifest = loadJson("../public/tokenizers/manifest.json") as Manifest;
-const mergesText = readFileSync(here("../src/core/toy/merges.json"), "utf8");
 
 const { Tokenizer } = await import("@huggingface/tokenizers");
 const Ctor = Tokenizer as unknown as TokenizerCtor;
@@ -35,13 +33,12 @@ const generatedAt =
   committed === null ? today : (JSON.parse(committed) as ComparisonFixture).meta.generatedAt;
 
 const fixture = buildComparison({
+  defaultText: DEFAULT_TEXT,
   examples: EXAMPLES,
   languages: LANGUAGES.map((l) => ({ id: l.id, sentence: l.sentence })),
-  toy,
   gpt2,
   bert,
   manifest,
-  mergesText,
   generatedAt,
 });
 const text = formatComparison(fixture);

@@ -1,5 +1,7 @@
 # Deferred from Phase 2 to Phase 5 (Harden & Release)
 
+Note (2026-10-07): section 4 is closed as superseded by Phase 2.1; the new items from that phase are in `DEFERRED-FROM-PHASE-2.1.md` in this directory.
+
 **Source:** plans 02-09 (Task 3 step 2) and 02-10 (Task 5). Written 2026-10-06.
 
 **Purpose:** Phase 5 planning must pick up every item below. Nothing here was dropped. Items marked "human" are checks no automated gate can prove; the first four groups are Phase 5 work, the last two are open checks inherited from earlier Phase 2 plans.
@@ -37,6 +39,8 @@
 | 3.9 | The stepper's third real-versus-toy difference ("They learn from a huge amount of text, not from one sentence") replaced the old "They work on bytes", because the new stepper works on bytes too | Re-read by the author in the review (02-10 Task 6) |
 
 ## 4. The toy's training corpus
+
+**CLOSED 2026-10-07: superseded by Phase 2.1.** The toy tokenizer, its trainer script, its merge list and its corpus are deleted, so there is no corpus to revisit and no corpus provenance to check in Phase 5. See `.planning/phases/02.1-replace-toy-tokenizer-with-gpt-2-in-playground-and-examples/02.1-CONTEXT.md` (D-17). The text below is kept for the record only.
 
 The idea "revisit the toy's training corpus" (02-CONTEXT, Deferred Ideas) is still open. Changing the playground toy's corpus changes `src/core/toy/merges.json` and its hash, the comparison fixture (`npm run precompute:comparison`), the pinned counts in `src/core/compare/fixture.test.ts` and the claims on the default sentence (`expect` lists of the `ToyTokens` figures). Plan 02-10 changed only the literary example (now the Garnett line), which regenerated the fixture and one case of `src/core/fixtures/adapter-parity.json` (the Rust reference run with the pinned `tokenizers==0.23.2`, offline from the uv cache).
 

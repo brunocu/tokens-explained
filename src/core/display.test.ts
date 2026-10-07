@@ -9,6 +9,7 @@ import {
   describeTokens,
   idLabel,
   pieceWording,
+  specialKinds,
   speakToken,
   tableCell,
 } from "./display.ts";
@@ -201,5 +202,30 @@ describe("speakToken and describeTokens", () => {
     // A real replacement character kept whole in one token is spoken as bytes, not as itself.
     const whole = cut([0xef, 0xbf, 0xbd]);
     expect(spoken(whole)).toEqual(["EF BF BD"]);
+  });
+});
+
+describe("specialKinds (which legend sentences apply)", () => {
+  const special = (s: string): Token => ({ ...text(s), special: true });
+
+  it("reports neither kind for no tokens and for ordinary tokens", () => {
+    expect(specialKinds([])).toEqual({ unknown: false, marker: false });
+    expect(specialKinds([text("hello"), partial([0xe6, 0x97])])).toEqual({ unknown: false, marker: false });
+  });
+
+  it("reports only unknown for a special token spelled [UNK]", () => {
+    expect(specialKinds([text("a"), special("[UNK]")])).toEqual({ unknown: true, marker: false });
+  });
+
+  it("reports only marker for any other special token, such as the end-of-text marker", () => {
+    expect(specialKinds([special("<|endoftext|>")])).toEqual({ unknown: false, marker: true });
+  });
+
+  it("reports both when both kinds are on screen", () => {
+    expect(specialKinds([special("[UNK]"), special("<|endoftext|>")])).toEqual({ unknown: true, marker: true });
+  });
+
+  it("does not treat an ordinary token that happens to spell [UNK] as special", () => {
+    expect(specialKinds([text("[UNK]")])).toEqual({ unknown: false, marker: false });
   });
 });

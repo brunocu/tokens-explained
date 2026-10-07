@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // Project-agnostic smoke tests of the walking skeleton.
 
@@ -12,18 +13,12 @@ test("(a) without JavaScript the server-rendered card already shows chips", asyn
 });
 
 test("(b) with JavaScript the island hydrates once the card is visible", async ({ page }) => {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page);
   await expect(page.locator("#t")).not.toHaveAttribute("readonly", /.*/);
 });
 
 test("(c) typing an emoji gives partial-character chips and never U+FFFD", async ({ page }) => {
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page);
   const defaultCount = await page.locator("[data-playground] [data-chip]").count();
   await page.locator("#t").fill("\u{1F642}");
   await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
@@ -41,10 +36,7 @@ test("(d) the whole run has no failed requests and no console errors", async ({ 
   page.on("console", (m) => {
     if (m.type() === "error") consoleErrors.push(m.text());
   });
-  await page.goto("./");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page);
   await page.locator("#t").fill("\u{1F642} hello");
   await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
   expect(failedResponses).toEqual([]);

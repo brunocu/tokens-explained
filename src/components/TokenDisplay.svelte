@@ -2,7 +2,7 @@
   // The shared coloured-token display (FOUND-02, FOUND-03, FOUND-06). Reused unchanged by
   // later posts. Reader text only ever reaches the DOM through text interpolation.
   import type { Token } from "../core/types.ts";
-  import { chipSegments, containsNewline, idLabel } from "../core/display.ts";
+  import { chipSegments, containsNewline, idLabel, specialKinds } from "../core/display.ts";
   import TokenLegend from "./TokenLegend.svelte";
   import { compositeNote, splitNote } from "../core/counts.ts";
   import { byteLineSegments, groupBytes, layoutChips, visibleLabels } from "../core/chars.ts";
@@ -34,6 +34,8 @@
   // Character frames (UI-SPEC R-01): derived here from the token bytes, callers pass nothing new.
   const grouping = $derived(groupBytes(tokens));
   const items = $derived(layoutChips(grouping));
+  // Which special-chip sentences the legend needs: [UNK] and any other special token.
+  const kinds = $derived(specialKinds(tokens));
 </script>
 
 {#snippet hex(token: Token, i: number)}{#each byteLineSegments(token, grouping.tokens[i]) as segment, k (k)}{#if k > 0}<span class="gap">{" "}</span>{/if}{#if segment.group}<span class="ch" data-ch={segment.text}>{segment.text}</span>{:else}{segment.text}{/if}{/each}{/snippet}
@@ -71,7 +73,7 @@
 {/if}
 
 {#if legend}
-  <TokenLegend />
+  <TokenLegend special={kinds.unknown} marker={kinds.marker} />
 {/if}
 
 {#if splitCount > 0}

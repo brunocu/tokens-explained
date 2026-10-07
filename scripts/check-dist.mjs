@@ -65,6 +65,8 @@ export const ALLOWED_REFERENCE_LINK_HOSTS = [
   "www.unicode.org",
   "w3techs.com",
   "en.wiktionary.org",
+  // Plan 02.1-09: the two Hugging Face pages cited for BERT and WordPiece.
+  "huggingface.co",
 ];
 
 const ANCHOR_TAG_RE = /<a\b(?:"[^"]*"|'[^']*'|[^>"'])*>/gi;
@@ -228,7 +230,7 @@ function selfTest() {
   expectFail("allowed host as a plain URL (not an anchor)", run(okUrl, "/"));
   if (ALLOWED_EXTERNAL_LINK_HOSTS.length !== 2) throw new Error("self-test: the allow-list must hold exactly two hosts");
   // The References hosts (plan 02-10): one per cited source, anchors only, nothing else from them.
-  if (ALLOWED_REFERENCE_LINK_HOSTS.length !== 16) throw new Error("self-test: the references allow-list must hold exactly sixteen hosts");
+  if (ALLOWED_REFERENCE_LINK_HOSTS.length !== 17) throw new Error("self-test: the references allow-list must hold exactly seventeen hosts");
   const refUrl = "https://aclanthology.org/P16-1162/";
   if (kept(`<a href="${refUrl}" rel="noopener noreferrer">x</a>`).length !== 0) throw new Error("self-test: a references anchor did not pass");
   if (kept(`<script src="${refUrl}"></script>`).length !== 1) throw new Error("self-test: a references host as script src was dropped");

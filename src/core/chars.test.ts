@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { byteLineSegments, groupBytes, labelFor, layoutChips, visibleLabels } from "./chars.ts";
+import { byteLineSegments, groupBytes, isValidUtf8, labelFor, layoutChips, visibleLabels } from "./chars.ts";
 import type { Grouping } from "./chars.ts";
 import { hexBytes } from "./display.ts";
 import { REGRESSION_CORPUS } from "./fixtures/regression-corpus.ts";
-import { tokenize } from "./toy.ts";
+import { buildGpt2 } from "./buildTokenizer.ts";
 import type { Token } from "./types.ts";
+
+// The corpus block at the bottom runs on real GPT-2 output (D-01). Top-level await keeps
+// describe-time tokenising working.
+const gpt2 = await buildGpt2();
+const tokenize = (text: string): Token[] => gpt2.tokenize(text);
 
 // Build the forbidden character from its code point so no literal sits in this file.
 const REPLACEMENT = String.fromCodePoint(0xfffd);
@@ -13,7 +18,7 @@ const REPLACEMENT = String.fromCodePoint(0xfffd);
 const toks = (...parts: number[][]): Token[] =>
   parts.map((bytes, id) => ({ id, bytes: Uint8Array.from(bytes), isPartial: false }));
 
-/** Every byte as its own token, the shape the toy tokenizer gives non-ASCII text. */
+/** Every byte as its own token, a hand-built shape used by the unit cases above. */
 const singles = (...bytes: number[]): Token[] => toks(...bytes.map((b) => [b]));
 
 const utf8 = (text: string): number[] => Array.from(new TextEncoder().encode(text));
@@ -399,19 +404,22 @@ describe("byteLineSegments", () => {
   });
 });
 
-describe("regression corpus through the real toy tokenizer", () => {
+describe("regression corpus through GPT-2", () => {
+  // Re-derived from GPT-2's output. Characters GPT-2 keeps whole in one token get no frame, so the
+  // lone surrogate (one whole replacement-character token), the zero-width space and the
+  // precomposed é have none.
   const FRAME_COUNTS: Record<string, number> = {
     japanese: 3,
     chinese: 5,
     flag: 2,
     "zwj-family": 5,
-    "lone-surrogate": 1,
+    "lone-surrogate": 0,
     bom: 1,
-    "zero-width": 1,
-    "emoji-example": 2,
-    "cafe-precomposed": 1,
+    "zero-width": 0,
+    "emoji-example": 1,
+    "cafe-precomposed": 0,
     "cafe-decomposed": 1,
-    "fifth-example": 7,
+    "fifth-example": 3,
   };
   const entries = [...REGRESSION_CORPUS, { name: "fifth-example", text: "男女 こんにちは" }];
 
@@ -422,8 +430,9 @@ describe("regression corpus through the real toy tokenizer", () => {
       const ascii = !/[^\u0000-\u007f]/.test(text);
 
       it("frames every partial token and no other", () => {
-        // The toy never merges non-ASCII bytes, so a token is partial exactly when it holds
-        // one byte of a multi-byte character, and that is exactly when the grouping frames it.
+        // A token is partial exactly when its bytes are not valid UTF-8 alone, which is exactly
+        // when it holds only part of a multi-byte character, and that is when the grouping frames it.
+        // GPT-2 may keep a whole multi-byte character in one token; that token is neither.
         tokens.forEach((t, i) => {
           expect(g.tokens[i]?.frame !== null, `token ${i}`).toBe(t.isPartial);
         });
@@ -443,18 +452,43 @@ describe("regression corpus through the real toy tokenizer", () => {
     });
   }
 
-  it("labels the lone surrogate placeholder, the BOM hidden mark and the zero-width space hidden space", () => {
+  it("labels the BOM hidden mark; GPT-2 keeps the lone surrogate and the zero-width space whole, so they get no label", () => {
     const labelOf = (text: string) => labelTexts(groupBytes(tokenize(text)));
-    expect(labelOf("\uD83D")).toEqual(["placeholder"]);
     expect(labelOf("﻿hello")).toEqual(["hidden mark"]);
-    expect(labelOf("a​b")).toEqual(["hidden space"]);
+    expect(labelOf("\uD83D")).toEqual([]);
+    expect(labelOf("a​b")).toEqual([]);
   });
 
-  it("gives 男女 こんにちは seven frames, 21 hatched chips and one normal space chip", () => {
+  it("gives 男女 こんにちは three frames, six hatched chips and four whole chips", () => {
+    // 男, こ and ち are each cut across two tokens; 女, ん, に and は arrive whole.
     const tokens = tokenize("男女 こんにちは");
     const g = groupBytes(tokens);
-    expect(g.frames).toHaveLength(7);
-    expect(tokens.filter((t) => t.isPartial)).toHaveLength(21);
-    expect(tokens.filter((t) => !t.isPartial)).toHaveLength(1);
+    expect(g.frames).toHaveLength(3);
+    expect(labelTexts(g)).toEqual(["男", "こ", "ち"]);
+    expect(tokens.filter((t) => t.isPartial)).toHaveLength(6);
+    expect(tokens.filter((t) => !t.isPartial)).toHaveLength(4);
+  });
+});
+
+describe("isValidUtf8", () => {
+  const bytes = (...values: number[]): Uint8Array => Uint8Array.from(values);
+
+  it("accepts ASCII and two-, three- and four-byte characters", () => {
+    expect(isValidUtf8(new TextEncoder().encode("Hi"))).toBe(true);
+    expect(isValidUtf8(bytes(0xc3, 0xa9))).toBe(true);
+    expect(isValidUtf8(bytes(0xe6, 0x97, 0xa5))).toBe(true);
+    expect(isValidUtf8(bytes(0xf0, 0x9f, 0x90, 0xb1))).toBe(true);
+    expect(isValidUtf8(bytes())).toBe(true);
+  });
+
+  it("keeps a byte-order mark as three valid bytes instead of stripping it", () => {
+    expect(isValidUtf8(bytes(0xef, 0xbb, 0xbf))).toBe(true);
+  });
+
+  it("rejects a lone continuation byte, a cut-off sequence and an overlong form", () => {
+    expect(isValidUtf8(bytes(0x80))).toBe(false);
+    expect(isValidUtf8(bytes(0xf0, 0x9f))).toBe(false);
+    expect(isValidUtf8(bytes(0xe6, 0x97))).toBe(false);
+    expect(isValidUtf8(bytes(0xc0, 0xaf))).toBe(false);
   });
 });

@@ -20,9 +20,7 @@
     "check:dist": "node scripts/check-dist.mjs",
     "check:repo": "node scripts/check-repo.mjs",
     "check:base": "node scripts/check-base.mjs",
-    "train:toy": "node scripts/train-toy-bpe.ts",
-    "precompute:comparison": "node scripts/precompute-comparison.ts",
-    "prepare:corpus": "node scripts/prepare-corpus.ts"
+    "precompute:comparison": "node scripts/precompute-comparison.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "8.0.2",

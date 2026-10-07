@@ -4,21 +4,22 @@
 // regenerated (RESEARCH Pitfall 7); the counts are on the page next to the rows. They talk
 // about where the cuts fall, never about one tokenizer being better.
 //
+// They compare GPT-2 with BERT only (D-01).
 // Keyed by the id of each entry in src/core/examples.ts. notes.test.ts keeps them honest.
 
 export const NOTES: Readonly<Record<string, string>> = {
   "rare-word":
     "Each tokenizer cuts the long word in different places. BERT puts ## in front of every piece that continues a word.",
   "numbers-dates":
-    "The toy tokenizer cuts most digits one at a time, while GPT-2 and BERT mostly keep short runs of digits together. BERT also drops the spaces and writes everything in lower case.",
+    "GPT-2 and BERT both mostly keep short runs of digits together. BERT also drops the spaces and writes everything in lower case.",
   emoji:
-    "The toy tokenizer cuts both emoji into raw byte pieces, and GPT-2 does the same for the first one, though it has a single piece for the second. BERT has no piece for either emoji and shows [UNK] instead.",
+    "GPT-2 cuts the first emoji into raw byte pieces but has a single piece for the second. BERT has no piece for either emoji and shows [UNK] instead.",
   literature:
-    "Each word is a single piece for GPT-2 and BERT. The toy tokenizer learned from far less text, so it cuts many of the same words into smaller pieces.",
+    "Each word is a single piece for both GPT-2 and BERT. GPT-2 keeps the capital letter and the space that comes with each word, while BERT lower-cases and ignores spaces.",
   "non-english":
-    "The toy tokenizer has no piece for these characters and falls back to raw byte pieces. GPT-2 has whole pieces for a few of them and byte pieces for the rest, while BERT has a piece for every one.",
+    "GPT-2 has whole pieces for some of these characters and byte pieces for the others, while BERT has a piece for every one.",
 };
 
 /** The note under the six-language table. */
 export const LANGUAGES_NOTE =
-  "The same meaning needs very different numbers of pieces depending on the language and the tokenizer. The toy tokenizer, which learned only English, spends the most on other scripts, and BERT's count for Chinese looks low only because many of those characters became [UNK].";
+  "The same meaning needs very different numbers of pieces depending on the language and the tokenizer. BERT's count for Chinese looks low only because many of those characters became [UNK].";

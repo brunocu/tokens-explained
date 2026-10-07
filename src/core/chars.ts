@@ -3,7 +3,20 @@ import type { Token } from "./types.ts";
 // Bytes-to-characters grouping for the shared token display (UI-SPEC revision R-01).
 // Pure TypeScript: no DOM, no framework, and no platform decoder. The code point of a
 // valid UTF-8 sequence is computed arithmetically from its bytes, so a replacement
-// character can never be produced (PITFALLS.md pitfall 2, FOUND-06).
+// character can never be produced (PITFALLS.md pitfall 2, FOUND-06). The one decoder here is
+// the strict check in isValidUtf8, which only answers yes or no and never yields text.
+
+const strict = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/** True when the bytes are valid UTF-8 on their own. `ignoreBOM: true` keeps a leading EF BB BF from being stripped. */
+export function isValidUtf8(bytes: Uint8Array): boolean {
+  try {
+    strict.decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export type CharKind = "single" | "multi" | "invalid";
 export type LabelStyle = "char" | "name";

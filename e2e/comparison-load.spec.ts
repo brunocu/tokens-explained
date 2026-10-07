@@ -1,13 +1,20 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import fixture from "../src/core/compare/comparison.json" with { type: "json" };
+import { NOTES } from "../src/core/compare/notes.ts";
 import { EXAMPLES } from "../src/core/examples.ts";
+import { expectCompareText, openPlaygroundReady } from "./helpers.ts";
 
-// The own-text block of the comparison card: an explicit button downloads GPT-2 and BERT, then the
-// reader types anything and sees three live rows. No request happens before the click, exactly two
-// after it, and none while typing (D-10, T-02-21). This spec is also run by `npm run check:base`
-// under a non-root base, so every address is built from the page's own base.
+// The live part of the comparison card, which is ONE widget with the precomputed examples: GPT-2 is
+// live without a button (the card asks the same memoised loader as the playground, so the page makes
+// one request for the file), the text area is editable in place, and BERT downloads only when the
+// reader presses its own sized button. Typing and picking never cause a request (D-08, D-09, T-02-21).
+// This spec is also run by `npm run check:base` under a non-root base, so every address is built from
+// the page's own base.
+//
+// Two islands ask for the GPT-2 file: the playground and this card. Where a test blocks that file it
+// says which island is being exercised.
 
-const ROW_ORDER = ["toy", "gpt2", "bert"] as const;
+const ROW_ORDER = ["gpt2", "bert"] as const;
 type RowId = (typeof ROW_ORDER)[number];
 
 type FixtureRows = Record<RowId, unknown[]>;
@@ -33,76 +40,116 @@ async function pick(card: Locator, id: string): Promise<void> {
   await expect(card.locator(`input[type="radio"][value="${id}"]`)).toBeChecked();
 }
 
-/** The live count of one row inside the own-text block. */
-const liveCount = (own: Locator, row: RowId): Locator => own.locator(`[data-row="${row}"] [data-row-count]`);
+/** The count of one row. */
+const liveCount = (card: Locator, row: RowId): Locator => card.locator(`[data-row="${row}"] [data-row-count]`);
 
-test("(tracer) nothing is requested before the click, exactly two files after it, and typing sends nothing", async ({ page, baseURL }) => {
+const BERT_SIZE = fixture.meta.download.bert.sizeLabelMb;
+// U+FFFD, and the byte-map glyphs for a space and a new line that must never reach the page.
+const FORBIDDEN = ["\u{FFFD}", "\u{0120}", "\u{010A}"];
+const GPT2_ONLY_ANNOUNCEMENT = /^GPT-2: (\d+) tokens\.$/;
+const ANNOUNCEMENT = /^GPT-2: (\d+) tokens\. BERT: (\d+) tokens\.$/;
+const GPT2_ERROR = "The GPT-2 tokenizer could not be downloaded. Check your connection and try again.";
+const BERT_ERROR = "The BERT tokenizer could not be downloaded. Check your connection and try again.";
+
+test("(tracer) GPT-2 is live with no button, typing replaces the BERT row by a prompt, BERT downloads only on its click, and typing sends nothing", async ({
+  page,
+  baseURL,
+}) => {
   const urls: string[] = [];
   page.on("request", (request) => urls.push(request.url()));
   const tokenizerUrls = () => urls.filter((url) => url.includes("/tokenizers/"));
+  const gpt2Url = new URL("tokenizers/gpt2.json", baseURL).href;
+  const bertUrl = new URL("tokenizers/bert-uncased.json", baseURL).href;
 
-  const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await expect(own).toHaveAttribute("data-own-state", "idle");
-  await own.scrollIntoViewIfNeeded();
+  // The playground downloads GPT-2 at page load; the card shares that one request.
+  await openPlaygroundReady(page, "what-is-a-token/");
+  const card = page.locator("[data-compare]");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toHaveAttribute("data-state", "ready");
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  await expect(card).toHaveAttribute("data-compare-bert", "idle");
+
+  // On arrival the card shows the example with both rows (BERT's is precomputed), and the only button
+  // is BERT's (it never mentions GPT-2).
+  await expect(card.locator("[data-row]")).toHaveCount(2);
+  await expect(card.locator("[data-load]")).toHaveCount(1);
+  await expect(card.locator("[data-load]")).not.toContainText("GPT-2");
+  await expect(card.locator("[data-load]")).toContainText("BERT");
+
+  // Picking examples and waiting cause no request; the log holds the one GPT-2 file and no BERT file.
   await pick(card, "emoji");
   await pick(card, FIRST.id);
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(300);
-  expect(tokenizerUrls()).toEqual([]);
+  expect(tokenizerUrls()).toEqual([gpt2Url]);
 
-  const gpt2Url = new URL("tokenizers/gpt2.json", baseURL).href;
-  const bertUrl = new URL("tokenizers/bert-uncased.json", baseURL).href;
+  // The text is the example's, and the live GPT-2 count equals the precomputed one.
+  await expect(card.locator("#compare-input")).toHaveValue(FIRST.text);
+  await expect(liveCount(card, "gpt2")).toHaveText(String(countOf(FIRST.id, "gpt2")));
 
-  await own.locator("[data-load]").click();
+  // Typing changes the GPT-2 row, takes the precomputed BERT row away (it was for the example, not for
+  // this text) and sends nothing.
+  const beforeTyping = urls.length;
+  await card.locator("#compare-input").fill("Hello \u{1F642} world");
+  await expect(card.locator("[data-row]")).toHaveCount(1);
+  await expect(card.locator("[data-bert-pending]")).toBeVisible();
+  await page.waitForTimeout(700);
+  expect(urls.slice(beforeTyping)).toEqual([]);
+
+  // One click, one new request, for the BERT file only; then both rows are live.
+  await card.locator("#compare-input").fill(FIRST.text);
+  await card.locator("[data-load]").click();
   await expect.poll(() => tokenizerUrls().length, { timeout: 15_000 }).toBe(2);
-  await expect(own).toHaveAttribute("data-own-state", "ready");
-  expect([...tokenizerUrls()].sort()).toEqual([gpt2Url, bertUrl].sort());
-
-  // Prefilled with the first example; the live counts equal the precomputed ones for all three.
-  await expect(own.locator("#own-text")).toHaveValue(FIRST.text);
+  await expect(card).toHaveAttribute("data-compare-bert", "ready");
+  expect(tokenizerUrls()).toEqual([gpt2Url, bertUrl]);
+  await expect(card.locator("[data-row]")).toHaveCount(2);
   for (const row of ROW_ORDER) {
-    await expect(liveCount(own, row), row).toHaveText(String(countOf(FIRST.id, row)));
+    await expect(liveCount(card, row), row).toHaveText(String(countOf(FIRST.id, row)));
   }
 
-  // Typing, including an emoji, changes the rows and sends nothing.
+  // Typing an emoji changes both rows and sends nothing.
   const before = urls.length;
-  await own.locator("#own-text").fill("Hello \u{1F642} world");
-  await expect(own.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(1);
+  await card.locator("#compare-input").fill("Hello \u{1F642} world");
+  await expect(card.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(1);
   await page.waitForTimeout(700);
   expect(urls.slice(before)).toEqual([]);
   expect(tokenizerUrls()).toHaveLength(2);
 });
 
-const SIZE = fixture.meta.download.sizeLabelMb;
-// U+FFFD, and the byte-map glyphs for a space and a new line that must never reach the page.
-const FORBIDDEN = ["\u{FFFD}", "\u{0120}", "\u{010A}"];
-const ANNOUNCEMENT = /^Toy tokenizer: (\d+) tokens\. GPT-2: (\d+) tokens\. BERT: (\d+) tokens\.$/;
-
-/** Open the post, press the load button and wait until the own-text block is ready. */
-async function openReadyOwn(page: Page): Promise<{ card: Locator; own: Locator }> {
+/** Open the post and wait until the card shows GPT-2 live (no button was pressed). */
+async function openReady(page: Page): Promise<Locator> {
   const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.scrollIntoViewIfNeeded();
-  await own.locator("[data-load]").click();
-  await expect(own).toHaveAttribute("data-own-state", "ready");
-  return { card, own };
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  return card;
 }
 
-test("(a) the button names the size, and the idle paragraph says nothing is downloaded until it is pressed", async ({ page }) => {
-  const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await expect(own.locator("[data-load]")).toHaveText(`Load GPT-2 and BERT (about ${SIZE} MB)`);
-  await expect(own.locator("[data-load]")).toHaveText("Load GPT-2 and BERT (about 0.7 MB)");
-  await expect(own.getByRole("heading", { name: "Try your own text" })).toBeVisible();
-  await expect(own).toContainText(
-    `Want to use your own text? This downloads two small tokenizer files, GPT-2 and BERT, once (about ${SIZE} MB in total). Nothing is downloaded until you press the button.`,
+/** As openReady, then press the BERT button and wait until BERT is live. */
+async function openBoth(page: Page): Promise<Locator> {
+  const card = await openReady(page);
+  await card.locator("[data-load]").click();
+  await expect(card).toHaveAttribute("data-compare-bert", "ready");
+  return card;
+}
+
+test("(a) the button names BERT and its size, not GPT-2, and the idle sentence says nothing is downloaded until it is pressed", async ({
+  page,
+}) => {
+  const card = await openReady(page);
+  await expect(card.locator("[data-load]")).toHaveText(`Load BERT (about ${BERT_SIZE} MB)`);
+  await expect(card.locator("[data-load]")).toHaveText("Load BERT (about 0.2 MB)");
+  await expect(card.locator("[data-load]")).not.toContainText("GPT-2");
+  await expect(card).toContainText(
+    "The BERT rows for the example texts were worked out in advance. To cut text you type yourself, BERT needs its own file. Nothing is downloaded until you press the button.",
   );
-  // Before the click there is nothing to type into.
-  await expect(own.locator("#own-text")).toHaveCount(0);
+  // GPT-2 needs no button: its box and its row are already there, and the card is not busy.
+  await expect(card.locator("#compare-input")).toBeVisible();
+  await expect(card.locator('[data-row="gpt2"]')).toBeVisible();
+  await expect(card).not.toHaveAttribute("aria-busy", "true");
 });
 
-test("(b) while a file is still coming the block says so, is aria-busy and has no spinner; then it is ready", async ({ page }) => {
+test("(b) while BERT is still coming the card says so, is aria-busy and has no spinner; GPT-2 stays live; then both rows are live", async ({
+  page,
+}) => {
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -111,29 +158,33 @@ test("(b) while a file is still coming the block says so, is aria-busy and has n
     await gate;
     await route.continue();
   });
-  const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.locator("[data-load]").click();
+  const card = await openReady(page);
+  await card.locator("#compare-input").fill("some words of my own");
+  await card.locator("[data-load]").click();
 
-  await expect(own).toHaveAttribute("data-own-state", "loading");
-  await expect(own).toHaveAttribute("aria-busy", "true");
-  const status = own.locator("[data-own-loading]");
+  await expect(card).toHaveAttribute("data-compare-bert", "loading");
+  await expect(card).toHaveAttribute("aria-busy", "true");
+  const status = card.locator('[data-compare-loading="bert"]');
   await expect(status).toHaveAttribute("role", "status");
-  await expect(status).toHaveText(`Downloading the GPT-2 and BERT tokenizers (about ${SIZE} MB)...`);
-  await expect(own.locator("[data-load]")).toHaveCount(0);
+  await expect(status).toHaveText(`Getting BERT ready (about ${BERT_SIZE} MB)...`);
+  await expect(card.locator("[data-load]")).toHaveCount(0);
   // No spinner or progress element of any kind.
-  await expect(own.locator('[role="progressbar"], progress, svg')).toHaveCount(0);
+  await expect(card.locator('[role="progressbar"], progress, svg')).toHaveCount(0);
+  // GPT-2 is not held up by BERT.
+  await expect(card.locator('[data-row="gpt2"]')).toBeVisible();
+  await expect(card.locator('[data-row="bert"]')).toHaveCount(0);
 
   release();
-  await expect(own).toHaveAttribute("data-own-state", "ready");
-  await expect(own).not.toHaveAttribute("aria-busy", "true");
-  await expect(own.locator("[data-own-loading]")).toHaveCount(0);
-  await expect(own.locator("[data-own-live]")).toHaveText("Loaded. Type below.");
+  await expect(card).toHaveAttribute("data-compare-bert", "ready");
+  await expect(card).not.toHaveAttribute("aria-busy", "true");
+  await expect(card.locator("[data-compare-loading]")).toHaveCount(0);
+  await expect(card.locator(":scope > [data-announce]")).toHaveText("BERT is loaded. Counts for both tokenizers are shown.");
   // Focus lands in the text box, since the button that was pressed is gone.
-  await expect(own.locator("#own-text")).toBeFocused();
+  await expect(card.locator("#compare-input")).toBeFocused();
+  await expect(card.locator("[data-row]")).toHaveCount(2);
 });
 
-test("(c) a failed download names the tokenizer, keeps the one that arrived, and Try again requests only the failed file", async ({
+test("(c) a failed BERT download names BERT, keeps the live GPT-2 row, and Try again requests only the BERT file", async ({
   page,
   baseURL,
 }) => {
@@ -144,136 +195,259 @@ test("(c) a failed download names the tokenizer, keeps the one that arrived, and
   const count = (url: string) => urls.filter((u) => u === url).length;
 
   await page.route("**/tokenizers/bert-uncased.json", (route) => route.abort());
-  const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.locator("[data-load]").click();
+  const card = await openReady(page);
+  await card.locator("[data-load]").click();
 
-  await expect(own).toHaveAttribute("data-own-state", "error");
-  await expect(own.locator("[data-own-error]")).toHaveText("The BERT tokenizer could not be downloaded. Check your connection and try again.");
-  await expect(own.locator("[data-retry]")).toHaveText("Try again");
-  await expect(own.locator("[data-retry]")).toBeFocused();
+  await expect(card).toHaveAttribute("data-compare-bert", "error");
+  await expect(card.locator('[data-compare-error="bert"]')).toHaveText(BERT_ERROR);
+  await expect(card.locator('[data-retry="bert"]')).toHaveText("Try again");
+  await expect(card.locator('[data-retry="bert"]')).toBeFocused();
+  // GPT-2 is untouched: still ready, still live, never asked for again. The example's precomputed
+  // BERT row is still there for the unchanged text.
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  await expect(card.locator("[data-row]")).toHaveCount(2);
+  await card.locator("#compare-input").fill("still live");
+  await expect(card.locator("[data-row]")).toHaveCount(1);
+  await expect(liveCount(card, "gpt2")).not.toHaveText("0");
+  await card.locator("#compare-input").fill(FIRST.text);
   expect(count(gpt2Url)).toBe(1);
   expect(count(bertUrl)).toBe(1);
 
   await page.unroute("**/tokenizers/bert-uncased.json");
-  await own.locator("[data-retry]").click();
-  await expect(own).toHaveAttribute("data-own-state", "ready");
+  await card.locator('[data-retry="bert"]').click();
+  await expect(card).toHaveAttribute("data-compare-bert", "ready");
   // Only the file that failed was requested again.
   expect(count(gpt2Url)).toBe(1);
   expect(count(bertUrl)).toBe(2);
-  await expect(own.locator("#own-text")).toHaveValue(FIRST.text);
-  for (const row of ROW_ORDER) await expect(liveCount(own, row), row).toHaveText(String(countOf(FIRST.id, row)));
+  for (const row of ROW_ORDER) await expect(liveCount(card, row), row).toHaveText(String(countOf(FIRST.id, row)));
 });
 
-test("(c2) the error sentence names GPT-2 alone when only that file fails, and the retry asks only for GPT-2", async ({ page, baseURL }) => {
+test("(c2) when GPT-2 fails, the playground and the card each show their own message, the card keeps the example rows, and the card's retry also clears the playground silently", async ({
+  page,
+  baseURL,
+}) => {
   const urls: string[] = [];
   page.on("request", (request) => urls.push(request.url()));
-  const bertUrl = new URL("tokenizers/bert-uncased.json", baseURL).href;
+  const gpt2Url = new URL("tokenizers/gpt2.json", baseURL).href;
+  const count = () => urls.filter((u) => u === gpt2Url).length;
+
+  // Both islands ask for this file: the playground and the comparison card. Blocking it exercises both.
+  await page.route("**/tokenizers/gpt2.json", (route) => route.abort());
+  const card = await openComparison(page);
+  const playground = page.locator("[data-playground]");
+  await expect(playground).toHaveAttribute("data-tokenizer", "failed");
+  await expect(playground.locator("[data-tokenizer-load-error]")).toBeVisible();
+
+  // The card names GPT-2 and offers its own Try again. The example text and both precomputed rows stay
+  // on screen, the text is read-only, and BERT is not offered before GPT-2 works.
+  await expect(card).toHaveAttribute("data-compare-gpt2", "error");
+  await expect(card.locator('[data-compare-error="gpt2"]')).toHaveText(GPT2_ERROR);
+  await expect(card.locator('[data-retry="gpt2"]')).toHaveText("Try again");
+  await expect(card.locator("[data-compare-text]")).toHaveText(FIRST.text);
+  await expect(card.locator("textarea")).toHaveCount(0);
+  await expect(card.locator("[data-row]")).toHaveCount(2);
+  await expect(card.locator("[data-load]")).toHaveCount(0);
+  expect(urls.filter((u) => u.includes("bert"))).toEqual([]);
+
+  // The card's Try again asks for the GPT-2 file again and then makes the text editable.
+  await page.unroute("**/tokenizers/gpt2.json");
+  const before = count();
+  await card.locator('[data-retry="gpt2"]').click();
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  expect(count()).toBe(before + 1);
+  await expect(card.locator('[data-row="gpt2"]')).toBeVisible();
+  await expect(card.locator("#compare-input")).toHaveValue(FIRST.text);
+  await expect(liveCount(card, "gpt2")).toHaveText(String(countOf(FIRST.id, "gpt2")));
+  await expect(card.locator("#compare-input")).toBeFocused();
+
+  // The card's success also cleared the playground (G-02.1-3), silently and with no request of its own:
+  // no click, no Try again button, no error, an editable textbox, nothing announced, focus still in the card.
+  await expect(playground).toHaveAttribute("data-tokenizer", "ready");
+  await expect(playground.locator("[data-tokenizer-retry]")).toHaveCount(0);
+  await expect(playground.locator("[data-tokenizer-load-error]")).toHaveCount(0);
+  await expect(playground.locator("textarea")).toBeEditable();
+  await expect(playground.locator("[data-tokenizer-live]")).toHaveText("");
+  await expect(playground.locator("textarea")).not.toBeFocused();
+  await expect(card.locator("#compare-input")).toBeFocused();
+  expect(count()).toBe(before + 1);
+});
+
+test("(c2b) a Try again in the playground clears the card's error too, without moving focus or announcing there", async ({
+  page,
+  baseURL,
+}) => {
+  const urls: string[] = [];
+  page.on("request", (request) => urls.push(request.url()));
+  const gpt2Url = new URL("tokenizers/gpt2.json", baseURL).href;
+  const count = () => urls.filter((u) => u === gpt2Url).length;
 
   await page.route("**/tokenizers/gpt2.json", (route) => route.abort());
   const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.locator("[data-load]").click();
-  await expect(own.locator("[data-own-error]")).toHaveText("The GPT-2 tokenizer could not be downloaded. Check your connection and try again.");
+  const playground = page.locator("[data-playground]");
+  await expect(playground).toHaveAttribute("data-tokenizer", "failed");
+  await expect(card).toHaveAttribute("data-compare-gpt2", "error");
 
-  // BERT arrived and is kept: a second failed attempt still names only GPT-2, and BERT is not asked for again.
-  await own.locator("[data-retry]").click();
-  await expect(own.locator("[data-own-error]")).toHaveText("The GPT-2 tokenizer could not be downloaded. Check your connection and try again.");
-  expect(urls.filter((u) => u === bertUrl)).toHaveLength(1);
+  await page.unroute("**/tokenizers/gpt2.json");
+  const before = count();
+  await playground.locator("[data-tokenizer-retry]").click();
+
+  // The pressed widget announces and is usable.
+  await expect(playground).toHaveAttribute("data-tokenizer", "ready");
+  await expect(playground.locator("[data-tokenizer-live]")).toHaveText("The tokenizer is ready. You can type now.");
+
+  // The card leaves its error without a click, silently: no message, no button, no announcement, no focus.
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  await expect(card.locator('[data-retry="gpt2"]')).toHaveCount(0);
+  await expect(card.locator('[data-compare-error="gpt2"]')).toHaveCount(0);
+  await expect(card.locator("#compare-input")).toBeVisible();
+  await expect(card.locator("#compare-input")).not.toBeFocused();
+  await expect(card.locator(":scope > [data-announce]")).toHaveText("");
+  await expect(liveCount(card, "gpt2")).toHaveText(String(countOf(FIRST.id, "gpt2")));
+  expect(count()).toBe(before + 1);
 });
 
-test("(c2b) the error sentence names both tokenizers when neither file arrives, and Try again asks for both", async ({ page }) => {
-  const urls: string[] = [];
-  page.on("request", (request) => urls.push(request.url()));
-  await page.route("**/tokenizers/*.json", (route) => route.abort());
+test("(c2c) a retry that fails again leaves the other widget on its error", async ({ page }) => {
+  await page.route("**/tokenizers/gpt2.json", (route) => route.abort());
   const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.locator("[data-load]").click();
-  await expect(own.locator("[data-own-error]")).toHaveText(
-    "The GPT-2 and BERT tokenizer could not be downloaded. Check your connection and try again.",
-  );
-  expect(urls.filter((u) => u.includes("/tokenizers/"))).toHaveLength(2);
+  const playground = page.locator("[data-playground]");
+  await expect(playground).toHaveAttribute("data-tokenizer", "failed");
+  await expect(card).toHaveAttribute("data-compare-gpt2", "error");
 
-  await own.locator("[data-retry]").click();
-  await expect(own.locator("[data-own-error]")).toBeVisible();
-  await expect.poll(() => urls.filter((u) => u.includes("/tokenizers/")).length).toBe(4);
+  // Still blocked: the playground's retry fails again and changes nothing in the card.
+  await playground.locator("[data-tokenizer-retry]").click();
+  await expect(playground).toHaveAttribute("data-tokenizer", "failed");
+  await expect(playground.locator("[data-tokenizer-retry]")).toBeFocused();
+  await expect(card).toHaveAttribute("data-compare-gpt2", "error");
+  await expect(card.locator('[data-retry="gpt2"]')).toBeVisible();
+
+  // Reachable again: the card's retry works and the playground follows without a click.
+  await page.unroute("**/tokenizers/gpt2.json");
+  await card.locator('[data-retry="gpt2"]').click();
+  await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+  await expect(playground).toHaveAttribute("data-tokenizer", "ready");
+  await expect(playground.locator("[data-tokenizer-retry]")).toHaveCount(0);
 });
 
-test("(c3) a response that is not a file (404) is handled like a failed download", async ({ page }) => {
+test("(c3) a response that is not a file (404) is handled like a failed download, for either tokenizer", async ({ page }) => {
+  // GPT-2 404: both islands that ask for the file (playground and card) fail.
   await page.route("**/tokenizers/gpt2.json", (route) => route.fulfill({ status: 404, body: "not found" }));
   const card = await openComparison(page);
-  const own = card.locator("[data-owntext]");
-  await own.locator("[data-load]").click();
-  await expect(own.locator("[data-own-error]")).toContainText("The GPT-2 tokenizer could not be downloaded.");
-  await expect(own.locator("[data-retry]")).toBeVisible();
+  await expect(card.locator('[data-compare-error="gpt2"]')).toContainText("The GPT-2 tokenizer could not be downloaded.");
+  await expect(card.locator('[data-retry="gpt2"]')).toBeVisible();
+  await expect(page.locator("[data-playground] [data-tokenizer-load-error]")).toBeVisible();
+
+  // BERT 404: GPT-2 works, only the click-started BERT download fails.
+  await page.unroute("**/tokenizers/gpt2.json");
+  await page.route("**/tokenizers/bert-uncased.json", (route) => route.fulfill({ status: 404, body: "not found" }));
+  const second = await openComparison(page);
+  await expect(second).toHaveAttribute("data-compare-gpt2", "ready");
+  await second.locator("[data-load]").click();
+  await expect(second.locator('[data-compare-error="bert"]')).toContainText("The BERT tokenizer could not be downloaded.");
+  await expect(second.locator('[data-retry="bert"]')).toBeVisible();
+  await expect(second.locator('[data-row="gpt2"]')).toBeVisible();
 });
 
-test("(d) an emoji text shows partial characters, [UNK] and no replacement symbol; typed [CLS] is one special chip", async ({ page }) => {
-  const { own } = await openReadyOwn(page);
-  await own.locator("#own-text").fill("Great job \u{1F389} see you soon");
+test("(d) an emoji text shows partial characters, [UNK] and no replacement symbol; typed [CLS] and <|endoftext|> are one special chip each", async ({
+  page,
+}) => {
+  const card = await openBoth(page);
+  await card.locator("#compare-input").fill("Great job \u{1F389} see you soon");
 
-  for (const row of ["toy", "gpt2"] as const) {
-    const hatched = own.locator(`[data-row="${row}"] [data-char-frame] [data-chip][data-partial="true"]`);
-    expect(await hatched.count(), row).toBeGreaterThan(0);
-  }
-  const unk = own.locator('[data-row="bert"] [data-special="true"]');
+  const hatched = card.locator('[data-row="gpt2"] [data-char-frame] [data-chip][data-partial="true"]');
+  expect(await hatched.count()).toBeGreaterThan(0);
+  const unk = card.locator('[data-row="bert"] [data-special="true"]');
   await expect(unk).toHaveCount(1);
   expect((await unk.first().textContent())?.trim()).toBe("[UNK]");
-  await expect(own.locator("[data-legend]")).toContainText("[UNK] means the tokenizer had no piece");
-  const shown = (await own.textContent()) ?? "";
+  await expect(card.locator("[data-legend]")).toContainText("[UNK] means the tokenizer had no piece");
+  // GPT-2 has no special chip here, so the end-of-text sentence stays away.
+  await expect(card.locator("[data-legend]")).not.toContainText("A chip marked special");
+  const shown = (await card.locator(":scope > .results").textContent()) ?? "";
   for (const glyph of FORBIDDEN) expect(shown.includes(glyph), `U+${glyph.codePointAt(0)?.toString(16)}`).toBe(false);
 
-  await own.locator("#own-text").fill("[CLS]");
-  const special = own.locator('[data-row="bert"] [data-special="true"]');
+  await card.locator("#compare-input").fill("[CLS]");
+  const special = card.locator('[data-row="bert"] [data-special="true"]');
   await expect(special).toHaveCount(1);
   expect((await special.first().textContent())?.trim()).toBe("[CLS]");
 
-  // Ordinary text has no special chip, and the [UNK] sentence goes away with it.
-  await own.locator("#own-text").fill("plain words only");
-  await expect(own.locator('[data-special="true"]')).toHaveCount(0);
-  await expect(own.locator("[data-legend]")).not.toContainText("[UNK]");
+  // The typed end-of-text string is one special chip in the GPT-2 row, and it gets the marker sentence,
+  // not the [UNK] sentence ("gave up" would be wrong for it).
+  await card.locator("#compare-input").fill("<|endoftext|>");
+  const marker = card.locator('[data-row="gpt2"] [data-special="true"]');
+  await expect(marker).toHaveCount(1);
+  expect((await marker.first().textContent())?.trim()).toBe("<|endoftext|>");
+  await expect(card.locator("[data-legend]")).toContainText("A chip marked special, such as <|endoftext|>");
+  await expect(card.locator("[data-legend]")).not.toContainText("[UNK] means");
+
+  // Ordinary text has no special chip, and both special sentences go away with it.
+  await card.locator("#compare-input").fill("plain words only");
+  await expect(card.locator('[data-special="true"]')).toHaveCount(0);
+  await expect(card.locator("[data-legend]")).not.toContainText("[UNK]");
+  await expect(card.locator("[data-legend]")).not.toContainText("A chip marked special");
 });
 
 test("(e) the limit message appears at 1,000 characters and not at 999, worded for this box", async ({ page }) => {
-  const { own } = await openReadyOwn(page);
-  await own.locator("#own-text").fill("a".repeat(999));
-  await expect(own.locator("[data-limit]")).toHaveCount(0);
-  await own.locator("#own-text").fill("a".repeat(1000));
-  await expect(own.locator("[data-limit]")).toHaveText(
+  const card = await openReady(page);
+  await card.locator("#compare-input").fill("a".repeat(999));
+  await expect(card.locator("[data-limit]")).toHaveCount(0);
+  await card.locator("#compare-input").fill("a".repeat(1000));
+  await expect(card.locator("[data-limit]")).toHaveText(
     "That is the limit for this box: 1,000 characters. Delete some text to keep typing.",
   );
-  await own.locator("#own-text").fill("a".repeat(999));
-  await expect(own.locator("[data-limit]")).toHaveCount(0);
-  await expect(own.locator("#own-text")).toHaveAttribute("maxlength", "1000");
+  await card.locator("#compare-input").fill("a".repeat(999));
+  await expect(card.locator("[data-limit]")).toHaveCount(0);
+  await expect(card.locator("#compare-input")).toHaveAttribute("maxlength", "1000");
 });
 
-test("(f) one debounced announcement gives the three counts, equal to the chips shown", async ({ page }) => {
-  const { own } = await openReadyOwn(page);
-  const live = own.locator("[data-own-live]");
+test("(f) one debounced announcement gives the GPT-2 count, and the BERT count once loaded, equal to the chips shown", async ({
+  page,
+}) => {
+  const card = await openReady(page);
+  const live = card.locator(":scope > [data-announce]");
   await expect(live).toHaveAttribute("role", "status");
-  await page.waitForTimeout(100);
-  await page.evaluate(() => {
-    const el = document.querySelector("[data-owntext] [data-own-live]") as HTMLElement;
-    const seen: string[] = [];
-    (window as unknown as { __seen: string[] }).__seen = seen;
-    new MutationObserver(() => seen.push(el.textContent ?? "")).observe(el, { childList: true, characterData: true, subtree: true });
-  });
 
-  // Two edits within 200 ms announce only the final text.
-  await own.locator("#own-text").fill("x");
+  const observe = async (): Promise<void> => {
+    await page.waitForTimeout(100);
+    await page.evaluate(() => {
+      const el = document.querySelector("[data-compare] > [data-announce]") as HTMLElement;
+      const seen: string[] = [];
+      (window as unknown as { __seen: string[] }).__seen = seen;
+      new MutationObserver(() => seen.push(el.textContent ?? "")).observe(el, { childList: true, characterData: true, subtree: true });
+    });
+  };
+  const seenMessages = () => page.evaluate(() => (window as unknown as { __seen: string[] }).__seen);
+
+  // GPT-2 alone: two edits within 200 ms announce only the final text, with one count.
+  await observe();
+  await card.locator("#compare-input").fill("x");
   await page.waitForTimeout(100);
-  await own.locator("#own-text").fill("Unbelievable results, 2026!");
+  await card.locator("#compare-input").fill("Unbelievable results, 2026!");
+  await expect(live).toHaveText(GPT2_ONLY_ANNOUNCEMENT, { timeout: 3000 });
+  await page.waitForTimeout(700);
+  const first = await seenMessages();
+  expect(first).toHaveLength(1);
+  const gpt2Only = GPT2_ONLY_ANNOUNCEMENT.exec(first[0] as string);
+  expect(gpt2Only).not.toBeNull();
+  const gpt2Chips = await card.locator('[data-row="gpt2"] [data-chip]').count();
+  expect(Number(gpt2Only?.[1])).toBe(gpt2Chips);
+
+  // Once BERT is loaded the same single announcement carries both counts.
+  await card.locator("[data-load]").click();
+  await expect(card).toHaveAttribute("data-compare-bert", "ready");
+  await observe();
+  await card.locator("#compare-input").fill("x");
+  await page.waitForTimeout(100);
+  await card.locator("#compare-input").fill("Unbelievable results, 2026!");
   await expect(live).toHaveText(ANNOUNCEMENT, { timeout: 3000 });
   await page.waitForTimeout(700);
-  const seen = await page.evaluate(() => (window as unknown as { __seen: string[] }).__seen);
+  const seen = await seenMessages();
   expect(seen).toHaveLength(1);
 
   const match = ANNOUNCEMENT.exec(seen[0] as string);
   expect(match).not.toBeNull();
   for (const [i, row] of ROW_ORDER.entries()) {
-    const chips = await own.locator(`[data-row="${row}"] [data-chip]`).count();
+    const chips = await card.locator(`[data-row="${row}"] [data-chip]`).count();
     expect(Number(match?.[i + 1]), row).toBe(chips);
-    await expect(liveCount(own, row), row).toHaveText(String(chips));
+    await expect(liveCount(card, row), row).toHaveText(String(chips));
   }
 });
 
@@ -287,77 +461,102 @@ test("(g) a tokenizer that throws replaces the rows by one clear message, the bo
       return original.call(this, input);
     };
   });
-  const { own } = await openReadyOwn(page);
+  const card = await openBoth(page);
   await page.evaluate(() => {
     (window as unknown as { __breakEncoder?: boolean }).__breakEncoder = true;
   });
-  await own.locator("#own-text").fill("something new");
-  await expect(own.locator("[data-own-failure]")).toHaveText(
+  await card.locator("#compare-input").fill("something new");
+  await expect(card.locator("[data-compare-failure]")).toHaveText(
     "The tokenizers could not run on this text. Edit the text, or reload the page. Your text stays in your browser.",
   );
-  await expect(own.locator("[data-row]")).toHaveCount(0);
-  await expect(own.locator("#own-text")).toBeEditable();
+  await expect(card.locator("[data-row]")).toHaveCount(0);
+  await expect(card.locator("#compare-input")).toBeEditable();
 
   await page.evaluate(() => {
     (window as unknown as { __breakEncoder?: boolean }).__breakEncoder = false;
   });
-  await own.locator("#own-text").fill("hello");
-  await expect(own.locator("[data-own-failure]")).toHaveCount(0);
-  await expect(own.locator("[data-row]")).toHaveCount(3);
-  expect(await own.locator('[data-row="gpt2"] [data-chip]').count()).toBeGreaterThan(0);
+  await card.locator("#compare-input").fill("hello");
+  await expect(card.locator("[data-compare-failure]")).toHaveCount(0);
+  await expect(card.locator("[data-row]")).toHaveCount(2);
+  expect(await card.locator('[data-row="gpt2"] [data-chip]').count()).toBeGreaterThan(0);
 });
 
 test("(h) chips are hidden from assistive technology and the tables list the same counts; the empty text shows the empty state", async ({
   page,
 }) => {
-  const { own } = await openReadyOwn(page);
-  await own.locator("#own-text").fill("A \u{1F642} and numbers 12345");
+  const card = await openBoth(page);
+  await card.locator("#compare-input").fill("A \u{1F642} and numbers 12345");
   for (const row of ROW_ORDER) {
-    await expect(own.locator(`[data-row="${row}"] [aria-hidden="true"]`).first()).toBeAttached();
+    await expect(card.locator(`[data-row="${row}"] [aria-hidden="true"]`).first()).toBeAttached();
   }
 
-  const details = own.locator("details[data-alt-tables]");
-  await expect(details.locator("summary")).toHaveText("View your results as tables");
+  const details = card.locator("details[data-alt-tables]");
+  await expect(details).toHaveCount(1);
+  await expect(details.locator("summary")).toHaveText("View these results as tables");
   await details.locator("summary").click();
   const tables = details.locator("table");
-  await expect(tables).toHaveCount(3);
-  await expect(tables.locator("caption")).toHaveText(["Tokens for the toy tokenizer", "Tokens for GPT-2", "Tokens for BERT"]);
+  await expect(tables).toHaveCount(2);
+  await expect(tables.locator("caption")).toHaveText(["Tokens for GPT-2", "Tokens for BERT"]);
   for (const [i, row] of ROW_ORDER.entries()) {
-    const chips = await own.locator(`[data-row="${row}"] [data-chip]`).count();
+    const chips = await card.locator(`[data-row="${row}"] [data-chip]`).count();
     expect(await tables.nth(i).locator("tbody tr").count(), row).toBe(chips);
-    await expect(liveCount(own, row), row).toHaveText(String(chips));
+    await expect(liveCount(card, row), row).toHaveText(String(chips));
   }
 
-  // Empty text: each row says there is nothing to split, with the own-text wording.
-  await own.locator("#own-text").fill("");
-  await expect(own.locator("[data-empty]")).toHaveCount(3);
-  await expect(own.locator("[data-empty] .empty-title").first()).toHaveText("Nothing to split yet");
-  await expect(own.locator("[data-empty] .empty-body").first()).toHaveText(
+  // Empty text: each row says there is nothing to split, with the box-above wording.
+  await card.locator("#compare-input").fill("");
+  await expect(card.locator("[data-empty]")).toHaveCount(2);
+  await expect(card.locator("[data-empty] .empty-title").first()).toHaveText("Nothing to split yet");
+  await expect(card.locator("[data-empty] .empty-body").first()).toHaveText(
     "Type or paste some text above and it will be split into tokens here.",
   );
-  for (const row of ROW_ORDER) await expect(liveCount(own, row), row).toHaveText("0");
+  for (const row of ROW_ORDER) await expect(liveCount(card, row), row).toHaveText("0");
 });
 
-test("(i) the ready block shows the privacy line linked to the box, and picker changes and typing never touch each other", async ({ page }) => {
-  const { card, own } = await openReadyOwn(page);
-  await expect(own.locator("label[for='own-text']")).toHaveText("Your text");
-  const privacy = own.locator("#own-privacy");
+test("(h2) after typing, before BERT is loaded, there is one row and one table, both for GPT-2", async ({ page }) => {
+  const card = await openReady(page);
+  await card.locator("#compare-input").fill("A \u{1F642} and numbers 12345");
+  await expect(card.locator("[data-row]")).toHaveCount(1);
+  const details = card.locator("details[data-alt-tables]");
+  await details.locator("summary").click();
+  await expect(details.locator("table")).toHaveCount(1);
+  await expect(details.locator("table caption")).toHaveText("Tokens for GPT-2");
+  const chips = await card.locator('[data-row="gpt2"] [data-chip]').count();
+  expect(await details.locator("tbody tr").count()).toBe(chips);
+  await expect(liveCount(card, "gpt2")).toHaveText(String(chips));
+});
+
+test("(i) the ready card shows the privacy line linked to the box; the note belongs to the example and goes away when the text is edited; a picker change or the reset button brings the example back", async ({
+  page,
+}) => {
+  const card = await openReady(page);
+  await expect(card.locator("label[for='compare-input']")).toHaveText("Your text (an example, or type your own)");
+  const privacy = card.locator("#compare-privacy");
   await expect(privacy).toHaveText("Your text stays in your browser. Nothing is sent anywhere.");
-  await expect(own.locator("#own-text")).toHaveAttribute("aria-describedby", "own-privacy");
-  await expect(own).toContainText("Counts here are computed in your browser with the downloaded files.");
-  await expect(own.locator("[data-note]")).toHaveCount(0);
-  await expect(own.locator("[data-source]")).toHaveCount(0);
+  await expect(card.locator("#compare-input")).toHaveAttribute("aria-describedby", "compare-privacy");
+  await expect(card).toContainText("Rows for text you type are computed in your browser with the downloaded files.");
+  await expectCompareText(card, FIRST.text);
 
-  // Typing leaves the curated rows alone.
-  const note = await card.locator("[data-note]").textContent();
-  await own.locator("#own-text").fill("my own words");
-  await expect(card.locator("[data-compare-text]")).toHaveText(FIRST.text);
-  await expect(card.locator("[data-note]")).toHaveText(note ?? "");
-  for (const row of ROW_ORDER) {
-    await expect(card.locator(`[data-row="${row}"] [data-row-count]`).first(), row).toHaveText(String(countOf(FIRST.id, row)));
-  }
+  // Unedited: the example's note is there and there is nothing to reset.
+  await expect(card.locator("[data-note]")).toHaveText(NOTES[FIRST.id] as string);
+  await expect(card.locator("[data-compare-reset]")).toHaveCount(0);
 
-  // A later picker change leaves the typed text alone.
+  // Typing takes the note away (it was about the example) and offers the way back. The picker keeps its
+  // selection.
+  await card.locator("#compare-input").fill("my own words");
+  await expect(card.locator("[data-note]")).toHaveCount(0);
+  await expect(card.locator(`input[type="radio"][value="${FIRST.id}"]`)).toBeChecked();
+  await card.locator("[data-compare-reset]").click();
+  await expect(card.locator("#compare-input")).toHaveValue(FIRST.text);
+  await expect(card.locator("#compare-input")).toBeFocused();
+  await expect(card.locator("[data-note]")).toHaveText(NOTES[FIRST.id] as string);
+  await expect(card.locator("[data-compare-reset]")).toHaveCount(0);
+  for (const row of ROW_ORDER) await expect(liveCount(card, row), row).toHaveText(String(countOf(FIRST.id, row)));
+
+  // A picker change after typing replaces the typed text by the picked example and its own note.
+  await card.locator("#compare-input").fill("my own words again");
   await pick(card, "emoji");
-  await expect(own.locator("#own-text")).toHaveValue("my own words");
+  await expect(card.locator("#compare-input")).toHaveValue(EXAMPLES.find((e) => e.id === "emoji")?.text as string);
+  await expect(card.locator("[data-note]")).toHaveText(NOTES.emoji as string);
+  for (const row of ROW_ORDER) await expect(liveCount(card, row), row).toHaveText(String(countOf("emoji", row)));
 });

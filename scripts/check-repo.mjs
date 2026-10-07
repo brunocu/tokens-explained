@@ -1,7 +1,7 @@
 // Reader-text safety and privacy lint (T-01-12, T-01-13). Phase 1 has no runtime
 // network or storage at all. Phase 2: one reviewed exemption (T-02-21, T-02-23). The
 // network-call rule is skipped for exactly the paths in FETCH_ALLOWED_FILES (the loader that
-// downloads two same-origin tokenizer files on a button press); every other rule still applies
+// downloads same-origin tokenizer files, from onMount or a button press); every other rule still applies
 // to those paths and the network-call rule still applies everywhere else. A later phase that
 // legitimately needs more must edit BANNED or FETCH_ALLOWED_FILES after review. Walks the src
 // directory itself (not git's file list) so new uncommitted files are covered. *.test.ts files
@@ -87,7 +87,7 @@ function selfTest() {
   if (scanText(call, allowed).length !== 0) throw new Error("self-test: the allowed path was flagged for the network call");
   for (const other of [
     undefined,
-    "src/components/OwnText.svelte",
+    "src/components/Comparison.svelte",
     "src/components/other/loadTokenizer.ts",
     "src/core/loadTokenizer.ts",
     "x/src/components/loadTokenizer.ts",

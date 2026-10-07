@@ -1,24 +1,32 @@
 ---
-// Build-time static token display for prose (TOK-10, Pitfall 4). Every split and every
-// count in the post comes from the shipped tokenizer here; no number is typed into prose.
-// A false claim fails the build. Rendered without a client directive: static HTML, no script.
+// Build-time static token display for prose (TOK-10, Pitfall 4, D-11). Every figure is cut by
+// the real GPT-2 tokenizer at build time, and every count in the post comes from it; no number
+// is typed into prose. A false claim fails the build. Rendered without a client directive:
+// static HTML, no script.
 import TokenDisplay from "../TokenDisplay.svelte";
-import { tokenize } from "../../core/toy.ts";
+import { buildGpt2 } from "../../core/buildTokenizer.ts";
 import { groupBytes } from "../../core/chars.ts";
 import { countCompositeCharacters, countSplitCharacters, countWords } from "../../core/counts.ts";
 import { describeTokens } from "../../core/display.ts";
 import { assertClaims, type Claim } from "../../core/claims.ts";
+import { SAMPLE_SENTENCE } from "../../core/stepper.ts";
 
+// `sample` cuts the stepper's own sample sentence (the constant, never retyped) and marks the
+// figure data-figure="sample" so tests can tell it from the other two.
 interface Props {
-  text: string;
+  text?: string;
+  sample?: boolean;
   expect?: Claim[];
   legend?: boolean;
 }
 
-const { text, expect: claims, legend = false } = Astro.props;
+const { text: givenText, sample = false, expect: claims, legend = false } = Astro.props;
+const text = sample ? SAMPLE_SENTENCE : givenText;
+if (text === undefined) throw new Error("TokenFigure needs a text or the sample prop");
 
-const tokens = tokenize(text);
-assertClaims(text, claims ?? []);
+const gpt2 = await buildGpt2();
+const tokens = gpt2.tokenize(text);
+assertClaims(text, claims ?? [], gpt2);
 
 const splitCount = countSplitCharacters(text, tokens);
 // Prose figures never show the byte peek, so showBytes is false here, same rule as the playground.
@@ -27,14 +35,14 @@ const words = countWords(text);
 const caption = `${tokens.length} ${tokens.length === 1 ? "token" : "tokens"}, ${words} ${words === 1 ? "word" : "words"}`;
 ---
 
-<figure class="toy-tokens">
+<figure class="token-figure" data-figure={sample ? "sample" : undefined}>
   <TokenDisplay tokens={tokens} mode="text" showBytes={false} splitCount={splitCount} compositeCount={compositeCount} legend={legend} emptyState={false} />
   <figcaption>{caption}</figcaption>
   <p class="sr-only">Tokens for the example: {describeTokens(tokens)}</p>
 </figure>
 
 <style>
-  .toy-tokens {
+  .token-figure {
     box-sizing: border-box;
     margin: var(--space-lg) 0;
     padding: var(--space-md);
@@ -43,7 +51,7 @@ const caption = `${tokens.length} ${tokens.length === 1 ? "token" : "tokens"}, $
     border-radius: 8px;
   }
   @media (min-width: 640px) {
-    .toy-tokens {
+    .token-figure {
       padding: var(--space-lg);
     }
   }

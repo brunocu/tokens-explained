@@ -15,7 +15,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FOUND-04**: Reader using a screen reader or keyboard can access the token display through a text/table alternative and keyboard-operable controls
 - [x] **FOUND-05**: Reader who prefers reduced motion sees no animated transitions in the token display or steppers
 - [x] **FOUND-06**: Reader sees tokens that split a single character (e.g. an emoji) shown as partial-character chips, never as a replacement symbol
-- [x] **FOUND-07**: Reader sees toy tokenizer output produced from bytes with a pre-split step, so the toy teaches the same pipeline real tokenizers use
+- [x] **FOUND-07**: Reader sees real tokenizer output (GPT-2, which works on bytes after a pre-split step) in the playground and the post's examples, so what they see is the pipeline real models use
 
 ### Post 1: What is a token?
 
@@ -25,7 +25,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOK-04**: Reader can pick example texts and reset the playground to its default
 - [x] **TOK-05**: Reader can step through BPE merges one at a time with Next, Back and Reset on a small corpus
 - [x] **TOK-06**: Reader can see pair counts and the tie-break rule at each BPE step
-- [x] **TOK-07**: Reader can compare toy tokenizer output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages)
+- [x] **TOK-07**: Reader can compare two real tokenizers of different kinds, GPT-2 (byte-level BPE) and BERT (WordPiece), side by side on curated inputs (numbers, emoji, other languages)
 - [x] **TOK-08**: Reader can see the same sentence in many languages and how token counts differ
 - [x] **TOK-09**: Reader gets a short plain-language note on each comparison saying what to notice
 - [x] **TOK-10**: Reader reads a post that defines "token" in plain language and corrects the "token = word" misconception, with no code or math required
@@ -112,14 +112,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-04 | Phase 1 | Complete |
 | FOUND-05 | Phase 1 | Complete |
 | FOUND-06 | Phase 1 | Complete |
-| FOUND-07 | Phase 1 | Complete |
+| FOUND-07 | Phase 1, Phase 2.1 | Complete |
 | TOK-01 | Phase 1 | Complete |
 | TOK-02 | Phase 1 | Complete |
 | TOK-03 | Phase 1 | Complete |
 | TOK-04 | Phase 1 | Complete |
 | TOK-05 | Phase 2 | Complete |
 | TOK-06 | Phase 2 | Complete |
-| TOK-07 | Phase 2 | Complete |
+| TOK-07 | Phase 2, Phase 2.1 | Complete |
 | TOK-08 | Phase 2 | Complete |
 | TOK-09 | Phase 2 | Complete |
 | TOK-10 | Phase 1 | Complete |
@@ -140,6 +140,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 28 ✓
 - Unmapped: 0
 
+FOUND-07 and TOK-07: amended by Phase 2.1 on 2026-10-07: wording and status reopened; Complete again only when Phase 2.1 verifies. Re-verified 2026-10-07 by the plan 02.1-09 automated gate on three browsers and the author's read-through and human checks.
+
 ---
 *Requirements defined: 2026-10-03*
-*Last updated: 2026-10-03 after roadmap creation (traceability mapped)*
+*Last updated: 2026-10-07 after plan 02.1-09 re-verified FOUND-07 and TOK-07 (Complete)*

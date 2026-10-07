@@ -57,7 +57,11 @@ describe("what-to-notice notes (D-13, T-02-14)", () => {
   });
 
   it.each(ALL_NOTES)("%s: is about the comparison", (_name, note) => {
-    expect(/toy|GPT-2|BERT|tokenizer/.test(note)).toBe(true);
+    expect(/GPT-2|BERT|tokenizer/.test(note)).toBe(true);
+  });
+
+  it.each(ALL_NOTES)("%s: does not mention the retired toy tokenizer", (_name, note) => {
+    expect(/\btoy\b/i.test(note)).toBe(false);
   });
 
   it.each(ALL_NOTES)("%s: does not call one tokenizer better", (_name, note) => {
@@ -66,17 +70,10 @@ describe("what-to-notice notes (D-13, T-02-14)", () => {
 });
 
 describe("tokenizer rows (D-13, TOK-09)", () => {
-  it("lists toy, GPT-2 and BERT in that order, each year-named except the toy", () => {
-    expect(TOKENIZER_ROWS.map((r) => r.id)).toEqual(["toy", "gpt2", "bert"]);
-    expect(TOKENIZER_ROWS.map((r) => r.name)).toEqual([
-      "Toy tokenizer (from the playground)",
-      "GPT-2 (2019)",
-      "BERT, uncased (2018)",
-    ]);
-    for (const row of TOKENIZER_ROWS) {
-      if (row.id === "toy") expect(row.name).not.toMatch(/\d{4}/);
-      else expect(row.name).toMatch(/\(\d{4}\)/);
-    }
+  it("lists GPT-2 and BERT in that order, each named with its year", () => {
+    expect(TOKENIZER_ROWS.map((r) => r.id)).toEqual(["gpt2", "bert"]);
+    expect(TOKENIZER_ROWS.map((r) => r.name)).toEqual(["GPT-2 (2019)", "BERT, uncased (2018)"]);
+    for (const row of TOKENIZER_ROWS) expect(row.name).toMatch(/\(\d{4}\)/);
   });
 
   it("tells the reader that BERT removes accents and marks continuation pieces with ##", () => {

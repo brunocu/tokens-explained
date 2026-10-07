@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { openPlaygroundReady } from "./helpers.ts";
 
 // WCAG 2.2 A and AA scans of the finished post in both themes at 1280 px (FOUND-04),
 // plus the structural checks axe does not make. Phone width lives in
@@ -10,10 +11,7 @@ const EMOJI_TEXT = "Great job \u{1F389} see you soon \u{1F642}";
 
 /** Put the page in the busiest state: partial chips present and the table open. */
 async function prepare(page: Page): Promise<void> {
-  await page.goto("what-is-a-token/");
-  const card = page.locator("[data-playground]");
-  await card.scrollIntoViewIfNeeded();
-  await expect(card).toHaveAttribute("data-state", "ready");
+  await openPlaygroundReady(page, "what-is-a-token/");
   await page.locator("#t").fill(EMOJI_TEXT);
   await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
   await page.locator("details[data-table] summary").click();
@@ -39,10 +37,7 @@ for (const scheme of ["light", "dark"] as const) {
   test(`(${scheme}) axe finds no violation with frames, name labels, Token IDs and Peek on, table open`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: scheme });
-    await page.goto("what-is-a-token/");
-    const card = page.locator("[data-playground]");
-    await card.scrollIntoViewIfNeeded();
-    await expect(card).toHaveAttribute("data-state", "ready");
+    await openPlaygroundReady(page, "what-is-a-token/");
     await page.locator("#t").fill(FRAMES_TEXT);
     await expect(page.locator("[data-playground] [data-char-frame]").first()).toBeVisible();
     // Both label styles are on screen: a character label and a name-style label.
@@ -53,6 +48,53 @@ for (const scheme of ["light", "dark"] as const) {
     await page.locator("label", { hasText: "Peek under the hood" }).click();
     await page.locator("details[data-table] summary").click();
     await expect(page.locator("details[data-table]")).toHaveAttribute("open", "");
+    const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+    const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" ; ")}`);
+    expect(summary, summary.join("\n")).toEqual([]);
+  });
+}
+
+// The playground's two download states (D-05, D-06, D-07): the status line while the file is on
+// its way, and the message with Try again after it failed. Colour contrast of both is checked.
+const GPT2_FILE = /tokenizers\/gpt2\.json$/;
+
+for (const scheme of ["light", "dark"] as const) {
+  test(`(${scheme}) axe finds no violation while the GPT-2 file is still downloading`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: scheme });
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(GPT2_FILE, async (route) => {
+      await gate;
+      await route.continue();
+    });
+    try {
+      await page.goto("what-is-a-token/");
+      const card = page.locator("[data-playground]");
+      await card.scrollIntoViewIfNeeded();
+      await expect(card).toHaveAttribute("data-state", "ready");
+      await expect(card).toHaveAttribute("data-tokenizer", "loading");
+      await expect(page.locator("[data-tokenizer-status]")).toBeVisible();
+      const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+      const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" ; ")}`);
+      expect(summary, summary.join("\n")).toEqual([]);
+    } finally {
+      release();
+    }
+  });
+
+  test(`(${scheme}) axe finds no violation when the GPT-2 file failed to download`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.route(GPT2_FILE, (route) => route.abort("failed"));
+    await page.goto("what-is-a-token/");
+    const card = page.locator("[data-playground]");
+    await card.scrollIntoViewIfNeeded();
+    await expect(card).toHaveAttribute("data-tokenizer", "failed");
+    await expect(page.locator("[data-tokenizer-load-error]")).toBeVisible();
+    await expect(page.locator("[data-tokenizer-retry]")).toBeVisible();
     const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
     const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" ; ")}`);
     expect(summary, summary.join("\n")).toEqual([]);

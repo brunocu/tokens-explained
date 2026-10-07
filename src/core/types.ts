@@ -7,22 +7,3 @@ export type Token = {
   /** True for a reserved marker the tokenizer added, such as [UNK]. */
   special?: boolean;
 };
-
-export type MergeMeta = {
-  corpus: string;
-  retrieved: string;
-  merges: number;
-  tieBreak: string;
-  preSplit: string;
-};
-
-export type MergeData = {
-  meta: MergeMeta;
-  merges: ReadonlyArray<readonly [number, number]>;
-};
-
-export type ToyTokenizer = {
-  tokenize(text: string): Token[];
-  readonly vocabSize: number;
-  vocabBytes(id: number): Uint8Array;
-};

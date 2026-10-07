@@ -289,9 +289,12 @@ test("(m) the end-of-word mark is retired: no section sign anywhere in the stepp
 });
 
 test("(n) stepping makes no request for a tokenizer file", async ({ page }) => {
+  const card = await openStepper(page);
+  // The playground on this page starts its GPT-2 download at page load (D-04), so wait for it to
+  // finish first; what is asserted is that the stepper's own interaction asks for nothing.
+  await expect(page.locator("[data-playground]")).toHaveAttribute("data-tokenizer", "ready");
   const urls: string[] = [];
   page.on("request", (r) => urls.push(r.url()));
-  const card = await openStepper(page);
   await card.locator("[data-run]").click();
   await card.locator("[data-reset]").click();
   await card.locator("[data-run]").click();

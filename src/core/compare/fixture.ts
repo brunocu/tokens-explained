@@ -7,12 +7,12 @@
 // no replacement character (FOUND-06). Sentences and their sources are NOT in the fixture;
 // they live in languages.ts, so there is one place to correct them.
 import { hexBytes } from "../display.ts";
-import { isValidUtf8 } from "../toy.ts";
+import { isValidUtf8 } from "../chars.ts";
 import type { Token } from "../types.ts";
 
 export type FixtureToken = { id: number; hex: string; special?: true };
 
-export type FixtureRows = { toy: FixtureToken[]; gpt2: FixtureToken[]; bert: FixtureToken[] };
+export type FixtureRows = { gpt2: FixtureToken[]; bert: FixtureToken[] };
 
 type TokenizerSource = { repo: string; commit: string; license: string; sha256: string };
 
@@ -20,10 +20,15 @@ export type ComparisonFixture = {
   meta: {
     /** YYYY-MM-DD, written by the precompute script; the only field a freshness check ignores. */
     generatedAt: string;
-    toy: { merges: number; mergesSha256: string };
     tokenizers: { gpt2: TokenizerSource; bert: TokenizerSource };
-    download: { combinedGzipBytes: number; sizeLabelMb: string };
+    download: {
+      /** Per-file download sizes: GPT-2 downloads at page load, BERT only on a click (D-04, D-09). */
+      gpt2: { gzipBytes: number; sizeLabelMb: string };
+      bert: { gzipBytes: number; sizeLabelMb: string };
+    };
   };
+  /** The playground's default text and its GPT-2 tokens, so the first paint is real (D-07). */
+  defaultText: { text: string; gpt2: FixtureToken[] };
   examples: Array<{ id: string; label: string; text: string; rows: FixtureRows }>;
   languages: Array<{ id: string; rows: FixtureRows }>;
 };

@@ -1,6 +1,5 @@
 // The one BPE merge loop and the one tie-break rule (D-04, R-02 d). A pure module: no
-// node: imports, so the offline trainer (scripts/lib/bpe-train.ts) and the browser
-// stepper (src/core/stepper.ts) both call it and cannot disagree.
+// node: imports, so the browser stepper (src/core/stepper.ts) and its tests can call it.
 
 /** Pair key: ids stay below 65536 (256 base ids plus at most a few thousand merges). */
 export const keyOf = (left: number, right: number): number => left * 65536 + right;
@@ -44,7 +43,7 @@ export function rankPairs(counts: ReadonlyMap<number, number>): PairEntry[] {
  * Learn up to `nMerges` merges over weighted pieces. Mutates `pieces`. Merge m gets id 256 + m.
  * Returns [left, right] id pairs and stops early when no pair is left. When `onStep` is given,
  * the pieces are copied before each merge so the hook can show the before and after states;
- * without a hook nothing is copied, which keeps the 800-merge toy training fast.
+ * without a hook nothing is copied.
  */
 export function trainOnPieces(
   pieces: BpePiece[],

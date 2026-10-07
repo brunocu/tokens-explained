@@ -2,8 +2,13 @@ import { describe, expect, it } from "vitest";
 import { render } from "svelte/server";
 import TokenDisplay from "./TokenDisplay.svelte";
 import TokenLegend from "./TokenLegend.svelte";
-import { tokenize } from "../core/toy.ts";
+import { buildGpt2 } from "../core/buildTokenizer.ts";
 import type { Token } from "../core/types.ts";
+
+// Tests marked "GPT-2" below render real GPT-2 output (D-01). Top-level await keeps describe-time
+// tokenising working.
+const gpt2 = await buildGpt2();
+const tokenize = (text: string): Token[] => gpt2.tokenize(text);
 
 // Server-rendered component tests with synthetic tokens (PD-05). The component only ever
 // renders text through interpolation, so the string it produces is the thing under test.
@@ -19,7 +24,7 @@ function html(props: Props): string {
 }
 
 const tok = (bytes: number[], isPartial: boolean, id = 0): Token => ({ id, bytes: Uint8Array.from(bytes), isPartial });
-/** One partial token per byte, the shape the toy gives non-ASCII text. */
+/** One partial token per byte: the worst case for a character cut into pieces. */
 const partials = (...bytes: number[]): Token[] => bytes.map((b, i) => tok([b], true, 1000 + i));
 const utf8 = (text: string): number[] => Array.from(new TextEncoder().encode(text));
 
@@ -153,22 +158,26 @@ describe("TokenDisplay frames (server-rendered)", () => {
     expect(tagsWith(out, "data-chip-bytes")).toHaveLength(3);
   });
 
-  it("renders no frame for ASCII-only tokens", () => {
-    const out = html({ tokens: tokenize("hello world") });
+  it("renders no frame for hand-built ASCII-only tokens", () => {
+    const out = html({ tokens: [tok(utf8("hello"), false, 1), tok(utf8(" world"), false, 2)] });
     expect(out).not.toContain("data-char-frame");
     expect(out).not.toContain("data-char-label");
+    expect(tagsWith(out, "data-chip")).toHaveLength(2);
+  });
+
+  it("GPT-2: renders no frame for the default-style sentence", () => {
+    const out = html({ tokens: tokenize("The quick brown fox jumps over the lazy dog.") });
+    expect(out).not.toContain("data-char-frame");
     expect(tagsWith(out, "data-chip").length).toBeGreaterThan(0);
   });
 
-  it("renders no frame for the toy's output on the default-style sentence", () => {
-    const out = html({ tokens: tokenize("The quick brown fox jumps over the lazy dog.") });
-    expect(out).not.toContain("data-char-frame");
-  });
-
-  it("renders the toy's output for 日本語 as three frames of three chips", () => {
+  it("GPT-2: renders 日本語 as three frames of two chips each (a two-byte piece and a one-byte piece)", () => {
     const out = html({ tokens: tokenize("日本語") });
     expect(tagsWith(out, "data-char-frame")).toHaveLength(3);
-    expect(tagsWith(out, "data-chip")).toHaveLength(9);
+    expect(tagsWith(out, "data-chip")).toHaveLength(6);
+    for (const ch of ["日", "本", "語"]) expect(out).toContain(`>${ch}</span>`);
+    // Only the second chip of each frame is marked as a cut.
+    expect(tagsWith(out, "data-chip").map((t) => /class="[^"]*\bcut\b/.test(t))).toEqual([false, true, false, true, false, true]);
   });
 
   it("renders the empty state, and no frame, for an empty token list", () => {
@@ -186,14 +195,34 @@ describe("TokenDisplay frames (server-rendered)", () => {
     }
   });
 
-  it("renders the toy's output for 男女 and the party popper in IDs mode with no byte group (the rule is dormant)", () => {
-    for (const text of ["男女", "\u{1f389}"]) {
-      for (const showBytes of [false, true]) {
-        const out = html({ tokens: tokenize(text), mode: "ids", showBytes });
-        expect(tagsWith(out, "data-ch")).toHaveLength(0);
-        expect(out).not.toContain('class="gap"');
-      }
+  it("hand-built one-byte tokens in IDs mode never get an underlined byte group (a group needs two bytes in one chip)", () => {
+    for (const showBytes of [false, true]) {
+      const out = html({ tokens: partials(...utf8("男女")), mode: "ids", showBytes });
+      expect(tagsWith(out, "data-ch")).toHaveLength(0);
+      expect(out).not.toContain('class="gap"');
     }
+  });
+
+  it("GPT-2: the party popper in IDs mode shows an ID and hex on each of its three chips, grouping only the two-byte piece", () => {
+    // GPT-2 cuts it into F0 9F, 8E and 89, so one chip holds two bytes of the character.
+    for (const showBytes of [false, true]) {
+      const out = html({ tokens: tokenize("\u{1f389}"), mode: "ids", showBytes });
+      expect(tagsWith(out, "data-char-frame")).toHaveLength(1);
+      expect(tagsWith(out, "data-chip")).toHaveLength(3);
+      expect(tagsWith(out, "data-chip-id")).toHaveLength(3);
+      expect(tagsWith(out, "data-chip-bytes")).toHaveLength(3);
+      expect(tagsWith(out, "data-ch")).toHaveLength(1);
+      expect(out).toContain('data-ch="F0 9F"');
+      expect(out).not.toContain('class="gap"');
+      expect(out).not.toContain(REPLACEMENT);
+    }
+  });
+
+  it("GPT-2: 日本語 in IDs mode groups the two-byte piece of each character and leaves the one-byte piece plain", () => {
+    const out = html({ tokens: tokenize("日本語"), mode: "ids" });
+    expect(tagsWith(out, "data-chip-id")).toHaveLength(6);
+    expect(tagsWith(out, "data-ch")).toHaveLength(3);
+    expect(out).not.toContain(REPLACEMENT);
   });
 
   it("never gives a frame or a label a handler, a tabindex or an aria role", () => {
@@ -262,6 +291,37 @@ describe("TokenDisplay legend and combined-character note", () => {
     const plain = render(TokenLegend, { props: {} }).body.replace(/<!--[\s\S]*?-->/g, "");
     expect(plain).not.toContain("[UNK]");
     expect(plain).toContain("data-legend");
+  });
+
+  it("shows the special-token sentence, and not the [UNK] sentence, when only a marker flag is set", () => {
+    const MARKER = "one token the tokenizer keeps whole as a signal to the model";
+    const UNK = "[UNK] means the tokenizer had no piece";
+    const only = (props: Record<string, unknown>): string =>
+      render(TokenLegend, { props }).body.replace(/<!--[\s\S]*?-->/g, "");
+    const marker = only({ marker: true });
+    expect(marker).toContain(MARKER);
+    expect(marker).toContain("|endoftext|");
+    expect(marker).not.toContain(UNK);
+    expect(marker).not.toContain("gave up");
+    expect(only({ special: true })).toContain(UNK);
+    expect(only({ special: true })).not.toContain(MARKER);
+    expect(only({})).not.toContain(MARKER);
+    expect(only({})).not.toContain(UNK);
+  });
+
+  it("renders the marker sentence, not the [UNK] sentence, for GPT-2's end-of-text token, and neither for ordinary tokens", () => {
+    const endOfText: Token = { id: 50256, bytes: new TextEncoder().encode("<|endoftext|>"), isPartial: false, special: true };
+    const unk: Token = { id: 100, bytes: new TextEncoder().encode("[UNK]"), isPartial: false, special: true };
+    const plain = tok([0x68, 0x69], false, 5);
+    const withMarker = render2({ legend: true, tokens: [plain, endOfText] });
+    expect(withMarker).toContain("one token the tokenizer keeps whole");
+    expect(withMarker).not.toContain("[UNK] means");
+    const withUnk = render2({ legend: true, tokens: [plain, unk] });
+    expect(withUnk).toContain("[UNK] means the tokenizer had no piece");
+    expect(withUnk).not.toContain("one token the tokenizer keeps whole");
+    const ordinary = render2({ legend: true, tokens: [plain] });
+    expect(ordinary).not.toContain("[UNK] means");
+    expect(ordinary).not.toContain("one token the tokenizer keeps whole");
   });
 
   it("renders the note only when compositeCount is above zero, after the split note, as a plain paragraph", () => {

@@ -50,7 +50,7 @@ for (const scheme of ["light", "dark"] as const) {
     await expect(card.locator('input[type="radio"][value="emoji"]')).toBeChecked();
     await card.locator("details[data-alt-tables] summary").click();
     await card.locator("details[data-source] summary").click();
-    await expect(card.locator("details[data-alt-tables] table")).toHaveCount(3);
+    await expect(card.locator("details[data-alt-tables] table")).toHaveCount(2);
     const summary = await scan(page);
     expect(summary, summary.join("\n")).toEqual([]);
   });
@@ -74,7 +74,7 @@ for (const scheme of ["light", "dark"] as const) {
       await expect(island.locator(`input[type="radio"][value="${language.id}"]`)).toBeChecked();
       await island.locator("details[data-alt-tables] summary").click();
       await page.locator("details[data-sentence-sources] summary").click();
-      await expect(island.locator("details[data-alt-tables] table")).toHaveCount(3);
+      await expect(island.locator("details[data-alt-tables] table")).toHaveCount(2);
       const results = await new AxeBuilder({ page }).withTags(TAGS).include('section[aria-labelledby="languages-heading"]').analyze();
       const summary = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" ; ")}`);
       expect(summary, summary.join("\n")).toEqual([]);
@@ -82,27 +82,52 @@ for (const scheme of ["light", "dark"] as const) {
   }
 }
 
-// The own-text block of the comparison card: ready (emoji text typed, tables open) and error.
+// The typed-text states of the comparison card. GPT-2 is live on its own, so the states are: GPT-2
+// ready with BERT idle (emoji text typed, tables open), both ready, a BERT failure, and a GPT-2 failure.
 for (const scheme of ["light", "dark"] as const) {
-  test(`(own text ${scheme}, ready, emoji, tables open) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({ page }) => {
+  test(`(typed text ${scheme}, GPT-2 ready, BERT idle, emoji, tables open) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: scheme });
     await page.goto("what-is-a-token/");
     const card = page.locator("[data-compare]");
     await card.scrollIntoViewIfNeeded();
     await expect(card).toHaveAttribute("data-state", "ready");
-    const own = card.locator("[data-owntext]");
-    await own.locator("[data-load]").click();
-    await expect(own).toHaveAttribute("data-own-state", "ready");
-    await own.locator("#own-text").fill("Great job \u{1F389} see you soon \u{1F642}");
-    await own.locator("details[data-alt-tables] summary").click();
-    await expect(own.locator("details[data-alt-tables] table")).toHaveCount(3);
-    await expect(own.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(2);
+    await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+    await expect(card).toHaveAttribute("data-compare-bert", "idle");
+    await card.locator("#compare-input").fill("Great job \u{1F389} see you soon \u{1F642} and more");
+    await card.locator("details[data-alt-tables] summary").click();
+    await expect(card.locator("details[data-alt-tables] table")).toHaveCount(1);
+    await expect(card.locator('[data-row="gpt2"] [data-char-frame]').first()).toBeAttached();
+    await expect(card.locator("[data-row]")).toHaveCount(1);
+    await expect(card.locator("[data-bert-pending]")).toBeVisible();
+    await expect(card.locator("[data-compare-reset]")).toBeVisible();
     const summary = await scan(page);
     expect(summary, summary.join("\n")).toEqual([]);
   });
 
-  test(`(own text ${scheme}, error) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({ page }) => {
+  test(`(typed text ${scheme}, both ready, emoji, tables open) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: scheme });
+    await page.goto("what-is-a-token/");
+    const card = page.locator("[data-compare]");
+    await card.scrollIntoViewIfNeeded();
+    await expect(card).toHaveAttribute("data-state", "ready");
+    await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+    await card.locator("[data-load]").click();
+    await expect(card).toHaveAttribute("data-compare-bert", "ready");
+    await card.locator("#compare-input").fill("Great job \u{1F389} see you soon \u{1F642}");
+    await card.locator("details[data-alt-tables] summary").click();
+    await expect(card.locator("details[data-alt-tables] table")).toHaveCount(2);
+    await expect(card.locator("[data-row]")).toHaveCount(2);
+    await expect(card.locator('[data-row="bert"] [data-special="true"]')).toHaveCount(2);
+    await expect(card.locator("[data-legend]")).toContainText("[UNK] means the tokenizer had no piece");
+    const summary = await scan(page);
+    expect(summary, summary.join("\n")).toEqual([]);
+  });
+
+  test(`(typed text ${scheme}, BERT error) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: scheme });
     await page.route("**/tokenizers/bert-uncased.json", (route) => route.abort());
@@ -110,9 +135,27 @@ for (const scheme of ["light", "dark"] as const) {
     const card = page.locator("[data-compare]");
     await card.scrollIntoViewIfNeeded();
     await expect(card).toHaveAttribute("data-state", "ready");
-    const own = card.locator("[data-owntext]");
-    await own.locator("[data-load]").click();
-    await expect(own.locator("[data-own-error]")).toBeVisible();
+    await expect(card).toHaveAttribute("data-compare-gpt2", "ready");
+    await card.locator("[data-load]").click();
+    await expect(card.locator('[data-compare-error="bert"]')).toBeVisible();
+    await expect(card.locator('[data-row="gpt2"]')).toBeVisible();
+    const summary = await scan(page);
+    expect(summary, summary.join("\n")).toEqual([]);
+  });
+
+  test(`(typed text ${scheme}, GPT-2 error) axe finds no WCAG 2.2 A or AA violation at 1280 px`, async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.emulateMedia({ colorScheme: scheme });
+    // The playground and the comparison card both ask for this file, so both show their error. The
+    // card keeps the precomputed example rows on screen.
+    await page.route("**/tokenizers/gpt2.json", (route) => route.abort());
+    await page.goto("what-is-a-token/");
+    const card = page.locator("[data-compare]");
+    await card.scrollIntoViewIfNeeded();
+    await expect(card).toHaveAttribute("data-state", "ready");
+    await expect(card.locator('[data-compare-error="gpt2"]')).toBeVisible();
+    await expect(card.locator('[data-retry="gpt2"]')).toBeVisible();
+    await expect(card.locator("[data-row]")).toHaveCount(2);
     const summary = await scan(page);
     expect(summary, summary.join("\n")).toEqual([]);
   });
