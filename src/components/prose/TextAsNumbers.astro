@@ -1,0 +1,71 @@
+---
+// A line of text shown as characters with the number a computer stores for each one (plan 02-10,
+// section "How does a computer store text?"). The numbers are the UTF-8 bytes of each character,
+// computed here at build time, so nothing is typed by hand. Static HTML, no script. The boxes are
+// hidden from screen readers; a hidden sentence lists the same characters and numbers.
+import { GLYPH_SPACE } from "../../core/display.ts";
+import { spokenText } from "../../core/stepper.ts";
+
+interface Props {
+  text: string;
+}
+
+const { text } = Astro.props;
+const encoder = new TextEncoder();
+const cells = Array.from(text).map((ch) => ({
+  ch,
+  shown: ch === " " ? GLYPH_SPACE : ch,
+  bytes: Array.from(encoder.encode(ch)),
+}));
+const spoken = cells.map((c) => `${spokenText(c.shown)} ${c.bytes.join(" ")}`).join(", ");
+---
+<figure class="text-numbers">
+  <div class="cells" aria-hidden="true">
+    {cells.map((c) => (<span class="cell"><span class="ch">{c.shown}</span><span class="num">{c.bytes.join(" ")}</span></span>))}
+  </div>
+  <p class="sr-only">The characters and their byte values: {spoken}.</p>
+  <figcaption>Each box holds one character, with the byte value the computer stores for it underneath.</figcaption>
+</figure>
+<style>
+  .text-numbers {
+    box-sizing: border-box;
+    margin: var(--space-lg) 0;
+    padding: var(--space-md);
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .cells {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 28px;
+    padding: 3px 4px 2px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    line-height: 1.15;
+  }
+  .ch {
+    font: 600 16px/1.15 var(--font-mono);
+    white-space: pre;
+  }
+  .num {
+    font: 400 11px/1.15 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+  .ch,
+  .num {
+    color: var(--text);
+  }
+  figcaption {
+    margin-top: var(--space-md);
+    font: 600 14px/1.4 var(--font-sans);
+    color: var(--muted);
+  }
+</style>

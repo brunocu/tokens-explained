@@ -46,7 +46,7 @@ test("(b) Reset text restores the default text with the same focus rule", async 
   await openReady(page);
   await page.locator('[data-example="emoji"]').click();
   await expect(page.locator("#t")).not.toHaveValue(DEFAULT_TEXT);
-  await page.locator("[data-reset]").click();
+  await page.locator("[data-playground] [data-reset]").click();
   await expectFocusAtEnd(page, DEFAULT_TEXT);
 });
 
@@ -57,7 +57,7 @@ test("(c) examples and Reset keep Token IDs and Peek under the hood as they were
   await page.locator('[data-example="numbers-dates"]').click();
   await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
   await expect(page.locator("[data-peek]")).toBeChecked();
-  await page.locator("[data-reset]").click();
+  await page.locator("[data-playground] [data-reset]").click();
   await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
   await expect(page.locator("[data-peek]")).toBeChecked();
 });
@@ -153,7 +153,7 @@ test("(i) every control is at least 44 by 44 CSS pixels", async ({ page }) => {
   await openReady(page);
   const targets = [
     ...(await page.locator("[data-example]").all()),
-    page.locator("[data-reset]"),
+    page.locator("[data-playground] [data-reset]"),
     page.locator("label.seg").first(),
     page.locator("label.seg").nth(1),
     peekLabel(page),

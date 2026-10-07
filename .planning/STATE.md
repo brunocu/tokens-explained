@@ -1,19 +1,19 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 2
-current_phase_name: BPE Stepper & Real-Tokenizer Comparison
+current_phase: 3
+current_phase_name: Embeddings, Context & Reasoning Posts
 status: planning
-stopped_at: Phase 01 complete, ready to plan Phase 2
-last_updated: "2026-10-06T03:54:01.470Z"
-last_activity: 2026-10-05
-last_activity_desc: Phase 01 complete, transitioned to Phase 2
-state_head: 00e9784b341a60c39dcf6701fee5d385653cb667
+stopped_at: Phase 02 complete, ready to plan Phase 3
+last_updated: "2026-10-07T01:34:44.168Z"
+last_activity: 2026-10-06
+last_activity_desc: Phase 02 complete, transitioned to Phase 3
+state_head: cf82ff16ed0db018e5bf0a1b37ce02d58358bd93
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
-  percent: 20
+  completed_phases: 2
+  total_plans: 17
+  completed_plans: 17
+  percent: 40
 ---
 
 # Project State
@@ -27,17 +27,17 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 2 — BPE Stepper & Real-Tokenizer Comparison
+Phase: 3 — Embeddings, Context & Reasoning Posts
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-05 — Phase 01 complete, transitioned to Phase 2
+Last activity: 2026-10-06 — Phase 02 complete, transitioned to Phase 3
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 17
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -46,6 +46,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 7 | - | - |
+| 02 | 10 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -63,6 +64,14 @@ Progress: [██░░░░░░░░] 20%
 | Phase 01 P05 | 6 min | 3 tasks | 8 files |
 | Phase 01 P06 | 4min | 2 tasks | 12 files |
 | Phase 01 P07 | 6min | 3 tasks | 12 files |
+| Phase 02 P01 | 12min | 2 tasks | 3 files |
+| Phase 02 P02 | 20min | 3 tasks | 15 files |
+| Phase 02 P03 | 25min | 2 tasks | 12 files |
+| Phase 02 P05 | 4 min | 3 tasks | 11 files |
+| Phase 02 P04 | 55min | 3 tasks | 18 files |
+| Phase 02 P06 | 8min | 3 tasks | 16 files |
+| Phase 02 P07 | 9min | 3 tasks | 10 files |
+| Phase 02 P08 | 10min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -88,6 +97,21 @@ Recent decisions affecting current work:
 - [Phase 01]: 01-06: table and spoken wording come from groupBytes context; unknown context falls back to hex, never a fallback sentence
 - [Phase 01]: 01-06: combined-character note is a plain paragraph under the split note and is not part of the live-region announcement
 - [Phase 01]: 01-07: fifth example needs no component change; post byte example is guarded by a TextEncoder test (T-01-22)
+- [Phase 02]: A1 whole UDHR Article 1 for all six languages
+- [Phase 02]: A2 [UNK] special chips plus '{k} of these are [UNK]' line
+- [Phase 02]: A3 BERT subline says 'removes accents'
+- [Phase 02]: A4 one shared tie-break comparator in src/core/bpe.ts
+- [Phase 02]: A5 Arabic Article 1 checked once against OHCHR page
+- [Phase 02]: 02-02: @huggingface/tokenizers pinned exactly at 0.2.0 after human legitimacy check; all added tokens flagged special
+- [Phase 02]: 02-02: minimal ambient declarations (src/node-builtins.d.ts) for node:fs/crypto/zlib in tests instead of adding @types/node
+- [Phase 02]: 02-03: one BPE tie-break in src/core/bpe.ts shared by trainMerges and the stepper trace; pair-source times are weighted by word count
+- [Phase 02]: 02-05: comparison fixture stores tokens as id plus uppercase hex bytes; sentences and sources live only in languages.ts
+- [Phase 02]: Plan 02-04: end-of-word mark rendered as aria-hidden glyph plus hidden 'end of word' text everywhere it appears
+- [Phase 02]: Plan 02-04: one inline watcher serves every [data-island] card; Phase 1 specs scope locators to [data-playground]
+- [Phase 02]: 02-06: licence-notices href built in ComparisonSection.astro from BASE_URL and passed as a prop; legend sentences use a long class so the conditional [UNK] sentence wraps
+- [Phase 02]: 02-07: check-dist allows only https anchors to www.ohchr.org and www.un.org, matched by count so an identical script URL still fails
+- [Phase 02]: 02-07: languages table is static HTML (works with JavaScript off); only the Look inside picker is an island
+- [Phase 02]: 02-08: network-call lint exempted for exactly src/components/loadTokenizer.ts (exact path, self-tested); load button is the only trigger for tokenizer downloads
 
 ### Pending Todos
 
@@ -110,6 +134,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-06T02:51:36.862Z
-Stopped at: Phase 01 complete, ready to plan Phase 2
+Last session: 2026-10-06T16:45:02.263Z
+Stopped at: Phase 02 complete, ready to plan Phase 3
 Resume file: None

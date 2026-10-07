@@ -1,0 +1,14 @@
+---
+// A number in the post's prose that comes from the stepper's engine (plan 02-10). It reads one
+// named figure from STEPPER_FACTS at build time, so the sentence cannot drift from the trace; an
+// unknown name fails the build. Rendered inline, as plain text.
+import { fact } from "../../core/stepper.ts";
+
+interface Props {
+  of: string;
+}
+
+const { of } = Astro.props;
+const value = fact(of);
+---
+{value}

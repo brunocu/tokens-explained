@@ -1,0 +1,119 @@
+/* Shared styles for every interactive card (UI-SPEC: Island lifecycle, Spacing, Color).
+   Plain CSS on the existing tokens only; no new colour value. The Phase 1 playground keeps
+   its own scoped rules and only borrows the `data-island` hook and the lifecycle status. */
+
+.island-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+}
+
+@media (min-width: 640px) {
+  .island-card {
+    padding: 24px;
+  }
+}
+
+.island-label {
+  font: 600 14px/1.4 var(--font-sans);
+}
+
+.island-muted {
+  font: 400 14px/1.4 var(--font-sans);
+  color: var(--muted);
+}
+
+/* Buttons: native elements, 44 by 44 minimum. The focus ring comes from the global rule. */
+.island-btn {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: 400 14px/1.4 var(--font-sans);
+  cursor: pointer;
+  transition:
+    color 100ms,
+    background-color 100ms;
+}
+
+.island-btn:not(:disabled):hover {
+  background: var(--bg);
+}
+
+.island-btn:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* Primary action: inverted text-on-background, never the accent colour. */
+.island-btn.island-btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+
+.island-btn.island-btn-primary:not(:disabled):hover {
+  background: var(--text);
+  opacity: 0.9;
+}
+
+.island-btn.island-btn-primary:disabled {
+  color: var(--bg);
+  opacity: 0.6;
+}
+
+.island-details summary {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 44px;
+  font: 600 14px/1.4 var(--font-sans);
+  cursor: pointer;
+}
+
+/* Lifecycle status line. It is shown and hidden purely by CSS on the card's data-state, so the
+   failed state works even though the island never hydrated. */
+.island-status {
+  margin: 0;
+  font: 400 14px/1.4 var(--font-sans);
+  color: var(--muted);
+}
+
+.island-status .msg-failed {
+  display: none;
+  color: var(--error);
+}
+
+.island-status .msg-failed .island-btn {
+  display: block;
+  margin-top: var(--space-sm);
+}
+
+[data-island][data-state="failed"] .island-status .msg-failed {
+  display: block;
+}
+
+[data-island][data-state="failed"] .island-status .msg-loading {
+  display: none;
+}
+
+[data-island][data-state="ready"] .island-status {
+  display: none;
+}
+
+.island-nojs {
+  margin: 0;
+  font: 400 14px/1.4 var(--font-sans);
+  color: var(--muted);
+}

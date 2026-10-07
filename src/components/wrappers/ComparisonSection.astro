@@ -1,0 +1,14 @@
+---
+// The comparison section of a post. The heading id is fixed here because ids generated
+// for headings inside MDX are fragile (research Pattern 4). The licence-notices address is
+// built from the site base here, not in src/core, so it works under a sub-path.
+import Comparison from "../Comparison.svelte";
+
+const noticeHref = import.meta.env.BASE_URL + "tokenizers/NOTICE.md";
+---
+
+<section aria-labelledby="compare-heading" class="compare-section">
+  <h2 id="compare-heading">How do real tokenizers compare?</h2>
+  <p><slot /></p>
+  <Comparison client:visible noticeHref={noticeHref} />
+</section>

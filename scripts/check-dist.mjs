@@ -2,6 +2,11 @@
 // Every URL in the built HTML and CSS must be base-prefixed, point at the site's
 // own origin (no third-party fonts or scripts: tokenizing stays private) and
 // resolve to a file that exists in the output directory.
+//
+// One exception (T-02-18): an https anchor link (<a href>) to one of the two citation hosts
+// below is allowed, because OHCHR asks for attribution with a link. Nothing else from those
+// hosts is allowed: a script, stylesheet, image or any other attribute still fails as a
+// third-party origin, as does an anchor to any other host or over plain http.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { posix } from "node:path";
 import { site, base, outDir } from "../site.config.mjs";
@@ -32,6 +37,80 @@ export function extractHtmlUrls(html) {
     }
   }
   return urls;
+}
+
+/** The hosts of the UDHR citation (T-02-18). */
+export const ALLOWED_EXTERNAL_LINK_HOSTS = ["www.ohchr.org", "www.un.org"];
+
+/**
+ * The hosts of the post's numbered References list (plan 02-10, T-02-29): the one place the post
+ * links out, one host per cited source. Like the UDHR hosts they are allowed for anchors only
+ * (https <a href>); a script, stylesheet, image or any other attribute from them still fails.
+ */
+export const ALLOWED_REFERENCE_LINK_HOSTS = [
+  "www.rfc-editor.org",
+  "www.gutenberg.org",
+  "web.stanford.edu",
+  "www.jmlr.org",
+  "aclanthology.org",
+  "jacobfilipp.com",
+  "arxiv.org",
+  "cdn.openai.com",
+  "ojs.aaai.org",
+  "github.com",
+  "doi.org",
+  // The second editorial pass of plan 02-10: the encoding history sources and the one dictionary link.
+  "ethw.org",
+  "en.wikipedia.org",
+  "www.unicode.org",
+  "w3techs.com",
+  "en.wiktionary.org",
+];
+
+const ANCHOR_TAG_RE = /<a\b(?:"[^"]*"|'[^']*'|[^>"'])*>/gi;
+
+/** The href values of <a> tags only, in document order. */
+export function extractAnchorHrefs(html) {
+  const hrefs = [];
+  for (const tag of html.matchAll(ANCHOR_TAG_RE)) {
+    for (const m of tag[0].matchAll(ATTR_RE)) {
+      if (m[1].toLowerCase() !== "href") continue;
+      const raw = decode(m[2] ?? m[3] ?? m[4] ?? "").trim();
+      if (raw) hrefs.push(raw);
+    }
+  }
+  return hrefs;
+}
+
+/** True for an https URL whose host is one of the allowed citation hosts. */
+export function isAllowedExternalLink(value) {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      (ALLOWED_EXTERNAL_LINK_HOSTS.includes(url.host) || ALLOWED_REFERENCE_LINK_HOSTS.includes(url.host))
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Drop from `urls` (the output of extractHtmlUrls for `html`) each URL that is an anchor href
+ * to an allowed citation host. Anchors are counted, so a script or stylesheet that happens to
+ * use the same URL as an anchor is still left in the list and still fails.
+ */
+export function withoutAllowedAnchors(html, urls) {
+  const allowed = new Map();
+  for (const href of extractAnchorHrefs(html)) {
+    if (isAllowedExternalLink(href)) allowed.set(href, (allowed.get(href) ?? 0) + 1);
+  }
+  return urls.filter((value) => {
+    const left = allowed.get(value) ?? 0;
+    if (left === 0) return true;
+    allowed.set(value, left - 1);
+    return false;
+  });
 }
 
 /** URL values found in a CSS document. */
@@ -132,6 +211,32 @@ function selfTest() {
     if (!found.includes(want)) throw new Error(`self-test: extractor missed ${want}`);
   }
   if (found.includes("/ignored")) throw new Error("self-test: extractor matched data-src");
+  // The citation-host allow-list (T-02-18): anchors to the two hosts pass, nothing else does.
+  const kept = (html) => withoutAllowedAnchors(html, extractHtmlUrls(html));
+  const okUrl = "https://www.ohchr.org/en/human-rights/universal-declaration";
+  if (kept(`<a href="${okUrl}" rel="noopener">x</a>`).length !== 0) throw new Error("self-test: allowed anchor (ohchr) did not pass");
+  if (kept(`<a class="c" href='https://www.un.org/en/x'>x</a>`).length !== 0) throw new Error("self-test: allowed anchor (un.org) did not pass");
+  if (kept(`<script src="${okUrl}"></script>`).length !== 1) throw new Error("self-test: allowed host as script src was dropped");
+  if (kept(`<link rel="stylesheet" href="${okUrl}">`).length !== 1) throw new Error("self-test: allowed host as stylesheet was dropped");
+  if (kept(`<img src="${okUrl}">`).length !== 1) throw new Error("self-test: allowed host as image was dropped");
+  if (kept(`<a href="https://example.com/x">x</a>`).length !== 1) throw new Error("self-test: anchor to another host was dropped");
+  if (kept(`<a href="http://www.ohchr.org/x">x</a>`).length !== 1) throw new Error("self-test: http anchor was dropped");
+  if (kept(`<a href="https://www.ohchr.org.evil.example/x">x</a>`).length !== 1) throw new Error("self-test: look-alike host was dropped");
+  if (kept(`<a href="${okUrl}">x</a><script src="${okUrl}"></script>`).length !== 1) {
+    throw new Error("self-test: a script with the same URL as an allowed anchor was dropped");
+  }
+  expectFail("allowed host as a plain URL (not an anchor)", run(okUrl, "/"));
+  if (ALLOWED_EXTERNAL_LINK_HOSTS.length !== 2) throw new Error("self-test: the allow-list must hold exactly two hosts");
+  // The References hosts (plan 02-10): one per cited source, anchors only, nothing else from them.
+  if (ALLOWED_REFERENCE_LINK_HOSTS.length !== 16) throw new Error("self-test: the references allow-list must hold exactly sixteen hosts");
+  const refUrl = "https://aclanthology.org/P16-1162/";
+  if (kept(`<a href="${refUrl}" rel="noopener noreferrer">x</a>`).length !== 0) throw new Error("self-test: a references anchor did not pass");
+  if (kept(`<script src="${refUrl}"></script>`).length !== 1) throw new Error("self-test: a references host as script src was dropped");
+  if (kept(`<img src="${refUrl}">`).length !== 1) throw new Error("self-test: a references host as image was dropped");
+  if (kept(`<a href="http://aclanthology.org/P16-1162/">x</a>`).length !== 1) throw new Error("self-test: an http references anchor was dropped");
+  if (kept(`<a href="https://aclanthology.org.evil.example/x">x</a>`).length !== 1) throw new Error("self-test: a look-alike references host was dropped");
+  if (kept(`<a href="https://github.com.evil.example/x">x</a>`).length !== 1) throw new Error("self-test: a look-alike github host was dropped");
+
   const cssFound = extractCssUrls(`@font-face{src:url("/_astro/fonts/a.woff2") format("woff2"),url(/b.woff2)}`);
   if (cssFound.length !== 2) throw new Error("self-test: css extractor wrong count");
 
@@ -166,7 +271,7 @@ if (process.argv.includes("--self-test")) {
     const text = readFileSync(`${outDir}/${rel}`, "utf8");
     // Inline <style> blocks hold the Fonts API @font-face rules, so scan their url() values too.
     const values = isHtml
-      ? [...extractHtmlUrls(text), ...[...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].flatMap((m) => extractCssUrls(m[1] ?? ""))]
+      ? [...withoutAllowedAnchors(text, extractHtmlUrls(text)), ...[...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].flatMap((m) => extractCssUrls(m[1] ?? ""))]
       : extractCssUrls(text);
     for (const value of values) {
       const { error, checked } = checkUrl(value, { fileRel: rel, siteUrl: site, baseValue: base, exists });

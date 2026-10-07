@@ -1,12 +1,21 @@
 ---
 // One post through the shared shell: H1, deck, the MDX body with its closed component
-// vocabulary (PlaygroundSection, ToyTokens), then space at the end. No footer, no
+// vocabulary (PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, ToyTokens,
+// and, from plan 02-10, Fact, Cite, References, Reference, TextAsNumbers), then space at the end. No footer, no
 // next-post link (UI-SPEC post end, D-12, D-14).
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
 import BaseLayout from "./BaseLayout.astro";
 import PlaygroundSection from "../components/wrappers/PlaygroundSection.astro";
+import StepperSection from "../components/wrappers/StepperSection.astro";
+import ComparisonSection from "../components/wrappers/ComparisonSection.astro";
+import LanguagesSection from "../components/wrappers/LanguagesSection.astro";
 import ToyTokens from "../components/prose/ToyTokens.astro";
+import Fact from "../components/prose/Fact.astro";
+import Cite from "../components/prose/Cite.astro";
+import References from "../components/prose/References.astro";
+import Reference from "../components/prose/Reference.astro";
+import TextAsNumbers from "../components/prose/TextAsNumbers.astro";
 
 interface Props {
   post: CollectionEntry<"posts">;
@@ -23,7 +32,9 @@ const { Content } = await render(post);
       <h1>{post.data.title}</h1>
       <p class="deck">{post.data.deck}</p>
     </header>
-    <Content components={{ PlaygroundSection, ToyTokens }} />
+    <Content
+      components={{ PlaygroundSection, StepperSection, ComparisonSection, LanguagesSection, ToyTokens, Fact, Cite, References, Reference, TextAsNumbers }}
+    />
   </article>
 </BaseLayout>
 

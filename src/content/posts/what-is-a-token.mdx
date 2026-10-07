@@ -1,25 +1,96 @@
 ---
 title: "What is a token?"
-deck: "AI models do not read words. They read tokens. Here is what that means, and you can try it yourself."
+deck: "AI models do not read words. They read tokens."
 order: 1
 terms: [token]
 ---
 
-## A token is a piece of text
+## How does a computer store text?
 
-A token is a small piece of text that a language model reads and writes. It can be a whole word, part of a word, a single character, a space plus a word, or a piece of punctuation.
+A _character_ is a single letter, digit, space or punctuation mark. A computer does not store characters as shapes. It stores each one as a number, using a table that says which number belongs to which character. Such a table is called a character encoding.
 
-A language model is the kind of AI program behind chat assistants. Before it can work with your message, your text has to be cut into tokens.
+Most English letters take up one byte, many other characters take several. A byte can be set in <Fact of="byteValues" /> different ways, which gives the values 0 to <Fact of="lastByteValue" />. The difference comes from history.
+
+The first widely used table was ASCII, published in the United States in 1963 <Cite n={1} />. It had room for 128 characters, which was enough for English letters, digits and punctuation, plus a few control codes such as the one that ends a line <Cite n={1} />. Every ASCII character fit in a single byte, with room to spare.
+
+Computers soon used that spare room for more characters, such as accented letters. But every country and every company filled it differently, so the same value could mean different letters on different machines, and text arrived garbled. Languages such as Japanese and Chinese, with thousands of characters, needed several bytes for each one and ended up with tables of their own, which did not agree with each other either <Cite n={2} />.
+
+In 1987, engineers at Apple and Xerox began the Unicode project, which aimed to give every character in every language its own number <Cite n={3} />. Unicode decides the number, and UTF-8 decides how to store that number as bytes. UTF-8 was devised in 1992 by Ken Thompson <Cite n={4} />. It keeps the ASCII values exactly as they were and uses between one and four bytes for every other character <Cite n={4} />. Today, 99.1% of the websites whose encoding is known use it <Cite n={5} />.
+
+For example, in ASCII and UTF-8 alike, the letter _t_ has the value <Fact of="byteOfT" />, and a space is <Fact of="byteOfSpace" />.
+
+Here is the opening sentence of *Anna Karenina*, by Leo Tolstoy (translation by Constance Garnett)<Cite n={6} />.
+
+> Happy families are all alike; every unhappy family is unhappy in its own way.
+
+To the computer, the sentence is a row of byte values, each between 0 and <Fact of="lastByteValue" />. The space has a value too, because a space is a character like any other.
+
+<TextAsNumbers text="Happy families are all alike; every unhappy family is unhappy in its own way." />
+
+
+## What is a language model, and why numbers?
+
+Natural language processing, or NLP, is the field of computer science whose goal is to get computers to perform useful tasks involving human language. A language model is a computational system that can predict the next word from previous words <Cite n={7} />. A language model is the kind of AI program behind chat assistants.
+
+Inside, a language model is built from arithmetic. It multiplies and adds numbers, and letters cannot be added up, so text has to become numbers before the model can use it.
+
+The number a model receives for a piece of text is a label, not an amount. The letter _t_ having a bigger value than the letter _a_ does not make it more important. The value only says which character it is.
+
+## Why not feed in raw bytes?
+
+The simplest choice is to give the model the bytes themselves. The model then needs only <Fact of="byteValues" /> different labels, one for each possible byte, and every text in every language can be written this way.
+
+The problem is length. Take the sentence "the cat sat on the mat and the cat sat on the hat". It has <Fact of="wordCount" /> words but <Fact of="startPieces" /> bytes. A model that reads raw bytes has to work through sequences that are longer than the same text cut into words, which costs more computation <Cite n={8} />.
+
+A better deal lies between single bytes and whole words. Imagine you keep a list of pieces of text: some are single bytes, others are longer pieces that turn up often. This list is called a vocabulary, and each piece in it is called a **token**. A token is a small piece of text that a language model reads and writes. It can be a whole word, part of a word, a single character, a space plus a word, a piece of punctuation, etc.
+
+A program called a tokenizer cuts text into tokens from the vocabulary and turns them into numbers, called ids. It can also turn the ids back into text.
 
 ## Tokens are not words
 
 Tokens are not the same thing as words. The same sentence can contain more tokens than words.
 
-Common words are often a single token, while rare words are split into several. A space can be part of a token.
+Many everyday words are a single token, while rare words are split into several. A space can be part of a token.
 
-A tokenizer is the program that cuts text into tokens. The one on this page is small and built for teaching, so a real chat model may cut some of this text differently.
+## How the numbers are assigned
 
-Here is one sentence, cut up by it. Count the chips, then compare your count with the caption underneath.
+Each token has an id, and the model works with those ids, not with the letters. The id is simply the token's label.
+
+The vocabulary is a numbered list, and the id of a token is its position in the list. Counting starts at 0, so a vocabulary of V entries uses the ids 0 to V - 1. In the demo below, the vocabulary starts as the <Fact of="byteValues" /> single byte values, with the ids 0 to <Fact of="lastByteValue" />, and every new token is added at the end of the list with the next id.
+
+Similarly to character encodings, these ids are only labels in a list. A bigger number does not mean a rarer or more important word, and a different tokenizer would give the same token a different id.
+
+## Why not just split on spaces, or on meaning?
+
+The obvious way to make tokens is to cut at spaces, so that every word is a token. That is easy, but the vocabulary then has to hold every form of every word. "Walk", "walks", "walked" and "walking" each need an entry, and so do names, typing mistakes and technical terms. A word that is missing from the vocabulary is called out-of-vocabulary, and a tokenizer with no entry for it cannot write it down.
+
+Byte-pair encoding, or BPE, takes another route. It starts from the smallest tokens, single bytes, and counts which two neighbouring tokens occur together most often. It glues that pair into one new token and adds it to the vocabulary. Then it counts again and repeats. The idea comes from a data-compression method that replaces the most common pair of bytes with a byte that was not used in the data <Cite n={[9, 10]} />. The encoding itself needs no knowledge of any language.
+
+A third idea is to cut words into morphemes, the smallest parts of a word that carry meaning. The word "unhelpful", for example, is un + help + ful, three parts that each mean something. It sounds ideal, but getting a program to find morphemes is hard. It needs knowledge of each language and its many exceptions, and finding them automatically is a research problem of its own. One family of methods, called Morfessor, learns a list of word segments from raw text without labelled examples <Cite n={11} />. A tokenizer that only counts, as BPE does, needs none of that knowledge. It is much simpler to build, and for many applications that is the practical choice. The price is that the tokens BPE finds often differ from morphemes, and one study argues that, for training language models, this makes BPE suboptimal <Cite n={12} />.
+
+<StepperSection>Byte-pair encoding builds a tokenizer's list of tokens by reading lots of text and joining the pair of neighbouring tokens it sees most often, again and again. Step through a tiny example.</StepperSection>
+
+## What the step by step example showed
+
+At every merge the example counted all the neighbouring pairs and joined the most common one. The first winner, `a + t`, was seen <Fact of="firstPairCount" /> times, and the new token got the next free id, <Fact of="firstNewId" />.
+
+Sometimes several pairs are tied for the most common. Our rule is: the pair with the smaller numeric values win. The code published by the author of the BPE-for-translation method settles ties differently: among the tied pairs it takes the one that sorts last as text <Cite n={13} />.
+
+Merging does not go on forever. We chose in advance to stop after <Fact of="merges" /> merges. Every merge adds exactly one entry, so the vocabulary ended with <Fact of="byteValues" /> + <Fact of="merges" /> = <Fact of="vocabularySize" /> entries. This is how the method is defined: the final vocabulary is the starting set of symbols plus the number of merges, and that number is the only setting of the algorithm <Cite n={[10, 7]} />. The text, meanwhile, shrank from <Fact of="startPieces" /> tokens to <Fact of="endPieces" />.
+
+That is the trade-off. A bigger vocabulary makes the text shorter, but the list grows, and many of its entries are rare tokens that are used far less often than the common ones <Cite n={14} />. A smaller vocabulary keeps the list small but leaves the text long, and the best size depends on how big the model is <Cite n={15} />.
+
+What about a word the tokenizer never saw? In the example, the word "that" was built from tokens already in the vocabulary, and the cat emoji, which has no learned token, fell back to its raw bytes. That works because the vocabulary always holds every single byte: a byte-level version of BPE only needs a base vocabulary of <Fact of="byteValues" /> entries <Cite n={16} />, and it can write any text <Cite n={17} />. So with byte-level BPE no word is out-of-vocabulary. An unfamiliar word is simply cut into more, smaller tokens.
+
+## The tokenizer behind the demos
+
+The examples below use the same tokenizer algorithm as the step by step example above, but it is trained on a small corpus of English text. It is a tiny toy, but it works the same way as the real tokenizers used in popular models. Real tokenizers follow the same steps, but their vocabularies are far bigger, so their splits will differ from the ones you see here. Many popular models use byte-pair encoding, though not all do.
+
+Compared with the tiny toy in the step by step example, real tokenizers differ in three ways. They learn from a huge amount of text, not from one sentence. They split text with a rule before merging, so tokens do not run across spaces and punctuation. And their vocabularies hold tens of thousands of tokens or more.
+
+The tokenizer of GPT-2 has 50,257 entries <Cite n={[16, 18]} />. The tokenizer of GPT-4 has 100,257 <Cite n={[18, 19]} />, and the one of GPT-4o has 200,019 <Cite n={[18, 19]} />.
+
+Here is one sentence, cut up by the playground tokenizer. Count the chips, then compare your count with the caption underneath.
 
 <ToyTokens
   text="Tokenization splits unusual words into pieces, but common words stay whole."
@@ -36,27 +107,77 @@ Notice that many chips start with a small symbol. It marks a space, and the spac
 Three things are worth remembering from your experiments.
 
 - Spaces belong to tokens. A word with a space in front of it is often a single token.
-- Rare words split into several tokens, while common words often stay whole.
-- Some characters, such as emoji, are too big for one piece. A byte is a unit of computer storage; most English letters take one byte, many other characters take several. An emoji takes several bytes, and the tokenizer can cut between them. That is why hatched chips appear, and why you never see a garbled symbol: a piece of a character is shown as its raw bytes instead. Hatched chips inside one frame are the bytes of a single character, which is shown in front of them. For example, the character 男 is stored as the bytes E7 94 B7, and the tokenizer may cut between them.
+- Rare words split into several tokens, while many everyday words stay whole.
+- Some characters, such as emoji, are too big for one token. An emoji takes several bytes, and the tokenizer can cut between them. That is why hatched chips appear, and why you never see a garbled symbol: a token that holds only part of a character is shown as its raw bytes instead. Hatched chips inside one frame are the bytes of a single character, which is shown in front of them. For example, the character [男](https://en.wiktionary.org/wiki/%E7%94%B7) is stored as the bytes `E7 94 B7`, and the tokenizer may cut between them.
 
 Here is a short sentence with an emoji, to look at the hatched chips again.
 
 <ToyTokens text="Great job 🎉" expect={["has-split-character"]} />
 
-Each token also has a number, called its id, and the model works with those numbers, not with the letters. Switch the playground above to Token IDs to see them.
+Switch the playground above to Token IDs to see the id each token gets.
 
-These numbers are only labels in a list. A bigger number does not mean a rarer or more important word, and a different tokenizer would number the same piece differently.
+<ComparisonSection>These are two older tokenizers, picked because they are small and free to share. Newer models may cut text differently. Pick a text and see how each tokenizer splits it.</ComparisonSection>
 
-## How this tokenizer works
+<LanguagesSection>The same sentence, in six languages, cut by the same three tokenizers. Look at the counts.</LanguagesSection>
 
-A tokenizer works from a vocabulary, which is the list of pieces it knows.
+## References
 
-This is a small toy tokenizer, trained on a small amount of English text. Real tokenizers follow the same steps, but their vocabularies are far bigger, so their splits will differ from the ones you see here.
-
-It works in three steps. First, it splits your text into pieces such as words and punctuation. Second, it turns each piece into bytes, the small units of storage described above. Third, it merges pairs of bytes that were common in the training text, so frequent pieces end up as a single token.
-
-It reads exactly what you typed and does not tidy up your text first.
-
-Many popular models use a method called byte-pair encoding, though not all do.
-
-The counts above cover only the text you type; chat apps add extra formatting tokens of their own.
+<References>
+<Reference n={1} url="https://ethw.org/Milestones:American_Standard_Code_for_Information_Interchange_ASCII,_1963" accessed="Oct. 6, 2026">
+IEEE Engineering and Technology History Wiki, "Milestones: American Standard Code for Information Interchange, ASCII, 1963."
+</Reference>
+<Reference n={2} url="https://en.wikipedia.org/wiki/Mojibake" accessed="Oct. 6, 2026">
+"Mojibake," Wikipedia, The Free Encyclopedia.
+</Reference>
+<Reference n={3} url="https://www.unicode.org/history/earlyyears.html" accessed="Oct. 6, 2026">
+Unicode Consortium, "Early years of Unicode."
+</Reference>
+<Reference n={4} url="https://www.rfc-editor.org/info/rfc3629">
+F. Yergeau, "UTF-8, a transformation format of ISO 10646," Internet Engineering Task Force, RFC 3629, Nov. 2003.
+</Reference>
+<Reference n={5} url="https://w3techs.com/technologies/overview/character_encoding" accessed="Oct. 6, 2026">
+W3Techs, "Usage statistics of character encodings for websites."
+</Reference>
+<Reference n={6} url="https://www.gutenberg.org/ebooks/1399" accessed="Oct. 6, 2026">
+L. Tolstoy, *Anna Karenina*, trans. C. Garnett. Project Gutenberg, ebook 1399.
+</Reference>
+<Reference n={7} url="https://web.stanford.edu/~jurafsky/slp3/" accessed="Oct. 6, 2026">
+D. Jurafsky and J. H. Martin, "Introduction" and "Words and Tokens," chs. 1 and 2 in *Speech and Language Processing*, 3rd ed. draft, Aug. 19, 2026.
+</Reference>
+<Reference n={8} url="https://aclanthology.org/2022.tacl-1.17">
+L. Xue et al., "ByT5: Towards a token-free future with pre-trained byte-to-byte models," *Trans. Assoc. Comput. Linguistics*, vol. 10, pp. 291-306, 2022.
+</Reference>
+<Reference n={9} url="https://jacobfilipp.com/DrDobbs/articles/CUJ/1994/9402/gage/gage.htm">
+P. Gage, "A new algorithm for data compression," *The C Users Journal*, vol. 12, no. 2, pp. 23-38, Feb. 1994.
+</Reference>
+<Reference n={10} url="https://aclanthology.org/P16-1162/">
+R. Sennrich, B. Haddow, and A. Birch, "Neural machine translation of rare words with subword units," in *Proc. 54th Annu. Meeting Assoc. Comput. Linguistics (Volume 1: Long Papers)*, Berlin, Germany, Aug. 2016, pp. 1715-1725, doi: 10.18653/v1/P16-1162.
+</Reference>
+<Reference n={11} url="https://doi.org/10.1145/1187415.1187418">
+M. Creutz and K. Lagus, "Unsupervised models for morpheme segmentation and morphology learning," *ACM Trans. Speech Lang. Process.*, vol. 4, no. 1, art. 3, Jan. 2007, doi: 10.1145/1187415.1187418.
+</Reference>
+<Reference n={12} url="https://aclanthology.org/2020.findings-emnlp.414">
+K. Bostrom and G. Durrett, "Byte pair encoding is suboptimal for language model pretraining," in *Findings Assoc. Comput. Linguistics: EMNLP 2020*, Nov. 2020, pp. 4617-4624.
+</Reference>
+<Reference n={13} url="https://github.com/rsennrich/subword-nmt/blob/master/subword_nmt/learn_bpe.py" accessed="Oct. 6, 2026">
+R. Sennrich, "subword-nmt," GitHub repository, learn_bpe.py, lines 373-378.
+</Reference>
+<Reference n={14} url="https://aclanthology.org/2020.findings-emnlp.352">
+T. Gowda and J. May, "Finding the optimal vocabulary size for neural machine translation," in *Findings Assoc. Comput. Linguistics: EMNLP 2020*, Nov. 2020, pp. 2650-2661.
+</Reference>
+<Reference n={15} url="https://arxiv.org/abs/2407.13623">
+C. Tao et al., "Scaling laws with vocabulary: Larger models deserve larger vocabularies," in *Adv. Neural Inf. Process. Syst. 37 (NeurIPS 2024)*, 2024.
+</Reference>
+<Reference n={16} url="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" accessed="Oct. 6, 2026">
+A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, and I. Sutskever, "Language models are unsupervised multitask learners," OpenAI, 2019.
+</Reference>
+<Reference n={17} url="https://ojs.aaai.org/index.php/AAAI/article/view/6451">
+C. Wang, K. Cho, and J. Gu, "Neural machine translation with byte-level subwords," in *Proc. AAAI Conf. Artif. Intell.*, vol. 34, no. 5, Apr. 2020, pp. 9154-9160.
+</Reference>
+<Reference n={18} url="https://github.com/openai/tiktoken/blob/main/tiktoken_ext/openai_public.py" accessed="Oct. 6, 2026">
+OpenAI, "tiktoken: openai_public.py," GitHub repository.
+</Reference>
+<Reference n={19} url="https://github.com/openai/tiktoken/blob/main/tiktoken/model.py" accessed="Oct. 6, 2026">
+OpenAI, "tiktoken: model.py," GitHub repository.
+</Reference>
+</References>

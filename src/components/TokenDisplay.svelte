@@ -2,14 +2,8 @@
   // The shared coloured-token display (FOUND-02, FOUND-03, FOUND-06). Reused unchanged by
   // later posts. Reader text only ever reaches the DOM through text interpolation.
   import type { Token } from "../core/types.ts";
-  import {
-    GLYPH_NEWLINE,
-    GLYPH_SPACE,
-    GLYPH_TAB,
-    chipSegments,
-    containsNewline,
-    idLabel,
-  } from "../core/display.ts";
+  import { chipSegments, containsNewline, idLabel } from "../core/display.ts";
+  import TokenLegend from "./TokenLegend.svelte";
   import { compositeNote, splitNote } from "../core/counts.ts";
   import { byteLineSegments, groupBytes, layoutChips, visibleLabels } from "../core/chars.ts";
 
@@ -22,6 +16,8 @@
     compositeCount?: number;
     legend?: boolean;
     emptyState?: boolean;
+    /** Second line of the empty state; the default is the playground's wording. */
+    emptyBody?: string;
   };
 
   let {
@@ -32,6 +28,7 @@
     compositeCount = 0,
     legend = true,
     emptyState = true,
+    emptyBody = "Type or paste some text above, or pick an example, and it will be split into tokens here.",
   }: Props = $props();
 
   // Character frames (UI-SPEC R-01): derived here from the token bytes, callers pass nothing new.
@@ -43,7 +40,7 @@
 
 {#snippet chip(i: number, cut: boolean)}
   {@const token = tokens[i] as Token}
-  <span class="chip" class:cut data-chip data-partial={token.isPartial ? "true" : "false"} data-pal={i % 4}
+  <span class="chip" class:cut data-chip data-partial={token.isPartial ? "true" : "false"} data-special={token.special ? "true" : undefined} data-pal={i % 4}
     >{#if mode === "ids"}<span class="line id" data-chip-id>{idLabel(token)}</span>{#if token.isPartial}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{:else if showBytes}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{/if}{:else if token.isPartial}<span class="line bytes" data-chip-main>{@render hex(token, i)}</span>{:else}<span class="line" data-chip-main>{#each chipSegments(token) as segment}{#if segment.ws}<span class="ws" data-ws>{segment.text}</span>{:else}{segment.text}{/if}{/each}</span>{#if showBytes}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{/if}{/if}</span
   >
 {/snippet}
@@ -51,7 +48,7 @@
 {#if tokens.length === 0 && emptyState}
   <div class="empty" data-empty>
     <p class="empty-title">Nothing to split yet</p>
-    <p class="empty-body">Type or paste some text above, or pick an example, and it will be split into tokens here.</p>
+    <p class="empty-body">{emptyBody}</p>
   </div>
 {:else}
   <div class="chips" aria-hidden="true">
@@ -74,12 +71,7 @@
 {/if}
 
 {#if legend}
-  <p class="legend" data-legend>
-    <span class="item"><span class="ws">{GLYPH_SPACE}</span> space</span>
-    <span class="item"><span class="ws">{GLYPH_NEWLINE}</span> new line</span>
-    <span class="item"><span class="ws">{GLYPH_TAB}</span> tab</span>
-    <span class="item">Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them.</span>
-  </p>
+  <TokenLegend />
 {/if}
 
 {#if splitCount > 0}
@@ -132,6 +124,11 @@
     background:
       repeating-linear-gradient(45deg, transparent 0 4px, var(--partial-hatch) 4px 5px),
       var(--partial-fill);
+  }
+  /* Special chips ([UNK]): neutral and solid, never hatched, never dashed. */
+  .chip[data-special="true"] {
+    border: 2px solid var(--partial-line);
+    background: var(--partial-fill);
   }
   /* Character frame (R-01): one flex item that never breaks internally. The solid outline
      means "one character"; the dashed left borders of later chips mark where the tokenizer cut. */
@@ -220,22 +217,10 @@
     font: 400 14px/1.4 var(--font-sans);
     color: var(--muted);
   }
-  .legend,
   .note {
     margin: var(--space-sm) 0 0;
     font: 400 14px/1.4 var(--font-sans);
     color: var(--muted);
-  }
-  .legend .item {
-    margin-right: var(--space-md);
-    white-space: nowrap;
-  }
-  .legend .item:last-child {
-    margin-right: 0;
-    white-space: normal;
-  }
-  .legend .ws {
-    font-size: 16px;
   }
   @media print {
     .chip {

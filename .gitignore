@@ -10,3 +10,5 @@ playwright-report/
 .env
 .env.*
 *.log
+.gsd/
+.planning/state.json

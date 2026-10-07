@@ -13,7 +13,7 @@ Tokenizer Vis is a short series of interactive posts that give a non-programmer 
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Token Playground** - Deployed "What is a token?" post with a live toy-tokenizer playground and the shared, accessible token display (completed 2026-10-05)
-- [ ] **Phase 2: BPE Stepper & Real-Tokenizer Comparison** - Step-through BPE trainer and toy-vs-real comparison, completing Post 1
+- [x] **Phase 2: BPE Stepper & Real-Tokenizer Comparison** - Step-through BPE trainer and toy-vs-real comparison, completing Post 1 (completed 2026-10-06)
 - [ ] **Phase 3: Embeddings, Context & Reasoning Posts** - Three posts that separate embedding, context and reasoning from "token"
 - [ ] **Phase 4: Hub, Disambiguation & Glossary** - "Start here" hub, side-by-side disambiguation page and glossary tooltips that tie the series together
 - [ ] **Phase 5: Harden & Release** - Remote repo, GitHub Pages deploy and CI, then accessibility, performance, fact-check and reader-testing passes before release
@@ -69,12 +69,37 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A reader can step through BPE merges on a small corpus using Next, Back and Reset, seeing the merged pair and the updated tokens at every step
   2. At every BPE step, a reader can see the pair counts and the tie-break rule that decided which pair merged
-  3. A reader can compare the toy tokenizer's output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages, code), with each real tokenizer clearly labelled
+  3. A reader can compare the toy tokenizer's output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages), with each real tokenizer clearly labelled
   4. A reader can see the same sentence in many languages and how the token counts differ
   5. Every comparison carries a short plain-language note saying what to notice
   6. The complete Post 1 prose has had a non-programmer read-through (deferred from Phase 1 UAT test 5), including whether "common words stay whole" reads as contradictory next to the toy's " com", "m", "on" split, and the author's notes on the article are resolved
 
-**Plans**: TBD
+**Plans**: 10/10 plans complete
+
+Plans:
+**Wave 1**
+- [x] 02-01-PLAN.md — Decisions and amendments: confirm the five open research answers, amend REQUIREMENTS TOK-07, ROADMAP criterion 3 and the UI-SPEC (R-02)
+- [x] 02-02-PLAN.md — Real-tokenizer engine: package legitimacy gate, exact-pin install and allow-list, self-hosted GPT-2 and BERT files with manifest and notices, pure adapter, Python-reference parity golden
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 02-03-PLAN.md — Stepper tracer and pure core: shared tie-break comparator, eight-step trace, why sentences, section in the post
+- [x] 02-05-PLAN.md — Comparison data: dated precompute script and fixture for five examples and six UDHR Article 1 sentences, freshness test, row names, hand-written notes
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 02-04-PLAN.md — Stepper UI: generalised island lifecycle watcher, pair table, chips, vocabulary, legend, final screen, focus and motion, axe, post prose
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 02-06-PLAN.md — Comparison UI: picker, three tokenizer rows, special chip, shared legend, notes, tables, source line, lifecycle
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 02-07-PLAN.md — Languages demo: counts table with bars and UNK line, source and dates, citation-link allow-list, look-inside picker
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 02-08-PLAN.md — Own-text block: explicit load button, two requests, live rows, error and retry states, repo-lint exemption, base-proof step
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 02-09-PLAN.md — Post assembly: softened claims, reworked third step, full three-browser gate, author-notes slot, non-programmer read-through
+
 **UI hint**: yes
 
 ### Phase 3: Embeddings, Context & Reasoning Posts
@@ -132,7 +157,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 (Phase 3 depends only
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Token Playground | 7/7 | Complete    | 2026-10-05 |
-| 2. BPE Stepper & Real-Tokenizer Comparison | 0/TBD | Not started | - |
+| 2. BPE Stepper & Real-Tokenizer Comparison | 10/10 | Complete    | 2026-10-06 |
 | 3. Embeddings, Context & Reasoning Posts | 0/TBD | Not started | - |
 | 4. Hub, Disambiguation & Glossary | 0/TBD | Not started | - |
 | 5. Harden & Release | 0/TBD | Not started | - |

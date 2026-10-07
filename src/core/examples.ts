@@ -24,7 +24,9 @@ export const EXAMPLES: ReadonlyArray<{ id: string; label: string; text: string }
   {
     id: "literature",
     label: "A line of classic literature",
-    text: "It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.",
+    // Opening line of Anna Karenina, translated by Constance Garnett (Project Gutenberg ebook 1399,
+    // public domain). The post credits the translator in its References.
+    text: "Happy families are all alike; every unhappy family is unhappy in its own way.",
   },
   {
     id: "non-english",

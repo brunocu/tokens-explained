@@ -80,6 +80,43 @@ test("(d) frames at 360 px in Token IDs mode: no horizontal page scroll and ever
   }
 });
 
+test("(e) the stepper at a merge stage and at the end has no horizontal page scroll and its pair table scrolls inside its own wrapper", async ({
+  page,
+}) => {
+  await page.goto("what-is-a-token/");
+  const card = page.locator("[data-stepper]");
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toHaveAttribute("data-state", "ready");
+  // Stage 6 is merge 5: six tied rows, the widest table. Then the last stage, with the unseen words.
+  for (let i = 0; i < 6; i++) {
+    const before = (await card.locator("[data-step-status]").textContent()) ?? "";
+    await card.locator("[data-next]").click();
+    await expect(card.locator("[data-step-status]")).not.toHaveText(before);
+  }
+  await expect(card.locator("[data-pair-table]")).toBeVisible();
+  expect(await overflowX(page)).toBeLessThanOrEqual(0);
+  await card.locator("[data-run]").click();
+  await expect(card.locator("[data-final]")).toBeVisible();
+  expect(await overflowX(page)).toBeLessThanOrEqual(0);
+  await card.locator("[data-reset]").click();
+  for (let i = 0; i < 6; i++) {
+    const before = (await card.locator("[data-step-status]").textContent()) ?? "";
+    await card.locator("[data-next]").click();
+    await expect(card.locator("[data-step-status]")).not.toHaveText(before);
+  }
+  const region = card.locator('[role="region"][aria-label="Pair counts, scrollable"]');
+  await expect(region).toBeVisible();
+  const box = await region.boundingBox();
+  const inner = await card.boundingBox();
+  expect(box).not.toBeNull();
+  expect(inner).not.toBeNull();
+  // The wrapper stays inside the card; whatever is wider than it scrolls within it.
+  expect((box as { x: number; width: number }).x + (box as { width: number }).width).toBeLessThanOrEqual(
+    (inner as { x: number; width: number }).x + (inner as { width: number }).width + 0.5,
+  );
+  expect(await region.evaluate((el) => getComputedStyle(el).overflowX)).toBe("auto");
+});
+
 test("(c) on the phone profile the post loads, the card is ready, chips are present and the console is clean", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (m) => {

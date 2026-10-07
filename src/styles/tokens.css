@@ -111,6 +111,17 @@ a {
   text-decoration: underline;
 }
 
+/* A quotation in a post: set apart by a rule, not by colour (plan 02-10). */
+blockquote {
+  margin: var(--space-lg) 0;
+  padding: 0 0 0 var(--space-md);
+  border-left: 4px solid var(--text);
+}
+
+blockquote p {
+  margin: var(--space-sm) 0;
+}
+
 main {
   box-sizing: border-box;
   max-width: 680px;

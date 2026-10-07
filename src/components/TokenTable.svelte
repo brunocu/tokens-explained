@@ -5,20 +5,26 @@
   import { hexBytes, idLabel, tableCell } from "../core/display.ts";
   import { groupBytes } from "../core/chars.ts";
 
-  let { tokens }: { tokens: Token[] } = $props();
+  type Props = {
+    tokens: Token[];
+    /** Render the scroll region and table alone, without the details wrapper (the caller supplies one). */
+    bare?: boolean;
+    caption?: string;
+  };
+
+  let { tokens, bare = false, caption = "Tokens in your text" }: Props = $props();
 
   // One grouping pass for the whole list; each Token cell says which byte of which character it holds.
   const grouping = $derived(groupBytes(tokens));
 </script>
 
-<details class="alt" data-table>
-  <summary>View tokens as a table</summary>
+{#snippet region()}
   <!-- A scrollable region must be reachable by keyboard (WCAG 2.1.1), so the tabindex is deliberate.
        It is only in the tab order while the details element is open. -->
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-  <div class="scroll" role="region" aria-label="Token table, scrollable" tabindex="0">
+  <div class="scroll" role="region" aria-label="Token table, scrollable" tabindex="0" data-alt-table={bare ? "" : undefined}>
     <table>
-      <caption>Tokens in your text</caption>
+      <caption>{caption}</caption>
       <thead>
         <tr>
           <th scope="col">#</th>
@@ -43,7 +49,16 @@
       </tbody>
     </table>
   </div>
-</details>
+{/snippet}
+
+{#if bare}
+  {@render region()}
+{:else}
+  <details class="alt" data-table>
+    <summary>View tokens as a table</summary>
+    {@render region()}
+  </details>
+{/if}
 
 <style>
   .alt {

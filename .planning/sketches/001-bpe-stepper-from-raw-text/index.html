@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch 001 - BPE stepper from raw text</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 64px 16px 80px; background: var(--bg); color: var(--text); font: 18px/1.6 var(--font-serif); }
+  main { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .lede { color: var(--muted); font: 14px/1.5 var(--font-sans); margin: 0 0 16px; }
+  #variant-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 9998; background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap; font-family: var(--font-sans); }
+  .variant-tab { font: 600 14px var(--font-sans); padding: 8px 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; cursor: pointer; transition: all .15s ease; }
+  .variant-tab:hover { background: var(--bg-2); }
+  .variant-tab[aria-selected="true"] { background: var(--text); color: var(--bg); }
+  .card { background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .btn { font: 600 14px var(--font-sans); padding: 8px 16px; min-height: 44px; border: 1px solid var(--border); background: var(--bg); color: var(--text); border-radius: 4px; cursor: pointer; transition: all .15s ease; }
+  .btn:hover:not(:disabled) { border-color: var(--text); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn:disabled { color: var(--muted); border-style: dashed; cursor: not-allowed; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .label { font: 600 14px/1.4 var(--font-sans); margin: 0; }
+  .muted { font: 14px/1.5 var(--font-sans); color: var(--muted); margin: 0; }
+  .why { margin: 0; min-height: 5.2em; }
+  .progress { display: flex; gap: 3px; flex-wrap: wrap; }
+  .progress i { width: 18px; height: 8px; border: 1px solid var(--border); border-radius: 2px; background: var(--bg); }
+  .progress i.done { background: var(--text); }
+  .progress i.now { background: var(--accent); border-color: var(--accent); }
+  .ws { color: var(--ws-color); font-family: var(--font-sans), "Segoe UI Symbol", "DejaVu Sans", sans-serif; }
+
+  /* Chips: text on top, number below. Fill colour is decoration; the number is the identity. */
+  .words { display: flex; flex-wrap: wrap; gap: 14px 18px; }
+  .word { display: flex; gap: 3px; padding-top: 2px; }
+  .chip { display: inline-flex; flex-direction: column; align-items: center; min-width: 30px; padding: 3px 5px 2px; border: 1.5px solid; border-radius: 4px; line-height: 1.15; }
+  .chip b { font: 600 15px var(--font-mono); white-space: pre; }
+  .chip i { font: normal 11px var(--font-sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+  .p0 { background: var(--chip-0-fill); border-color: var(--chip-0-line); }
+  .p1 { background: var(--chip-1-fill); border-color: var(--chip-1-line); }
+  .p2 { background: var(--chip-2-fill); border-color: var(--chip-2-line); }
+  .p3 { background: var(--chip-3-fill); border-color: var(--chip-3-line); }
+  .chip.raw { background: var(--bg); border-color: var(--border); }
+  .chip.fresh { border-style: double; border-width: 4px; animation: pop .35s ease; }
+  .chip.hit { outline: 3px solid var(--text); outline-offset: 2px; }
+  .chip.hit.l::before, .chip.hit.r::before { font: 700 10px var(--font-sans); position: absolute; margin-top: -18px; }
+  .chip { position: relative; }
+  .words { padding-top: 14px; }
+  .chip.hit.l::before { content: "left"; } .chip.hit.r::before { content: "right"; }
+  .pairbox { display: inline-flex; gap: 3px; padding: 3px; border: 3px solid var(--text); border-radius: 8px; background: var(--bg); transition: gap .3s ease, padding .3s ease; }
+  .pairbox.fusing { gap: 0; padding: 0 3px; }
+  .pairbox.fusing .chip:first-child { border-right-width: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+  .pairbox.fusing .chip:last-child { border-left-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+  .pairbox .chip { transition: all .3s ease; }
+  @media (prefers-reduced-motion: reduce) { .pairbox, .pairbox .chip { transition: none; } }
+  @keyframes pop { from { transform: scale(.8); } to { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .chip.fresh { animation: none; } }
+
+  table { width: 100%; border-collapse: collapse; font: 14px/1.4 var(--font-sans); background: var(--bg); border: 1px solid var(--border); }
+  th, td { padding: 6px 10px; text-align: left; border-top: 1px solid var(--border); }
+  th { background: var(--bg-2); }
+  td.num { font-variant-numeric: tabular-nums; }
+  tr.merged { font-weight: 700; outline: 2px solid var(--text); outline-offset: -2px; }
+  .bar { display: inline-block; height: 10px; background: var(--text); border-radius: 2px; vertical-align: middle; }
+  .bar.tie { background: repeating-linear-gradient(45deg, var(--text) 0 3px, var(--bg) 3px 6px); border: 1px solid var(--text); }
+  .callout { background: var(--bg); border: 1px solid var(--border); border-left: 4px solid var(--text); border-radius: 4px; padding: 10px 14px; }
+  .callout h3 { margin: 0 0 4px; font: 700 15px var(--font-sans); }
+  .callout p { margin: 0; font-size: 16px; }
+  .stat { display: inline-flex; flex-direction: column; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 12px; min-width: 120px; }
+  .stat b { font: 700 22px var(--font-sans); font-variant-numeric: tabular-nums; }
+  .stat span { font: 12px var(--font-sans); color: var(--muted); }
+  .chars { display: flex; flex-wrap: wrap; gap: 2px; }
+  .ch { min-width: 22px; text-align: center; font: 600 16px var(--font-mono); border: 1px solid var(--border); background: var(--bg); border-radius: 3px; padding: 1px 3px; }
+  .ids { display: flex; flex-wrap: wrap; gap: 3px; font: 600 14px var(--font-mono); }
+  .ids span { padding: 1px 5px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; font-variant-numeric: tabular-nums; }
+  .ids span.w { margin-left: 10px; }
+  .ids span.new { border: 3px double var(--text); }
+  .book { max-height: 380px; overflow: auto; }
+  .book td.id { font: 700 14px var(--font-mono); }
+  .grid2 { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } }
+  #tools { position: fixed; bottom: 12px; right: 12px; z-index: 9999; font: 12px system-ui; background: rgba(0,0,0,.7); color: #fff; padding: 8px 12px; border-radius: 8px; opacity: .4; transition: opacity .2s; display: flex; gap: 6px; align-items: center; }
+  #tools:hover { opacity: 1; }
+  #tools button { font: 12px system-ui; }
+  .stage { font: 700 13px var(--font-sans); letter-spacing: .02em; text-transform: uppercase; color: var(--muted); }
+</style>
+</head>
+<body>
+<nav id="variant-nav" role="tablist" aria-label="Variants">
+  <button class="variant-tab" role="tab" data-v="a">A: Layered ledger</button>
+  <button class="variant-tab" role="tab" data-v="b">B: Highlight, then fuse</button>
+  <button class="variant-tab" role="tab" data-v="c">C: Index book</button>
+  <button class="variant-tab" role="tab" data-v="d">D: B + fuse animation ★ Selected</button>
+</nav>
+
+<main id="view">
+  <h1>Where do tokens come from? (stepper sketch)</h1>
+  <p class="lede">Throwaway mockup. Real BPE runs in the page on the sentence below, so every count and number is genuine. Switch variants at the top; use Back / Next (or Left/Right arrow keys).</p>
+  <div class="card" id="card"></div>
+</main>
+
+<div id="tools" aria-hidden="true">Viewport
+  <button onclick="vp(375)">phone</button><button onclick="vp(768)">tablet</button><button onclick="vp(0)">full</button>
+</div>
+
+<script>
+/* ---------- Engine: real byte-level BPE with the project's tie rule (highest count, then first seen) ---------- */
+const SENTENCE = "the cat sat on the mat and the cat sat on the hat";
+const MERGES = 8;
+const enc = new TextEncoder();
+const vocab = [];                                   // vocab[k] = merge k+1 -> id 256+k
+const byteText = b => b === 32 ? "␣" : (b > 32 && b < 127) ? String.fromCharCode(b) : b.toString(16).toUpperCase().padStart(2, "0");
+const textOf = id => id < 256 ? byteText(id) : vocab[id - 256].text;
+const wordsOf = s => s.match(/ ?[^ ]+/g);
+const toSegs = s => wordsOf(s).map(w => [...enc.encode(w)]);
+function applyMerge(segs, l, r, nid) {
+  return segs.map(sg => { const o = []; for (let i = 0; i < sg.length; i++) { if (sg[i] === l && sg[i + 1] === r) { o.push(nid); i++; } else o.push(sg[i]); } return o; });
+}
+function countPairs(segs) {
+  const m = new Map(), order = [];
+  segs.forEach(sg => { for (let i = 0; i < sg.length - 1; i++) { const k = sg[i] + "|" + sg[i + 1]; if (!m.has(k)) { m.set(k, 0); order.push(k); } m.set(k, m.get(k) + 1); } });
+  return order.map((k, i) => { const [l, r] = k.split("|").map(Number); return { l, r, count: m.get(k), first: i }; })
+              .sort((a, b) => b.count - a.count || a.first - b.first);
+}
+const start = toSegs(SENTENCE);
+const trace = [];                                   // trace[k-1] = state of merge k
+{ let segs = start;
+  for (let k = 1; k <= MERGES; k++) {
+    const pairs = countPairs(segs), best = pairs[0], nid = 255 + k;
+    vocab.push({ id: nid, l: best.l, r: best.r, text: textOf(best.l) + textOf(best.r), count: best.count });
+    const tied = pairs.filter(p => p.count === best.count).length;
+    const after = applyMerge(segs, best.l, best.r, nid);
+    trace.push({ k, pairs, best, nid, tied, before: segs, after }); segs = after;
+  } }
+const total = segs => segs.reduce((n, s) => n + s.length, 0);
+function encode(text) { let segs = toSegs(text); vocab.forEach(v => { segs = applyMerge(segs, v.l, v.r, v.id); }); return segs; }
+const seqLen = k => total(k === 0 ? start : trace[k - 1].after);
+
+/* ---------- Stages ---------- */
+// 0 text, 1 bytes, 2 starting pieces, 3..10 merges 1..8, 11 stop, 12 new words
+const LAST = 12;
+const STAGE_NAME = s => s === 0 ? "The text" : s === 1 ? "Bytes" : s === 2 ? "Starting pieces" : s <= 10 ? `Merge ${s - 2} of ${MERGES}` : s === 11 ? "Stop" : "A word it has never seen";
+const q = s => `<span class="ws">${s}</span>`;
+const nice = t => t.replace(/␣/g, "␣");
+function why(s) {
+  if (s === 0) return "This is the raw text. To a computer it is a row of characters: letters, spaces, nothing else. Press Next to see how it is really stored.";
+  if (s === 1) return "Every character is stored as a number called a byte. The letter t is 116 and a space is 32 in the widely used UTF-8 table. Now the text is just a list of numbers.";
+  if (s === 2) return `Before any merging, the tokenizer's vocabulary is the 256 possible byte values, numbered 0 to 255. The text is ${seqLen(0)} pieces long, one per byte. Words are split first, so a piece never joins two words (the space belongs to the start of the next word).`;
+  if (s <= 10) { const t = trace[s - 3], n = t.best.count;
+    const tie = t.tied > 1 ? ` ${t.tied} pairs were tied on ${n}, so the one seen first in the text wins.` : "";
+    return `Merge ${t.k}: the most common neighbouring pair is ${q(textOf(t.best.l))} + ${q(textOf(t.best.r))} (${t.best.l} and ${t.best.r}), seen ${n} times.${tie} Give the pair a new number: ${t.nid}.`; }
+  if (s === 11) return `We decided in advance to stop after ${MERGES} merges. The vocabulary is now 256 + ${MERGES} = ${256 + MERGES} entries and the text shrank from ${seqLen(0)} pieces to ${seqLen(MERGES)}. More merges would shorten it further but grow the vocabulary; real tokenizers pick a budget such as tens of thousands.`;
+  return "Words the tokenizer never saw still work. \" that\" is built from pieces it knows. An emoji has no learned pieces at all, so it falls back to raw bytes. Nothing is ever \"unknown\".";
+}
+
+/* ---------- Shared render helpers ---------- */
+const esc = s => s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const showText = t => esc(t).replace(/␣/g, '<span class="ws">␣</span>');
+const chip = (id, o = {}) => `<span class="chip ${o.raw ? "raw" : "p" + (id % 4)} ${o.fresh ? "fresh" : ""} ${o.hit || ""}"><b>${showText(textOf(id))}</b><i>${id}</i></span>`;
+const strip = (segs, o = {}) => `<div class="words">${segs.map(sg => `<div class="word">${sg.map((id, i) => chip(id, { raw: o.raw ? o.raw(id) : false, fresh: o.fresh && id === o.fresh, hit: o.hit ? o.hit(sg, i) : "" })).join("")}</div>`).join("")}</div>`;
+const heading = (s, extra = "") => `<p class="label">${extra}</p>`;
+
+function newWordPanel() {
+  const ex = [" that", " \u{1F431}"];
+  return `<div class="callout"><h3>Encoding words that were never in the text</h3>` + ex.map(w => {
+    const segs = encode(w); return `<p style="margin:6px 0 4px">${showText(w)} becomes ${segs[0].length} piece${segs[0].length > 1 ? "s" : ""}:</p>${strip(segs, { raw: id => id < 256 })}`;
+  }).join("") + `<p class="muted" style="margin-top:8px">Pieces with a plain outline are single bytes: nothing was learned for them, so the tokenizer falls back to raw bytes. The cat emoji needs four bytes (240, 159, 144, 177), shown in hexadecimal above.</p></div>`;
+}
+
+/* ---------- Variant A: layered ledger ---------- */
+function viewA(s) {
+  let h = `<div><p class="label">1. Text</p><div class="chars">${[...SENTENCE].map(c => `<span class="ch">${c === " " ? '<span class="ws">␣</span>' : c}</span>`).join("")}</div></div>`;
+  if (s >= 1) h += `<div><p class="label">2. Each character as a byte (its number)</p>${strip(start, { raw: () => true })}</div>`;
+  if (s >= 2) {
+    const k = Math.min(MERGES, Math.max(0, s - 2)), segs = k === 0 ? start : trace[k - 1].after;
+    h += `<div><p class="label">3. Pieces${k ? ` after merge ${k}` : " (vocabulary: bytes 0 to 255)"}</p>${strip(segs, { fresh: k ? trace[k - 1].nid : 0 })}</div>`;
+    if (s >= 3 && s <= 10) { const t = trace[s - 3], max = t.pairs[0].count;
+      h += `<div><p class="label">Pairs counted before merge ${t.k}</p><table><caption class="sr" style="position:absolute;left:-9999px">Pair counts</caption><thead><tr><th>Pair</th><th>Seen</th><th></th><th>Outcome</th></tr></thead><tbody>` +
+        t.pairs.slice(0, 5).map((p, i) => { const win = i === 0, tie = !win && p.count === max;
+          return `<tr class="${win ? "merged" : ""}"><td>${showText(textOf(p.l))} + ${showText(textOf(p.r))} <span class="muted">(${p.l}, ${p.r})</span></td><td class="num">${p.count}</td><td><span class="bar ${tie ? "tie" : ""}" style="width:${p.count / max * 90}px"></span></td><td>${win ? "Merged" : tie ? "Tied (seen later)" : ""}</td></tr>`; }).join("") +
+        `</tbody></table><p class="muted">Top 5 of ${t.pairs.length} pairs.</p></div>`; }
+  }
+  h += `<div class="row"><span class="stat"><b>${s < 2 ? "-" : 256 + Math.max(0, s - 2 > MERGES ? MERGES : s - 2)}</b><span>vocabulary size</span></span><span class="stat"><b>${s < 1 ? [...SENTENCE].length : seqLen(Math.min(MERGES, Math.max(0, s - 2)))}</b><span>pieces in the text</span></span></div>`;
+  return h;
+}
+
+/* ---------- Variant B: highlight the pair everywhere, then fuse ---------- */
+function viewB(s) {
+  if (s < 2 || s > 10) {
+    if (s >= 11) { const segs = trace[MERGES - 1].after;
+      return `<div><p class="label">The finished text, ${total(segs)} pieces</p>${strip(segs, { raw: id => id < 256 })}</div>`; }
+    return `<div><p class="label">${s === 0 ? "Characters" : "Bytes"}</p>${s === 0 ? `<div class="chars">${[...SENTENCE].map(c => `<span class="ch">${c === " " ? '<span class="ws">␣</span>' : c}</span>`).join("")}</div>` : strip(start, { raw: () => true })}</div>`;
+  }
+  const t = trace[s === 2 ? 0 : s - 3], preview = s === 2;
+  const hitFn = (sg, i) => (!preview && sg[i] === t.best.l && sg[i + 1] === t.best.r) ? "hit l" : (!preview && i > 0 && sg[i - 1] === t.best.l && sg[i] === t.best.r) ? "hit r" : "";
+  const max = t.pairs[0].count;
+  let h = `<div><p class="label">${preview ? "Starting pieces" : `Every place the winning pair appears (${t.best.count})`}</p>${strip(t.before, { hit: hitFn })}</div>`;
+  if (!preview) {
+    h += `<div class="callout"><h3>Next: ${showText(textOf(t.best.l))} + ${showText(textOf(t.best.r))} becomes one piece, number ${t.nid}</h3><p>Press Next to fuse all ${t.best.count} spots at once.</p></div>`;
+    h += `<div><p class="label">Leaderboard</p>` + t.pairs.slice(0, 5).map((p, i) => { const tie = i > 0 && p.count === max;
+      return `<div class="row" style="flex-wrap:nowrap;margin:4px 0"><span style="width:84px;font:14px var(--font-mono)">${showText(textOf(p.l))} + ${showText(textOf(p.r))}</span><span class="bar ${tie ? "tie" : ""}" style="width:${p.count / max * 200}px"></span><span class="muted">${p.count}${i === 0 ? " ← winner" : tie ? " tied, seen later" : ""}</span></div>`; }).join("") + `</div>`;
+  }
+  return h;
+}
+
+/* ---------- Variant C: the index book (ids, vocabulary and length side by side) ---------- */
+function viewC(s) {
+  const k = Math.min(MERGES, Math.max(0, s - 2)), segs = s < 2 ? start : (k === 0 ? start : trace[k - 1].after);
+  const newest = k > 0 ? trace[k - 1].nid : -1;
+  const seq = `<div class="ids" aria-label="The sentence as a list of numbers">${segs.map(sg => sg.map((id, i) => `<span class="${i === 0 ? "w " : ""}${id === newest ? "new" : ""}">${id}</span>`).join("")).join("")}</div>`;
+  const book = `<div class="book"><table><thead><tr><th>Number</th><th>Piece</th><th>Made from</th></tr></thead><tbody>` +
+    `<tr><td class="id">0 to 255</td><td colspan="2">All single bytes (letters, digits, punctuation, parts of emoji)</td></tr>` +
+    vocab.slice(0, k).map(v => `<tr class="${v.id === newest ? "merged" : ""}"><td class="id">${v.id}</td><td>${showText(v.text)}</td><td>${showText(textOf(v.l))} (${v.l}) + ${showText(textOf(v.r))} (${v.r})</td></tr>`).join("") + `</tbody></table></div>`;
+  const tradeoff = `<table><thead><tr><th>Merges</th><th>Vocabulary</th><th>Numbers in the text</th></tr></thead><tbody>` +
+    Array.from({ length: MERGES + 1 }, (_, i) => i).filter(i => i <= k).map(i => `<tr class="${i === k ? "merged" : ""}"><td>${i}</td><td class="num">${256 + i}</td><td class="num">${seqLen(i)}</td></tr>`).join("") + `</tbody></table>`;
+  let pairLine = "";
+  if (s >= 3 && s <= 10) { const t = trace[s - 3]; pairLine = `<div class="callout"><h3>Most common pair before this merge</h3><p>${t.best.l} + ${t.best.r} (${showText(textOf(t.best.l))} + ${showText(textOf(t.best.r))}) seen ${t.best.count} times${t.tied > 1 ? `, tied with ${t.tied - 1} other pair${t.tied > 2 ? "s" : ""}; first seen wins` : ""}.</p></div>`; }
+  return `${pairLine}<div class="grid2"><div><p class="label">The sentence, as the model sees it: ${total(segs)} numbers</p>${seq}</div><div><p class="label">The vocabulary book</p>${book}</div></div><div><p class="label">The trade-off so far</p>${tradeoff}</div>`;
+}
+
+/* ---------- Variant D: B's layout, one box around the pair, fuse animation ---------- */
+function stripD(segs, t, fresh) {
+  return `<div class="words">${segs.map(sg => { let h = ""; for (let i = 0; i < sg.length; i++) {
+    if (t && sg[i] === t.best.l && sg[i + 1] === t.best.r) { h += `<span class="pairbox" title="about to merge">${chip(sg[i])}${chip(sg[i + 1])}</span>`; i++; }
+    else h += chip(sg[i], { raw: sg[i] < 256 && !t, fresh: fresh && sg[i] === fresh });
+  } return `<div class="word">${h}</div>`; }).join("")}</div>`;
+}
+function viewD(s) {
+  if (s < 2 || s > 10) return viewB(s);
+  const t = trace[s === 2 ? 0 : s - 3], preview = s === 2, max = t.pairs[0].count;
+  const fresh = s >= 4 ? trace[s - 4].nid : 0;
+  let h = `<div><p class="label">${preview ? "Starting pieces" : `Every place the winning pair appears (${t.best.count})`}</p>${stripD(t.before, preview ? null : t, fresh)}</div>`;
+  if (!preview) {
+    h += `<div class="callout"><h3>Next: ${showText(textOf(t.best.l))} + ${showText(textOf(t.best.r))} becomes one piece, number ${t.nid}</h3><p>Press Next to fuse all ${t.best.count} boxed spots at once.</p></div>`;
+    h += `<div><p class="label">Leaderboard</p>` + t.pairs.slice(0, 5).map((p, i) => { const tie = i > 0 && p.count === max;
+      return `<div class="row" style="flex-wrap:nowrap;margin:4px 0"><span style="width:84px;font:14px var(--font-mono)">${showText(textOf(p.l))} + ${showText(textOf(p.r))}</span><span class="bar ${tie ? "tie" : ""}" style="width:${p.count / max * 200}px"></span><span class="muted">${p.count}${i === 0 ? " ← winner" : tie ? " tied, seen later" : ""}</span></div>`; }).join("") + `</div>`;
+  }
+  return h;
+}
+
+/* ---------- Shell ---------- */
+let step = 0, variant = "a";
+const card = document.getElementById("card");
+function render() {
+  const body = variant === "a" ? viewA(step) : variant === "b" ? viewB(step) : variant === "c" ? viewC(step) : viewD(step);
+  card.innerHTML =
+    `<div class="stage">${STAGE_NAME(step)}</div>` +
+    `<div class="progress" aria-hidden="true">${Array.from({ length: LAST + 1 }, (_, i) => `<i class="${i < step ? "done" : i === step ? "now" : ""}"></i>`).join("")}</div>` +
+    `<div class="row"><button class="btn" id="back" ${step === 0 ? "disabled" : ""}>Back</button><button class="btn primary" id="next" ${step === LAST ? "disabled" : ""}>Next</button><button class="btn" id="end" ${step >= 11 ? "disabled" : ""}>Run to end</button><button class="btn" id="reset" ${step === 0 ? "disabled" : ""}>Reset</button></div>` +
+    `<p class="why" role="status" aria-live="polite">${why(step)}</p>` + body + (step === LAST ? newWordPanel() : "");
+  document.getElementById("back").onclick = () => { step--; render(); document.getElementById("next").focus(); };
+  document.getElementById("next").onclick = () => {
+    const boxes = document.querySelectorAll(".pairbox");
+    if (variant === "d" && boxes.length && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      boxes.forEach(b => b.classList.add("fusing")); document.getElementById("next").disabled = true;
+      setTimeout(advance, 320); return;
+    }
+    advance();
+  };
+  function advance() { step++; render(); (document.getElementById("next").disabled ? document.getElementById("reset") : document.getElementById("next")).focus(); };
+  document.getElementById("end").onclick = () => { step = 11; render(); document.getElementById("next").focus(); };
+  document.getElementById("reset").onclick = () => { step = 0; render(); document.getElementById("next").focus(); };
+}
+document.querySelectorAll(".variant-tab").forEach(b => b.addEventListener("click", () => { variant = b.dataset.v; document.querySelectorAll(".variant-tab").forEach(x => x.setAttribute("aria-selected", x === b)); render(); }));
+document.querySelector('[data-v="a"]').setAttribute("aria-selected", "true");
+addEventListener("keydown", e => { if (e.key === "ArrowRight" && step < LAST) { step++; render(); } if (e.key === "ArrowLeft" && step > 0) { step--; render(); } });
+function vp(w) { document.getElementById("view").style.maxWidth = w ? w + "px" : "760px"; }
+render();
+</script>
+</body>
+</html>

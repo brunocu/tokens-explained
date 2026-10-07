@@ -1,0 +1,27 @@
+/* Sketch theme: copied from src/styles/tokens.css so mockups match the real site (light + system dark). */
+:root {
+  color-scheme: light dark;
+  --bg: #FFFFFF; --bg-2: #F5F4F0; --text: #1A1A1A; --muted: #5C5C5C; --border: #767676;
+  --accent: #2A3FB8; --accent-text: #FFFFFF; --error: #B3261E;
+  --chip-0-fill: #CFE3FF; --chip-0-line: #3366B3;
+  --chip-1-fill: #FFD9B8; --chip-1-line: #B35C14;
+  --chip-2-fill: #CDEFD2; --chip-2-line: #2F7A3B;
+  --chip-3-fill: #E6D4FA; --chip-3-line: #7A4BB3;
+  --partial-fill: #E9E7E1; --partial-line: #6B6B6B;
+  --ws-color: #5C5C5C;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212; --bg-2: #1E1E1E; --text: #ECECEC; --muted: #A8A8A8; --border: #8A8A8A;
+    --accent: #9FAEFF; --accent-text: #121212; --error: #F2B8B5;
+    --chip-0-fill: #1F3A5F; --chip-0-line: #7FB0F0;
+    --chip-1-fill: #5A3515; --chip-1-line: #E0954F;
+    --chip-2-fill: #1E4A2A; --chip-2-line: #6CC27C;
+    --chip-3-fill: #46306B; --chip-3-line: #B794E8;
+    --partial-fill: #2A2A2A; --partial-line: #9A9A9A;
+    --ws-color: #BDBDBD;
+  }
+}

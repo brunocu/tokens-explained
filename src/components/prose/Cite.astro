@@ -1,0 +1,16 @@
+---
+// A numbered citation, IEEE style: "[3]" or "[3], [5]". Each number is a link to the entry with
+// the same number in the References list (id="ref-N"). Numbers follow the order of first citation.
+interface Props {
+  n: number | number[];
+}
+
+const { n } = Astro.props;
+const list = Array.isArray(n) ? n : [n];
+---
+<span class="cites">{list.map((k, i) => (<>{i > 0 ? ", " : ""}<a class="cite" href={`#ref-${k}`}>[{k}]</a></>))}</span>
+<style>
+  .cites {
+    white-space: nowrap;
+  }
+</style>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render } from "svelte/server";
 import TokenDisplay from "./TokenDisplay.svelte";
+import TokenLegend from "./TokenLegend.svelte";
 import { tokenize } from "../core/toy.ts";
 import type { Token } from "../core/types.ts";
 
@@ -203,6 +204,31 @@ describe("TokenDisplay frames (server-rendered)", () => {
   });
 });
 
+describe("TokenDisplay special chips (server-rendered)", () => {
+  const special = (text: string, id = 100): Token => ({ id, bytes: new TextEncoder().encode(text), isPartial: false, special: true });
+
+  it("marks a special token with data-special and shows its text, never hatched", () => {
+    const out = html({ tokens: [special("[UNK]")] });
+    const chips = tagsWith(out, "data-chip");
+    expect(chips).toHaveLength(1);
+    expect(chips[0]).toContain('data-special="true"');
+    expect(chips[0]).toContain('data-partial="false"');
+    expect(out).toContain(">[UNK]</span>");
+    expect(out).not.toContain("data-char-frame");
+    expect(out).not.toContain(REPLACEMENT);
+  });
+
+  it("leaves an ordinary token without the attribute", () => {
+    const out = html({ tokens: [tok([0x68, 0x69], false, 5), ...partials(0xe7, 0x94, 0xb7)] });
+    expect(out).not.toContain("data-special");
+  });
+
+  it("keeps the palette index by position around a special chip", () => {
+    const out = html({ tokens: [tok([0x61], false, 1), special("[UNK]"), tok([0x62], false, 2)] });
+    expect(Array.from(out.matchAll(/data-pal="(\d)"/g), (m) => m[1])).toEqual(["0", "1", "2"]);
+  });
+});
+
 describe("TokenDisplay legend and combined-character note", () => {
   const render2 = (props: Record<string, unknown>): string =>
     render(TokenDisplay, { props: { tokens: partials(0xe7, 0x94, 0xb7), ...props } }).body.replace(/<!--[\s\S]*?-->/g, "");
@@ -215,6 +241,27 @@ describe("TokenDisplay legend and combined-character note", () => {
     expect(out).toContain("space");
     expect(out).toContain("new line");
     expect(out).toContain("tab");
+  });
+
+  it("renders no legend when legend is false", () => {
+    expect(render2({ legend: false })).not.toContain("data-legend");
+  });
+
+  it("keeps the user's line break between the glyph items and the hatched-chips sentence", () => {
+    const out = render2({ legend: true });
+    expect(out).toMatch(/tab<\/span>\s*<br\s*\/?>\s*<span class="item long[^"]*">Hatched chips are raw bytes/);
+  });
+
+  it("shows the [UNK] sentence in the legend only when asked, as a further item after the hatched sentence", () => {
+    const UNK = "[UNK] means the tokenizer had no piece for that word or character and gave up.";
+    expect(render2({ legend: true })).not.toContain(UNK);
+    const withSpecial = render(TokenLegend, { props: { special: true } }).body.replace(/<!--[\s\S]*?-->/g, "");
+    expect(withSpecial).toContain(UNK);
+    expect(withSpecial.indexOf("Hatched chips are raw bytes")).toBeLessThan(withSpecial.indexOf(UNK));
+    expect(withSpecial).toContain("data-legend");
+    const plain = render(TokenLegend, { props: {} }).body.replace(/<!--[\s\S]*?-->/g, "");
+    expect(plain).not.toContain("[UNK]");
+    expect(plain).toContain("data-legend");
   });
 
   it("renders the note only when compositeCount is above zero, after the split note, as a plain paragraph", () => {

@@ -138,25 +138,25 @@ test("(e) lifecycle: loading, failed after 8 s in view, recovery on late hydrati
   await card.scrollIntoViewIfNeeded();
 
   await expect(card).toHaveAttribute("data-state", "loading");
-  await expect(page.locator('[data-msg="loading"]')).toBeVisible();
-  await expect(page.locator('[data-msg="failed"]')).toBeHidden();
+  await expect(page.locator('[data-playground] [data-msg="loading"]')).toBeVisible();
+  await expect(page.locator('[data-playground] [data-msg="failed"]')).toBeHidden();
   await expect(page.locator("#t")).toHaveAttribute("readonly", "");
   await expect(page.locator("[data-example]").first()).toBeDisabled();
 
   await expect(card).toHaveAttribute("data-state", "failed", { timeout: 12_000 });
-  await expect(page.locator('[data-msg="failed"]')).toBeVisible();
-  await expect(page.locator('[data-msg="failed"]')).toContainText(
+  await expect(page.locator('[data-playground] [data-msg="failed"]')).toBeVisible();
+  await expect(page.locator('[data-playground] [data-msg="failed"]')).toContainText(
     "The playground could not load. Check your connection, then reload the page. The example below still shows the default text.",
   );
-  await expect(page.locator('[data-msg="loading"]')).toBeHidden();
-  await expect(page.locator("[data-reload]")).toBeVisible();
+  await expect(page.locator('[data-playground] [data-msg="loading"]')).toBeHidden();
+  await expect(page.locator("[data-playground] [data-reload]")).toBeVisible();
   await expect(page.locator("#t")).toHaveAttribute("readonly", "");
   await expect(page.locator("[data-example]").first()).toBeDisabled();
   await expect(page.locator("[data-playground] [data-chip]").first()).toBeVisible();
 
   release();
   await expect(card).toHaveAttribute("data-state", "ready");
-  await expect(page.locator("[data-status]")).toBeHidden();
+  await expect(page.locator("[data-playground] [data-status]")).toBeHidden();
   await expect(page.locator("#t")).toBeEditable();
 });
 
@@ -170,7 +170,7 @@ test("(e2) the Reload page button reloads the page", async ({ page }) => {
   await card.scrollIntoViewIfNeeded();
   await expect(card).toHaveAttribute("data-state", "failed", { timeout: 12_000 });
   await page.unroute(island);
-  await Promise.all([page.waitForEvent("load"), page.locator("[data-reload]").click()]);
+  await Promise.all([page.waitForEvent("load"), page.locator("[data-playground] [data-reload]").click()]);
   await card.scrollIntoViewIfNeeded();
   await expect(card).toHaveAttribute("data-state", "ready");
 });
@@ -183,7 +183,7 @@ test("(f) without JavaScript the no-JS note shows and the loading line is hidden
   const note = page.locator(".nojs");
   await expect(note).toBeVisible();
   await expect(note).toHaveText("Typing needs JavaScript. The example below shows the default text.");
-  await expect(page.locator("[data-status]")).toBeHidden();
+  await expect(page.locator("[data-playground] [data-status]")).toBeHidden();
   expect(await page.locator("[data-playground] [data-chip]").count()).toBeGreaterThan(0);
   await context.close();
 });

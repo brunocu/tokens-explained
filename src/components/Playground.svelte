@@ -104,7 +104,7 @@
   });
 </script>
 
-<div class="card" data-playground data-state={phase}>
+<div class="card" data-playground data-island data-state={phase}>
   <!-- Lifecycle line. Shown and hidden purely by CSS on the card's data-state, so the failed state
        works even though this island never hydrated. The Reload button has no Svelte handler: the
        layout script delegates its click (research Pitfall 7). -->

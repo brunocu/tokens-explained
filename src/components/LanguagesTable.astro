@@ -1,0 +1,216 @@
+---
+// The six-language counts table with its note and sources. Static HTML: no client directive, so
+// it is complete without JavaScript. Counts come from the committed fixture (never computed
+// here); sentences, language codes, directions and sources come from LANGUAGES. Dates are read
+// from the data, never typed. Text reaches the page through interpolation only.
+import fixtureJson from "../core/compare/comparison.json";
+import { countUnk, fixtureTokens } from "../core/compare/fixture.ts";
+import type { ComparisonFixture } from "../core/compare/fixture.ts";
+import { LANGUAGES, SOURCE_PAGE } from "../core/compare/languages.ts";
+import { LANGUAGES_NOTE } from "../core/compare/notes.ts";
+
+const fixture = fixtureJson as unknown as ComparisonFixture;
+const COLUMNS = [
+  { id: "toy", label: "Toy tokenizer" },
+  { id: "gpt2", label: "GPT-2" },
+  { id: "bert", label: "BERT (uncased)" },
+] as const;
+
+const rows = LANGUAGES.map((language) => {
+  const entry = fixture.languages.find((item) => item.id === language.id);
+  if (entry === undefined) throw new Error(`comparison.json has no entry for language "${language.id}"`);
+  return {
+    language,
+    counts: {
+      toy: entry.rows.toy.length,
+      gpt2: entry.rows.gpt2.length,
+      bert: entry.rows.bert.length,
+    },
+    // How many of BERT's pieces are the [UNK] marker; only the BERT cell ever shows it.
+    unk: countUnk(fixtureTokens(entry.rows.bert)),
+  };
+});
+
+// One shared maximum, so bar lengths compare across every cell of the table.
+const maxCount = Math.max(...rows.flatMap((row) => COLUMNS.map((column) => row.counts[column.id])));
+const percent = (count: number): string => `${((count / maxCount) * 100).toFixed(2)}%`;
+
+// The latest retrieval date among the six sentences, and the date the counts were precomputed.
+const retrieved = LANGUAGES.map((language) => language.retrieved).sort().at(-1) ?? "";
+const generatedAt = fixture.meta.generatedAt;
+---
+
+<div class="scroll" role="region" aria-label="Token counts by language, scrollable" tabindex="0">
+  <table data-languages-table>
+    <caption>
+      The same sentence in six languages. Token counts for three tokenizers (a lower number means fewer pieces).
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Language</th>
+        {COLUMNS.map((column) => <th scope="col">{column.label}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map(({ language, counts, unk }) => (
+          <tr data-lang-row={language.id}>
+            <th scope="row">
+              <span class="name">{language.name}</span>
+              <span class="sentence" lang={language.lang} dir={language.dir} data-sentence>
+                {language.sentence}
+              </span>
+            </th>
+            {COLUMNS.map((column) => (
+              <td data-count={column.id}>
+                <span class="number">{counts[column.id]}</span>
+                {column.id === "bert" && unk > 0 ? (
+                  <p class="unk" data-unk-line>
+                    {unk} of these are [UNK]
+                  </p>
+                ) : null}
+                <div class="bar" data-bar aria-hidden="true" style={`width: ${percent(counts[column.id])}`} />
+              </td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<div class="notice">
+  <span class="island-label">What to notice</span>
+  <p class="note" data-note>{LANGUAGES_NOTE}</p>
+</div>
+
+<div class="provenance">
+  <p class="island-muted source-line" data-source data-source-line>
+    Sentence: <a href={SOURCE_PAGE} rel="noopener noreferrer">Universal Declaration of Human Rights</a>, Article 1 (the whole article),
+    official translations from the United Nations human rights office (OHCHR), retrieved {retrieved}. Counts precomputed on {generatedAt}
+    with the toy tokenizer, GPT-2 and BERT (uncased); see where the tokenizer files come from above.
+  </p>
+  <details class="island-details" data-source data-sentence-sources>
+    <summary>Where the sentences come from</summary>
+    <p class="island-muted source-text">
+      Spanish Article 1 is one sentence, while the other five languages have two, which is why the whole article is shown.
+    </p>
+    <ul class="sources">
+      {
+        LANGUAGES.map((language) => (
+          <li class="island-muted" data-source-item={language.id}>
+            {language.name}: <a href={language.retrievalUrl} rel="noopener noreferrer">page read on {language.retrieved}</a>
+            {language.ohchrPdfUrl !== null ? (
+              <>
+                {", cross-checked with the "}
+                <a href={language.ohchrPdfUrl} rel="noopener noreferrer">
+                  OHCHR PDF
+                </a>
+              </>
+            ) : (
+              ", no OHCHR PDF exists for this language"
+            )}
+            .
+          </li>
+        ))
+      }
+    </ul>
+  </details>
+</div>
+
+<style>
+  .scroll {
+    overflow-x: auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    /* Fixed layout gives the three count columns the same width, so one bar length means the
+       same count in every cell. */
+    table-layout: fixed;
+    font: 400 14px/1.4 var(--font-sans);
+  }
+  thead th:first-child {
+    width: 40%;
+  }
+  caption {
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    font: 400 14px/1.4 var(--font-sans);
+    color: var(--muted);
+  }
+  th,
+  td {
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    vertical-align: top;
+    border-top: 1px solid var(--border);
+  }
+  thead th {
+    background: var(--bg-2);
+    font-weight: 600;
+  }
+  tbody th {
+    background: var(--bg);
+    font-weight: 400;
+  }
+  .name {
+    display: block;
+    font: 600 14px/1.4 var(--font-sans);
+  }
+  .sentence {
+    display: block;
+    unicode-bidi: isolate;
+    font: 400 18px/1.5 var(--font-sans);
+    overflow-wrap: anywhere;
+  }
+  .number {
+    display: block;
+    font: 600 24px/1.2 var(--font-sans);
+    font-variant-numeric: tabular-nums;
+  }
+  .unk {
+    margin: var(--space-xs) 0 0;
+    font: 400 14px/1.4 var(--font-sans);
+    color: var(--muted);
+  }
+  /* Neutral border colour, never the accent; the number above is the readable value. */
+  .bar {
+    height: 8px;
+    margin-top: var(--space-sm);
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .notice {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .note {
+    margin: 0;
+    font: 400 18px/1.6 var(--font-serif), Georgia, serif;
+    color: var(--text);
+  }
+  .provenance {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .source-line,
+  .source-text {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .source-text {
+    margin-bottom: 8px;
+  }
+  .sources {
+    margin: 0 0 8px;
+    padding-left: var(--space-lg);
+    overflow-wrap: anywhere;
+  }
+</style>

@@ -1,6 +1,9 @@
 // Non-root-base proof (D-15 amended): build with a test base into a separate
 // directory, scan it, and run the smoke spec against it. The default dist
 // directory is never touched. Phase 5 deployment then only sets SITE_URL and SITE_BASE.
+// Phase 2: the proof also runs the load-button spec (e2e/comparison-load.spec.ts). The tokenizer
+// files are fetched by JavaScript from an address the browser builds at run time, which
+// check:dist cannot see in the built files; a wrong base in that address fails this spec.
 import { spawnSync } from "node:child_process";
 import { normalizeBase } from "../site.config.mjs";
 
@@ -12,6 +15,17 @@ const TEST_SITE = "http://localhost:4322";
 /** Copy of the given environment plus the four variables that select the test build. */
 export function childEnv(env = process.env) {
   return { ...env, SITE_BASE: TEST_BASE, SITE_OUT_DIR: TEST_OUT, SITE_URL: TEST_SITE, E2E_PORT: TEST_PORT };
+}
+
+/** The ordered steps of the proof: [command, arguments]. The specs run after the build they test. */
+export function buildSteps() {
+  return [
+    ["node", ["scripts/check-env.mjs", "--playwright"]],
+    ["npx", ["astro", "build"]],
+    ["node", ["scripts/check-dist.mjs"]],
+    ["npx", ["playwright", "test", "--project=chromium", "e2e/smoke.spec.ts"]],
+    ["npx", ["playwright", "test", "--project=chromium", "e2e/comparison-load.spec.ts"]],
+  ];
 }
 
 function selfTest() {
@@ -31,6 +45,15 @@ function selfTest() {
     throw new Error("self-test: child environment is missing a variable");
   }
   if (env.KEEP !== "1") throw new Error("self-test: child environment dropped the inherited environment");
+
+  const steps = buildSteps();
+  const build = steps.findIndex(([, args]) => args.includes("build"));
+  if (build < 0) throw new Error("self-test: the build step is missing from buildSteps()");
+  for (const spec of ["e2e/smoke.spec.ts", "e2e/comparison-load.spec.ts"]) {
+    const at = steps.findIndex(([, args]) => args.includes(spec));
+    if (at < 0) throw new Error(`self-test: ${spec} is missing from buildSteps()`);
+    if (at < build) throw new Error(`self-test: ${spec} runs before the build in buildSteps()`);
+  }
   console.log("check-base self-test OK");
 }
 
@@ -43,13 +66,7 @@ if (process.argv.includes("--self-test")) {
   }
 } else {
   const env = childEnv();
-  const steps = [
-    ["node", ["scripts/check-env.mjs", "--playwright"]],
-    ["npx", ["astro", "build"]],
-    ["node", ["scripts/check-dist.mjs"]],
-    ["npx", ["playwright", "test", "--project=chromium", "e2e/smoke.spec.ts"]],
-  ];
-  for (const [cmd, args] of steps) {
+  for (const [cmd, args] of buildSteps()) {
     console.log(`check-base: $ ${cmd} ${args.join(" ")}`);
     const r = spawnSync(cmd, args, { env, stdio: "inherit" });
     if (r.status !== 0) {

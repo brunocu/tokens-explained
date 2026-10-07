@@ -21,11 +21,13 @@
     "check:repo": "node scripts/check-repo.mjs",
     "check:base": "node scripts/check-base.mjs",
     "train:toy": "node scripts/train-toy-bpe.ts",
+    "precompute:comparison": "node scripts/precompute-comparison.ts",
     "prepare:corpus": "node scripts/prepare-corpus.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "8.0.2",
     "@astrojs/svelte": "9.0.1",
+    "@huggingface/tokenizers": "0.2.0",
     "astro": "7.3.5",
     "svelte": "5.57.1"
   },

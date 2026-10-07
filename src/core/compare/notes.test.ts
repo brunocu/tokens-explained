@@ -1,0 +1,88 @@
+import { describe, expect, it } from "vitest";
+import { EXAMPLES } from "../examples.ts";
+import { LANGUAGES_NOTE, NOTES } from "./notes.ts";
+import { TOKENIZER_ROWS } from "./rows.ts";
+
+const REPLACEMENT = String.fromCodePoint(0xfffd);
+
+// Names a note must never use: only GPT-2 and BERT are shown, so no other vendor or model
+// (D-08, UI-SPEC "Comparison lead-in").
+const BANNED_NAMES = [
+  "claude",
+  "anthropic",
+  "openai",
+  "google",
+  "gemini",
+  "llama",
+  "meta",
+  "mistral",
+  "qwen",
+  "chatgpt",
+  "gpt-3",
+  "gpt-4",
+  "gpt-5",
+  "microsoft",
+];
+
+const ALL_NOTES: Array<[string, string]> = [...Object.entries(NOTES), ["languages", LANGUAGES_NOTE]];
+
+/** Sentences, split on ., ! or ? followed by a space or the end of the text. */
+const sentenceCount = (note: string): number => note.split(/[.!?](?:\s+|$)/).filter((s) => s.trim() !== "").length;
+
+/** "GPT-2" is the one allowed name that contains a digit. */
+const withoutGpt2 = (note: string): string => note.replaceAll("GPT-2", "GPT");
+
+describe("what-to-notice notes (D-13, T-02-14)", () => {
+  it("has exactly one non-empty note per playground example id, and no others", () => {
+    expect(Object.keys(NOTES).sort()).toEqual(EXAMPLES.map((e) => e.id).sort());
+    for (const example of EXAMPLES) expect(NOTES[example.id]?.trim(), example.id).not.toBe("");
+    expect(LANGUAGES_NOTE.trim()).not.toBe("");
+  });
+
+  it.each(ALL_NOTES)("%s: has at most two sentences", (_name, note) => {
+    expect(sentenceCount(note)).toBeGreaterThanOrEqual(1);
+    expect(sentenceCount(note)).toBeLessThanOrEqual(2);
+  });
+
+  it.each(ALL_NOTES)("%s: contains no digit (apart from the name GPT-2) and no replacement character", (_name, note) => {
+    expect(withoutGpt2(note)).not.toMatch(/\d/);
+    expect(note.includes(REPLACEMENT)).toBe(false);
+  });
+
+  it.each(ALL_NOTES)("%s: names no vendor or model other than GPT-2 and BERT", (_name, note) => {
+    const lower = note.toLowerCase();
+    for (const banned of BANNED_NAMES) {
+      expect(new RegExp(`\\b${banned}\\b`).test(lower), banned).toBe(false);
+    }
+  });
+
+  it.each(ALL_NOTES)("%s: is about the comparison", (_name, note) => {
+    expect(/toy|GPT-2|BERT|tokenizer/.test(note)).toBe(true);
+  });
+
+  it.each(ALL_NOTES)("%s: does not call one tokenizer better", (_name, note) => {
+    expect(/\b(better|worse|best|worst|superior|inferior)\b/i.test(note)).toBe(false);
+  });
+});
+
+describe("tokenizer rows (D-13, TOK-09)", () => {
+  it("lists toy, GPT-2 and BERT in that order, each year-named except the toy", () => {
+    expect(TOKENIZER_ROWS.map((r) => r.id)).toEqual(["toy", "gpt2", "bert"]);
+    expect(TOKENIZER_ROWS.map((r) => r.name)).toEqual([
+      "Toy tokenizer (from the playground)",
+      "GPT-2 (2019)",
+      "BERT, uncased (2018)",
+    ]);
+    for (const row of TOKENIZER_ROWS) {
+      if (row.id === "toy") expect(row.name).not.toMatch(/\d{4}/);
+      else expect(row.name).toMatch(/\(\d{4}\)/);
+    }
+  });
+
+  it("tells the reader that BERT removes accents and marks continuation pieces with ##", () => {
+    const bert = TOKENIZER_ROWS.find((r) => r.id === "bert");
+    expect(bert?.subline).toContain("removes accents");
+    expect(bert?.subline).toContain("##");
+    expect(bert?.subline).toContain("lower-cases");
+  });
+});

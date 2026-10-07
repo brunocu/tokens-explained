@@ -1,0 +1,29 @@
+{
+  "files": [
+    {
+      "id": "gpt2",
+      "file": "gpt2.json",
+      "repo": "openai-community/gpt2",
+      "commit": "607a30d783dfa663caf39e06633721c8d4cfcd7e",
+      "license": "MIT",
+      "sourceUrl": "https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/tokenizer.json",
+      "retrieved": "2026-10-06",
+      "bytes": 1355256,
+      "gzipBytes": 548865,
+      "sha256": "8414cab924d8b9b33013f0d221c5862f365ee9be39c5c2bfae8a5a9e970478a6"
+    },
+    {
+      "id": "bert",
+      "file": "bert-uncased.json",
+      "repo": "google-bert/bert-base-uncased",
+      "commit": "86b5e0934494bd15c9632b12f734a8a67f723594",
+      "license": "Apache-2.0",
+      "sourceUrl": "https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json",
+      "retrieved": "2026-10-06",
+      "bytes": 466062,
+      "gzipBytes": 190756,
+      "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98"
+    }
+  ],
+  "combinedGzipBytes": 739621
+}

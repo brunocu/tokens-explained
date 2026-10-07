@@ -1,6 +1,8 @@
 // Supply-chain guard (T-01-SC). The dependency set must equal the human-approved
 // allow-list with exact specifiers. Adding a package later is deliberate friction:
 // edit ALLOW after a legitimacy review.
+// "@huggingface/tokenizers" was added after the human legitimacy check of plan 02-02
+// (T-02-03): exact pin, no install script, Apache-2.0, maintained by the Hugging Face org.
 import { readFileSync } from "node:fs";
 
 const ALLOW = {
@@ -8,6 +10,7 @@ const ALLOW = {
     astro: "7.3.5",
     "@astrojs/mdx": "8.0.2",
     "@astrojs/svelte": "9.0.1",
+    "@huggingface/tokenizers": "0.2.0",
     svelte: "5.57.1",
   },
   devDependencies: {

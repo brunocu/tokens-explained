@@ -2,6 +2,7 @@
 import { Font } from "astro:assets";
 import SiteHeader from "../components/SiteHeader.astro";
 import "../styles/tokens.css";
+import "../styles/island.css";
 
 interface Props {
   title: string;
@@ -26,28 +27,32 @@ const { title, description, canonical } = Astro.props;
   <body>
     <SiteHeader />
     <main id="main"><slot /></main>
-    <!-- Failed-to-load watcher (D-09). Inline on purpose: it must not depend on any bundled asset
-         that could itself fail to load. The timer starts when the card first enters the viewport,
-         not at page load, because the island only hydrates once the card is near the viewport. -->
+    <!-- Failed-to-load watcher (D-09), for every interactive card (every [data-island]). Inline on
+         purpose: it must not depend on any bundled asset that could itself fail to load. Each card
+         gets its own observer and its own timer, started when that card first enters the viewport
+         (not at page load), because an island only hydrates once its card is near the viewport.
+         A late hydration recovers the card: the island sets data-state back to ready. The Reload
+         page buttons have no framework handler, so one delegated click listener serves them all. -->
     <script is:inline>
       (function () {
-        var card = document.querySelector("[data-playground]");
-        if (!card) return;
-        card.addEventListener("click", function (e) {
+        document.addEventListener("click", function (e) {
           var t = e.target;
           if (t && t.closest && t.closest("[data-reload]")) location.reload();
         });
         if (!("IntersectionObserver" in window)) return;
-        var io = new IntersectionObserver(function (entries) {
-          var seen = false;
-          for (var i = 0; i < entries.length; i++) if (entries[i].isIntersecting) seen = true;
-          if (!seen) return;
-          io.disconnect();
-          setTimeout(function () {
-            if (card.getAttribute("data-state") === "loading") card.setAttribute("data-state", "failed");
-          }, 8000);
+        var cards = document.querySelectorAll("[data-island]");
+        Array.prototype.forEach.call(cards, function (card) {
+          var io = new IntersectionObserver(function (entries) {
+            var seen = false;
+            for (var i = 0; i < entries.length; i++) if (entries[i].isIntersecting) seen = true;
+            if (!seen) return;
+            io.disconnect();
+            setTimeout(function () {
+              if (card.getAttribute("data-state") === "loading") card.setAttribute("data-state", "failed");
+            }, 8000);
+          });
+          io.observe(card);
         });
-        io.observe(card);
       })();
     </script>
   </body>

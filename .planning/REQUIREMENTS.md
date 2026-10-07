@@ -23,11 +23,11 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TOK-02**: Reader can see token, character and word counts for their text
 - [x] **TOK-03**: Reader can toggle the playground between token text and token IDs
 - [x] **TOK-04**: Reader can pick example texts and reset the playground to its default
-- [ ] **TOK-05**: Reader can step through BPE merges one at a time with Next, Back and Reset on a small corpus
-- [ ] **TOK-06**: Reader can see pair counts and the tie-break rule at each BPE step
-- [ ] **TOK-07**: Reader can compare toy tokenizer output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages, code)
-- [ ] **TOK-08**: Reader can see the same sentence in many languages and how token counts differ
-- [ ] **TOK-09**: Reader gets a short plain-language note on each comparison saying what to notice
+- [x] **TOK-05**: Reader can step through BPE merges one at a time with Next, Back and Reset on a small corpus
+- [x] **TOK-06**: Reader can see pair counts and the tie-break rule at each BPE step
+- [x] **TOK-07**: Reader can compare toy tokenizer output side by side with real model tokenizers on curated inputs (numbers, emoji, other languages)
+- [x] **TOK-08**: Reader can see the same sentence in many languages and how token counts differ
+- [x] **TOK-09**: Reader gets a short plain-language note on each comparison saying what to notice
 - [x] **TOK-10**: Reader reads a post that defines "token" in plain language and corrects the "token = word" misconception, with no code or math required
 
 ### Embeddings
@@ -117,11 +117,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOK-02 | Phase 1 | Complete |
 | TOK-03 | Phase 1 | Complete |
 | TOK-04 | Phase 1 | Complete |
-| TOK-05 | Phase 2 | Pending |
-| TOK-06 | Phase 2 | Pending |
-| TOK-07 | Phase 2 | Pending |
-| TOK-08 | Phase 2 | Pending |
-| TOK-09 | Phase 2 | Pending |
+| TOK-05 | Phase 2 | Complete |
+| TOK-06 | Phase 2 | Complete |
+| TOK-07 | Phase 2 | Complete |
+| TOK-08 | Phase 2 | Complete |
+| TOK-09 | Phase 2 | Complete |
 | TOK-10 | Phase 1 | Complete |
 | EMB-01 | Phase 3 | Pending |
 | EMB-02 | Phase 3 | Pending |
