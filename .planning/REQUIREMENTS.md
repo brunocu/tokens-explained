@@ -5,7 +5,7 @@
 
 ## v1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for initial release. Each maps to roadmap phases. The MVP is Foundation and Post 1 only; the Embeddings, Context, Reasoning and Site sections below are deferred to the next milestone (v1.1).
 
 ### Foundation
 
@@ -106,7 +106,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 1 (static build), Phase 5 (deployed verification) | Complete |
+| FOUND-01 | Phase 1 (static build), Phase 3 (deployed verification) | Complete |
 | FOUND-02 | Phase 1 | Complete |
 | FOUND-03 | Phase 1 | Complete |
 | FOUND-04 | Phase 1 | Complete |
@@ -123,22 +123,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOK-08 | Phase 2 | Complete |
 | TOK-09 | Phase 2 | Complete |
 | TOK-10 | Phase 1 | Complete |
-| EMB-01 | Phase 3 | Pending |
-| EMB-02 | Phase 3 | Pending |
-| EMB-03 | Phase 3 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
-| REAS-01 | Phase 3 | Pending |
-| REAS-02 | Phase 3 | Pending |
-| SITE-01 | Phase 4 | Pending |
-| SITE-02 | Phase 4 | Pending |
-| SITE-03 | Phase 4 | Pending |
-| SITE-04 | Phase 4 | Pending |
+| EMB-01 | Phase 4 (v1.1) | Deferred |
+| EMB-02 | Phase 4 (v1.1) | Deferred |
+| EMB-03 | Phase 4 (v1.1) | Deferred |
+| CTX-01 | Phase 4 (v1.1) | Deferred |
+| CTX-02 | Phase 4 (v1.1) | Deferred |
+| REAS-01 | Phase 4 (v1.1) | Deferred |
+| REAS-02 | Phase 4 (v1.1) | Deferred |
+| SITE-01 | Phase 5 (v1.1) | Deferred |
+| SITE-02 | Phase 5 (v1.1) | Deferred |
+| SITE-03 | Phase 5 (v1.1) | Deferred |
+| SITE-04 | Phase 5 (v1.1) | Deferred |
 
 **Coverage:**
-- v1 requirements: 28 total
-- Mapped to phases: 28 ✓
+- MVP requirements (Foundation + Post 1): 17 total, all mapped and Complete (deployed verification of FOUND-01 in Phase 3)
+- Deferred to v1.1 (Embeddings, Context, Reasoning, Site): 11, mapped to provisional Phases 4 and 5
 - Unmapped: 0
+
+MVP pivot 2026-10-13: the author narrowed the MVP to Post 1 only. EMB, CTX, REAS and SITE requirements stay defined but are deferred to the next milestone.
 
 FOUND-07 and TOK-07: amended by Phase 2.1 on 2026-10-07: wording and status reopened; Complete again only when Phase 2.1 verifies. Re-verified 2026-10-07 by the plan 02.1-09 automated gate on three browsers and the author's read-through and human checks.
 

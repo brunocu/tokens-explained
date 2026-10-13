@@ -46,7 +46,7 @@ A non-programmer can play with a tokenizer in the browser and come away with a c
 
 - **Audience**: General public, no programming assumed — drives tone, depth, and interaction design
 - **Interactivity**: Interactives must run in the browser for readers — an interactive blog should work without setup
-- **Scope**: First release includes all four posts plus hub and disambiguation page — author's stated definition of done
+- **Scope**: MVP is the core "What is a token?" post only, published as the site root page. Revised 2026-10-13 from "all four posts plus hub and disambiguation page" after the author wrote Post 1. The embeddings, context and reasoning posts, hub and disambiguation page move to the next milestone (v1.1)
 
 ## Key Decisions
 
@@ -55,7 +55,7 @@ A non-programmer can play with a tokenizer in the browser and come away with a c
 | Series of posts + hub instead of one long essay | Scope too large for one page; one concept per post; shippable and maintainable in pieces | — Pending |
 | The BPE stepper for internals, real tokenizers (GPT-2, BERT) for everything the reader types into | A miniature is easy to explain step by step, but a toy tokenizer in the playground gave readers ids and splits that contradict every real tool; real ones show convincing real-world behavior | Resolved 2026-10-07 (Phase 2.1): toy tokenizer, its trainer and its corpus deleted; stepper kept as a labelled miniature |
 | Start with "What is a token?" as the flagship post | Foundation for every other term; reusable components originate here | — Pending |
-| First release = all four posts | Author's definition of done | — Pending |
+| MVP = Post 1 ("What is a token?") only | Revised 2026-10-13: the original definition of done was all four posts plus hub; after writing Post 1 the author chose to ship the core post first and add the rest in v1.1 | Superseded the earlier "first release = all four posts" |
 
 ## Evolution
 

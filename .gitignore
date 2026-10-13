@@ -12,3 +12,4 @@ playwright-report/
 *.log
 .gsd/
 .planning/state.json
+.planning/milestone.lock

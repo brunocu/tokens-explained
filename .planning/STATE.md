@@ -1,19 +1,21 @@
 ---
 gsd_state_version: "1.0"
-current_phase: 3
-current_phase_name: Embeddings, Context & Reasoning Posts
-status: planning
-stopped_at: Phase 02.2 complete, ready to plan Phase 3
-last_updated: "2026-10-13T17:24:47.568Z"
+milestone: v1.1
+milestone_name: ) — deferred from the MVP on 2026-10-13
+current_phase: 03
+current_phase_name: harden-release
+status: executing
+stopped_at: Phase 3 context gathered
+last_updated: "2026-10-13T19:38:52.136Z"
 last_activity: 2026-10-13
 last_activity_desc: Phase 02.2 complete, transitioned to Phase 3
-state_head: 87d6f0f45dcc3d6f8760f65cb3152b5610138ad5
+state_head: 30de19d08906fd0a49ef7ed65f7bd76d12bd6412
 progress:
-  total_phases: 7
-  completed_phases: 3
-  total_plans: 35
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 43
   completed_plans: 35
-  percent: 50
+  percent: 20
 ---
 
 # Project State
@@ -27,12 +29,12 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 
 ## Current Position
 
-Phase: 3 — Embeddings, Context & Reasoning Posts
+Phase: 03 (harden-release) — READY TO EXECUTE
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-10-13 — Phase 02.2 complete, transitioned to Phase 3
+Status: Ready to execute
+Last activity: 2026-10-13 — Roadmap revised: MVP pivoted to Post 1 only
 
-Progress: [█████░░░░░] 50%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -179,6 +181,7 @@ None yet.
 
 - Phase 02.1 inserted after Phase 2: Replace toy tokenizer with GPT-2 in playground and examples (from quick task 261006-riu evaluation) (URGENT)
 - Phase 02.2 inserted after Phase 2: rework widgets (URGENT)
+- 2026-10-13 MVP pivot: scope narrowed to Post 1 only. Old Phases 3 (embeddings/context/reasoning posts) and 4 (hub/disambiguation/glossary) deferred to the next milestone (v1.1, provisional Phases 4 and 5); old Phase 5 (Harden & Release) renumbered Phase 3, depends on Phase 2.2, scoped to Post 1 as the site root page. Directory phases/05-harden-release renamed to 03-harden-release
 
 ## Deferred Items
 
@@ -190,6 +193,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T16:40:17.181Z
-Stopped at: Phase 02.2 complete, ready to plan Phase 3
-Resume file: None
+Last session: 2026-10-13T18:48:17.554Z
+Stopped at: Phase 3 context gathered
+Resume file: .planning/phases/03-harden-release/03-CONTEXT.md

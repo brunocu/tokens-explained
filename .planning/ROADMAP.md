@@ -2,7 +2,9 @@
 
 ## Overview
 
-Tokenizer Vis is a short series of interactive posts that give a non-programmer a correct mental model of "token", "embedding", "context" and "reasoning". The journey starts with the smallest slice that proves the core value: a deployed "What is a token?" post where a reader types text into a real tokenizer (GPT-2) and sees accessible, correctly rendered tokens (Phase 1; amended by Phase 2.1). It then deepens Post 1 with the step-through BPE trainer and honest comparison against real model tokenizers (Phase 2), adds the embeddings, context and reasoning posts that reuse the shared pieces (Phase 3), and finishes by tying the series together with a "start here" hub, a glossary-driven disambiguation page and glossary tooltips (Phase 4). Every phase ends with something a reader can open and use.
+Tokenizer Vis is a short series of interactive posts that give a non-programmer a correct mental model of "token", "embedding", "context" and "reasoning".
+
+**MVP scope (revised 2026-10-13):** after writing Post 1, the author narrowed the MVP to the core "What is a token?" post alone. The MVP journey starts with the smallest slice that proves the core value: a "What is a token?" post where a reader types text into a real tokenizer (GPT-2) and sees accessible, correctly rendered tokens (Phase 1; amended by Phase 2.1). It deepens Post 1 with the step-through BPE trainer and honest comparison against real model tokenizers (Phase 2), reworks the four widgets into one consistent layout (Phase 2.2), and finishes by publishing Post 1 as the site's root page and checking it end to end (Phase 3). The embeddings, context and reasoning posts, the "start here" hub, the disambiguation page and glossary tooltips move to the next milestone (v1.1). Every phase ends with something a reader can open and use.
 
 ## Phases
 
@@ -14,20 +16,27 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & Token Playground** - Deployed "What is a token?" post with a live GPT-2 playground and the shared, accessible token display (completed 2026-10-05; amended by Phase 2.1)
 - [x] **Phase 2: BPE Stepper & Real-Tokenizer Comparison** - Step-through BPE trainer and GPT-2-vs-BERT comparison, completing Post 1 (completed 2026-10-06; amended by Phase 2.1)
-- [ ] **Phase 3: Embeddings, Context & Reasoning Posts** - Three posts that separate embedding, context and reasoning from "token"
-- [ ] **Phase 4: Hub, Disambiguation & Glossary** - "Start here" hub, side-by-side disambiguation page and glossary tooltips that tie the series together
-- [ ] **Phase 5: Harden & Release** - Remote repo, GitHub Pages deploy and CI, then accessibility, performance, fact-check and reader-testing passes before release
+- [x] **Phase 2.1: Replace the toy with GPT-2** - (INSERTED) real GPT-2 tokenizer in the playground and examples (completed 2026-10-07)
+- [x] **Phase 2.2: Rework widgets** - (INSERTED) consistent layout for the four Post 1 widgets (completed 2026-10-13)
+- [ ] **Phase 3: Harden & Release** - Remote repo, GitHub Pages deploy and CI with Post 1 as the root page, then accessibility, performance, fact-check and reader-testing passes before release (renumbered from Phase 5 on 2026-10-13)
+
+### Next milestone (v1.1) — deferred from the MVP on 2026-10-13
+
+Details are kept under "Deferred Phase Details" below. They are not part of the MVP and are renumbered when the next milestone starts.
+
+- [ ] **Phase 4: Embeddings, Context & Reasoning Posts** (was Phase 3) - Three posts that separate embedding, context and reasoning from "token"
+- [ ] **Phase 5: Hub, Disambiguation & Glossary** (was Phase 4) - "Start here" hub, side-by-side disambiguation page and glossary tooltips that tie the series together
 
 ## Phase Details
 
 ### Phase 1: Foundation & Token Playground
 
-**Goal**: A reader can open the "What is a token?" post (served locally in Phase 1; deployed in Phase 5) and play with a tokenizer in the browser, using a shared, accessible token display that every later post reuses
+**Goal**: A reader can open the "What is a token?" post (served locally in Phase 1; deployed in Phase 3) and play with a tokenizer in the browser, using a shared, accessible token display that every later post reuses
 **Mode:** mvp
 **Depends on**: Nothing (first phase)
 **Requirements**: FOUND-01, FOUND-02, FOUND-03, FOUND-04, FOUND-05, FOUND-06, FOUND-07, TOK-01, TOK-02, TOK-03, TOK-04, TOK-10
 **Success Criteria** (what must be TRUE):
-  1. The site builds to fully static files (`astro build`, viewable with `astro preview` on the post URL `/what-is-a-token/`) that need no server, account or setup in a desktop browser; mobile is secondary for the MVP. Public deployment is verified in Phase 5
+  1. The site builds to fully static files (`astro build`, viewable with `astro preview` on the post URL `/what-is-a-token/`) that need no server, account or setup in a desktop browser; mobile is secondary for the MVP. Public deployment is verified in Phase 3
   2. A reader can type text into the playground and see it split into colored tokens, with token, character and word counts, a toggle between token text and token IDs, example-text chips, and a reset to the default text
   3. A reader can tell where each token starts and ends without relying on color (separators or outlines), and can see whitespace inside tokens (such as a leading space) as a visible glyph
   4. A reader who types an emoji or other multi-byte character sees the pieces of a split character as partial-character chips, and a replacement symbol never appears; the playground uses a real tokenizer (GPT-2) whose output comes from bytes after a pre-split step (amended by Phase 2.1)
@@ -175,7 +184,51 @@ Plans:
 
 **UI hint**: yes
 
-### Phase 3: Embeddings, Context & Reasoning Posts
+### Phase 3: Harden & Release
+
+**Goal**: Post 1, "What is a token?", is published as the site's root page on a public URL and has been checked end to end: deployed, accessible, fast on a throttled connection, factually current, and readable by non-programmers
+**Depends on**: Phase 2.2
+**Requirements**: FOUND-01 (deployed-site verification, deferred from Phase 1)
+**Success Criteria** (what must be TRUE):
+  1. A reader can open the site's public GitHub Pages URL and land directly on Post 1 with no install, account or setup (Post 1 is the root page; there is no hub or placeholder index in the MVP), and every link and asset works under the sub-path base
+  2. Pushing to main builds, tests and deploys the site through CI, and the live URL passes the same smoke tests as the local build
+  3. The site passes automated accessibility checks (axe, Lighthouse) plus keyboard-only, screen-reader and colour-blind checks, and also works in dark mode, print and zoom
+  4. Typing in the playground sends no network request; the initial bundle fits its budget on a throttled connection; a mobile layout is usable (mobile is secondary for v1)
+  5. Every quoted split, vendor fact and definition in Post 1 has been re-verified against current sources and dated, and `npm audit` has been re-checked
+  6. At least two non-programmers have read Post 1 and their confusion points are resolved or recorded
+
+**Plans:** 0/8 plans complete
+
+Plans:
+**Wave 1**
+- [ ] 03-01-PLAN.md — History baseline: squash rehearsal, identity and lock-file decisions, per-phase baseline commits, local archive, phase branch
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 03-02-PLAN.md — Release tracer: favicon under the production base, licences, README, font notice, licence footer
+- [ ] 03-03-PLAN.md — Fact re-verification of the 26 references, tokenizer facts and numbers; refreshed access dates in References
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 03-04-PLAN.md — Deploy workflow (test gates deploy), gitleaks in the dev shell, remote-base e2e mode, local-squash release runbook
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [ ] 03-05-PLAN.md — Hardening evidence (budget, reflow/print/dark, freeze guard, audit) and manual-check kits with reader questionnaire
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [ ] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step)
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [ ] 03-07-PLAN.md — Remote read-back, publish go/no-go, push main only, first deployment and live URL
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [ ] 03-08-PLAN.md — Live smoke run, headers and Lighthouse report, two reader sessions, limitations note, branch-per-phase config
+
+**UI hint**: no
+
+## Deferred Phase Details (next milestone, v1.1)
+
+Deferred from the MVP on 2026-10-13 when the author narrowed it to Post 1. Phase numbers 4 and 5 are provisional and are reassigned when the next milestone is created. Their requirements (EMB, CTX, REAS, SITE) stay in REQUIREMENTS.md, marked deferred.
+
+### Phase 4: Embeddings, Context & Reasoning Posts (deferred; was Phase 3)
 
 **Goal**: A reader can tell a token apart from an embedding, understand context as "what is in the prompt right now", and understand "reasoning" as extra generated tokens
 **Mode:** mvp
@@ -191,11 +244,11 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 4: Hub, Disambiguation & Glossary
+### Phase 5: Hub, Disambiguation & Glossary (deferred; was Phase 4)
 
 **Goal**: A reader can enter the series from a "start here" hub, see the four terms side by side, and check any term's definition from inside a post, with definitions that never disagree
 **Mode:** mvp
-**Depends on**: Phase 2, Phase 3
+**Depends on**: Phase 2, Phase 4 (the posts it links)
 **Requirements**: SITE-01, SITE-02, SITE-03, SITE-04
 **Success Criteria** (what must be TRUE):
   1. A reader can open a "start here" hub page that lists the posts in a recommended but optional order, and can open any post directly from it
@@ -206,32 +259,17 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 5: Harden & Release
-
-**Goal**: The finished series is published on a public URL and has been checked end to end: deployed, accessible, fast on a throttled connection, factually current, and readable by non-programmers
-**Depends on**: Phase 4
-**Requirements**: FOUND-01 (deployed-site verification, deferred from Phase 1)
-**Success Criteria** (what must be TRUE):
-  1. A reader can open the site at its public GitHub Pages URL with no install, account or setup, and every link and asset works under the sub-path base
-  2. Pushing to main builds, tests and deploys the site through CI, and the live URL passes the same smoke tests as the local build
-  3. The site passes automated accessibility checks (axe, Lighthouse) plus keyboard-only, screen-reader and colour-blind checks, and also works in dark mode, print and zoom
-  4. Typing in any playground sends no network request; the initial bundle fits its budget on a throttled connection; a mobile layout is usable (mobile is secondary for v1)
-  5. Every quoted split, vendor fact and definition has been re-verified against current sources and dated, terminology is consistent across posts, and `npm audit` has been re-checked
-  6. At least two non-programmers have read each post and their confusion points are resolved or recorded
-
-**Plans**: TBD
-**UI hint**: no
-
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 2.1 → 3 → 4 → 5 (Phase 3 depends only on Phase 1, so it can proceed even if Phase 2 slips)
+MVP phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3. Phases 4 and 5 belong to the next milestone (v1.1) and are not scheduled.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Token Playground | 7/7 | Complete    | 2026-10-05 |
 | 2. BPE Stepper & Real-Tokenizer Comparison | 10/10 | Complete    | 2026-10-06 |
 | 2.1. Replace the toy with GPT-2 | 10/10 | Complete    | 2026-10-07 |
-| 3. Embeddings, Context & Reasoning Posts | 0/TBD | Not started | - |
-| 4. Hub, Disambiguation & Glossary | 0/TBD | Not started | - |
-| 5. Harden & Release | 0/TBD | Not started | - |
+| 2.2. Rework widgets | 8/8 | Complete    | 2026-10-13 |
+| 3. Harden & Release | 0/8 | Planned | - |
+| 4. Embeddings, Context & Reasoning Posts (v1.1) | 0/TBD | Deferred | - |
+| 5. Hub, Disambiguation & Glossary (v1.1) | 0/TBD | Deferred | - |
