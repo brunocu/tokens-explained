@@ -74,7 +74,8 @@
     cursor: pointer;
   }
   .scroll {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 200px;
     margin-top: var(--space-sm);
     background: var(--bg);
     border: 1px solid var(--border);

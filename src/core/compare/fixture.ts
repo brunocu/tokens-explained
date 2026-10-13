@@ -27,8 +27,9 @@ export type ComparisonFixture = {
       bert: { gzipBytes: number; sizeLabelMb: string };
     };
   };
-  /** The playground's default text and its GPT-2 tokens, so the first paint is real (D-07). */
-  defaultText: { text: string; gpt2: FixtureToken[] };
+  /** The playground's default text and its tokens, so the first paint is real (D-07). The comparison
+   *  shows the BERT rows of the default text too, so both tokenizers are stored. */
+  defaultText: { text: string } & FixtureRows;
   examples: Array<{ id: string; label: string; text: string; rows: FixtureRows }>;
   languages: Array<{ id: string; rows: FixtureRows }>;
 };

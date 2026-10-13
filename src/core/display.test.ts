@@ -9,7 +9,6 @@ import {
   describeTokens,
   idLabel,
   pieceWording,
-  specialKinds,
   speakToken,
   tableCell,
 } from "./display.ts";
@@ -154,6 +153,14 @@ describe("pieceWording", () => {
     expect(pieceWording(undefined)).toBeNull();
     expect(pieceWording(groupBytes([text("abc")]).tokens[0])).toBeNull();
   });
+  it("lists a space with the character it shares a token with, as a glyph", () => {
+    const tokens = [tok([0x20, 0xf0, 0x9f], true), tok([0x8e, 0x89], true)];
+    const g = groupBytes(tokens);
+    expect(tableCell(tokens[0] as Token, g.tokens[0])).toBe(`Pieces of 2 characters: ${GLYPH_SPACE}, \u{1f389}`);
+    expect(speakToken(tokens[0] as Token, g.tokens[0])).toBe("pieces of 2 characters: space, \u{1f389}");
+    // The second token holds only the end of the emoji, so its wording is unchanged.
+    expect(tableCell(tokens[1] as Token, g.tokens[1])).toBe("Bytes 3 to 4 of 4 of \u{1f389}");
+  });
   it("is never offered for a non-partial token by the cell helpers", () => {
     const tokens = cut(bytesOf("日"));
     expect(tokens[0]?.isPartial).toBe(false);
@@ -163,10 +170,26 @@ describe("pieceWording", () => {
 });
 
 describe("speakToken and describeTokens", () => {
-  it("spells out whitespace and the same wording in lower case", () => {
-    expect(speakToken(text(" the"))).toBe("(space)the");
-    expect(speakToken(text("\n"))).toBe("(new line)");
-    expect(speakToken(text("\t"))).toBe("(tab)");
+  it("speaks leading, trailing and only spaces as the word space", () => {
+    expect(speakToken(text(" cat"))).toBe("space cat");
+    expect(speakToken(text("cat "))).toBe("cat space");
+    expect(speakToken(text(" "))).toBe("space");
+    expect(speakToken(text("  "))).toBe("space space");
+  });
+
+  it("speaks new line, tab and other control characters as words", () => {
+    expect(speakToken(text("\n"))).toBe("new line");
+    expect(speakToken(text("\t"))).toBe("tab");
+    expect(speakToken(text("a\tb"))).toBe("a tab b");
+    expect(speakToken(tok([0x07]))).toBe("control character");
+    expect(speakToken(tok([0x7f]))).toBe("control character");
+  });
+
+  it("announces a special token", () => {
+    expect(speakToken({ ...text("[UNK]"), special: true })).toBe("special token [UNK]");
+  });
+
+  it("spells out the same wording as the table in lower case, with whitespace as words", () => {
     expect(spoken(cut([0xf0, 0x9f], [0x8e], [0x89]))).toEqual([
       "bytes 1 to 2 of 4 of 🎉",
       "byte 3 of 4 of 🎉",
@@ -178,15 +201,23 @@ describe("speakToken and describeTokens", () => {
     );
   });
 
-  it("speaks hex for a partial token without context", () => {
-    expect(speakToken(partial([0xf0, 0x9f]))).toBe("F0 9F");
+  it("speaks bytes for a partial token without context", () => {
+    expect(speakToken(partial([0xf0, 0x9f]))).toBe("bytes F0 9F");
+  });
+
+  it("speaks a newline or tab sharing a token with the start of an emoji as words", () => {
+    const tokens = [tok([0x0a, 0xf0, 0x9f], true), tok([0x8e, 0x89], true)];
+    const g = groupBytes(tokens);
+    expect(speakToken(tokens[0] as Token, g.tokens[0])).toBe("pieces of 2 characters: new line, \u{1f389}");
+    const tabbed = [tok([0x09, 0xf0, 0x9f], true), tok([0x8e, 0x89], true)];
+    expect(speakToken(tabbed[0] as Token, groupBytes(tabbed).tokens[0])).toBe("pieces of 2 characters: tab, \u{1f389}");
   });
 
   it("summarises a token list", () => {
     expect(describeTokens([])).toBe("no tokens");
     expect(describeTokens([text("a")])).toBe("1 token: a");
     expect(describeTokens(cut([0x61], [0x20, 0x62], [0xf0, 0x9f], [0x8e], [0x89]))).toBe(
-      "5 tokens: a | (space)b | bytes 1 to 2 of 4 of 🎉 | byte 3 of 4 of 🎉 | byte 4 of 4 of 🎉",
+      "5 tokens: a | space b | bytes 1 to 2 of 4 of 🎉 | byte 3 of 4 of 🎉 | byte 4 of 4 of 🎉",
     );
   });
 
@@ -201,31 +232,6 @@ describe("speakToken and describeTokens", () => {
     }
     // A real replacement character kept whole in one token is spoken as bytes, not as itself.
     const whole = cut([0xef, 0xbf, 0xbd]);
-    expect(spoken(whole)).toEqual(["EF BF BD"]);
-  });
-});
-
-describe("specialKinds (which legend sentences apply)", () => {
-  const special = (s: string): Token => ({ ...text(s), special: true });
-
-  it("reports neither kind for no tokens and for ordinary tokens", () => {
-    expect(specialKinds([])).toEqual({ unknown: false, marker: false });
-    expect(specialKinds([text("hello"), partial([0xe6, 0x97])])).toEqual({ unknown: false, marker: false });
-  });
-
-  it("reports only unknown for a special token spelled [UNK]", () => {
-    expect(specialKinds([text("a"), special("[UNK]")])).toEqual({ unknown: true, marker: false });
-  });
-
-  it("reports only marker for any other special token, such as the end-of-text marker", () => {
-    expect(specialKinds([special("<|endoftext|>")])).toEqual({ unknown: false, marker: true });
-  });
-
-  it("reports both when both kinds are on screen", () => {
-    expect(specialKinds([special("[UNK]"), special("<|endoftext|>")])).toEqual({ unknown: true, marker: true });
-  });
-
-  it("does not treat an ordinary token that happens to spell [UNK] as special", () => {
-    expect(specialKinds([text("[UNK]")])).toEqual({ unknown: false, marker: false });
+    expect(spoken(whole)).toEqual(["bytes EF BF BD"]);
   });
 });

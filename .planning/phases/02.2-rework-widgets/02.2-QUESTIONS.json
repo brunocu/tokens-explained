@@ -1,0 +1,397 @@
+{
+  "phase": "02.2-rework-widgets",
+  "generated_at": "2026-10-07T00:00:00Z",
+  "stats": {
+    "total": 14,
+    "answered": 14,
+    "chat_more": 5,
+    "remaining": 0
+  },
+  "sections": [
+    {
+      "id": "sizing",
+      "title": "Constant height and wide breakout",
+      "questions": [
+        {
+          "id": "Q-01",
+          "title": "What does \"constant height\" mean?",
+          "context": "Today every widget grows with its content: the playground wraps with the text length, the stepper changes block-by-block per step (BpeStepper.svelte 473 lines), the comparison changes with the picked text. Article column is 680px (styles/tokens.css:127).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Same fixed height for all widgets",
+              "description": "One shared value (e.g. about 640px on wide screens). Strongest visual consistency; some widgets will have spare room."
+            },
+            {
+              "id": "b",
+              "label": "Fixed per widget, never changes while the reader uses it",
+              "description": "Each widget reserves the height of its tallest state, so nothing jumps, but widgets can differ from each other."
+            },
+            {
+              "id": "c",
+              "label": "Fixed height tied to the viewport",
+              "description": "Widget is e.g. min(80vh, 720px) so it always fits on screen; same on every widget."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": "Describe in the box below."
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-02",
+          "title": "When content does not fit the fixed height",
+          "context": "Cases: a pasted long text in the playground, a long own-text in the comparison, the stepper pair table on a small viewport. Today the stepper pair table already scrolls in its own region.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Scroll inside the affected panel",
+              "description": "Only the overflowing panel scrolls (keyboard-focusable region with a label). Everything else stays put."
+            },
+            {
+              "id": "b",
+              "label": "Cap the input length",
+              "description": "Limit typed/pasted text (e.g. a few hundred characters) so output normally fits; scroll only as a fallback."
+            },
+            {
+              "id": "c",
+              "label": "Both a and b",
+              "description": "Cap the input and scroll as a safety net."
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-03",
+          "title": "How wide may a widget go?",
+          "context": "Reading column stays 680px; widgets break out of it on wide screens. Chips and tables need room for two columns.",
+          "options": [
+            {
+              "id": "a",
+              "label": "About 960px",
+              "description": "Modest breakout, always comfortably inside a laptop window."
+            },
+            {
+              "id": "b",
+              "label": "About 1120px",
+              "description": "Room for two real columns; still centred with margin on 1440px screens."
+            },
+            {
+              "id": "c",
+              "label": "Full viewport minus gutters, capped about 1280px",
+              "description": "Widest; most content visible at once."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "Chosen via sketch 002: variant A, 960px.",
+          "status": "answered"
+        },
+        {
+          "id": "Q-04",
+          "title": "Breakpoint and the stacked fallback",
+          "context": "Two columns below the breakpoint would be cramped. The stacked layout is for narrower screens and phones (mobile is secondary per Phase 1 D-15).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Two columns from 900px; stacked below with auto height",
+              "description": "Constant height applies only in two-column mode; stacked widgets grow with content for readability."
+            },
+            {
+              "id": "b",
+              "label": "Two columns from 1024px; stacked below with auto height",
+              "description": "Same rule, later breakpoint (tablets in portrait get stacked)."
+            },
+            {
+              "id": "c",
+              "label": "Two columns from 900px; constant height also when stacked",
+              "description": "Stacked widgets keep a fixed height and scroll inside."
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "structure",
+      "title": "MDX structure and column roles",
+      "questions": [
+        {
+          "id": "Q-05",
+          "title": "Rule for what goes in the left and right column",
+          "context": "Playground: textbox, examples, counts, legend, tokens. Stepper: controls, why-sentence, chars stream, words, vocabulary, pair table. Comparison: picker/own text, two tokenizer rows, notes.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Left = input and controls, right = results",
+              "description": "Same rule in every widget: you act on the left, you read the outcome on the right."
+            },
+            {
+              "id": "b",
+              "label": "Left = the visual (chips, words), right = explanation (tables, notes, counts)",
+              "description": "Visual first, numbers beside it."
+            },
+            {
+              "id": "c",
+              "label": "Decide per widget",
+              "description": "Planner chooses per widget within 'all information visible at once'."
+            }
+          ],
+          "answer": "c",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-06",
+          "title": "Headings and prose in the MDX: one section heading per widget?",
+          "context": "The wrappers fix heading ids because MDX-generated ids are fragile (research Pattern 4) and the wrappers also feed props (fixture subset for the playground, the licence-notices address from the site base). Moving to MDX means h2 ids and prop wiring move into the post. The pinned-sentence tests in post-content.test.ts must follow.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Plain ## headings in MDX, explicit ids where a widget needs aria-labelledby",
+              "description": "Closest to 'all content in the MDX file'."
+            },
+            {
+              "id": "b",
+              "label": "Plain ## headings, widgets labelled by their own aria-label (no heading id link)",
+              "description": "Simplest; the widget names itself for screen readers."
+            },
+            {
+              "id": "c",
+              "label": "Let the planner choose",
+              "description": "As long as no .astro wrapper remains."
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-07",
+          "title": "Where do prop data and the base-aware URL come from once wrappers are gone?",
+          "context": "PlaygroundSection builds preTokens from comparison.json and passes sizeLabel; ComparisonSection builds noticeHref from BASE_URL. Svelte islands must not import the big fixture themselves (research Pitfall 6) and must not touch browser-only APIs at top level.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Post MDX imports data modules and passes props",
+              "description": "Everything visible in the MDX; a little code in the post."
+            },
+            {
+              "id": "b",
+              "label": "A small shared .ts module exports ready-made props; MDX only passes them",
+              "description": "Keeps the MDX tidy. No .astro wrapper."
+            },
+            {
+              "id": "c",
+              "label": "Planner decides",
+              "description": ""
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "playground",
+      "title": "Playground: single text + IDs view",
+      "questions": [
+        {
+          "id": "Q-08",
+          "title": "How are text and token ID shown together?",
+          "context": "The stepper currently shows chips with the character on top and its byte value below (BpeStepper.svelte 'chars' stream). TokenDisplay has 'text' and 'ids' modes plus a TokenTable text alternative and TokenRows.svelte.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Each chip is two-line: token text on top, ID underneath",
+              "description": "Like the stepper's character/byte stack. Wraps naturally with the text."
+            },
+            {
+              "id": "b",
+              "label": "Chip with text; ID as a small label tucked under the chip, outside the outline",
+              "description": "Cleaner chips, the ID reads as secondary."
+            },
+            {
+              "id": "c",
+              "label": "Two aligned rows per line (text row, ID row)",
+              "description": "Strong table feel; harder to wrap."
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-09",
+          "title": "Bytes and the text alternative after removing 'Peek under the hood'",
+          "context": "Phase 1 D-04: hex is shown on partial-character chips by default; the peek toggle revealed bytes for everything. The accessible TokenTable and the IDs toggle (D-08) also exist.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Keep hex on partial-character chips only; drop the toggle; keep the table alternative",
+              "description": "Smallest change. Removes whole-string byte view."
+            },
+            {
+              "id": "b",
+              "label": "As a, and the table alternative also lists bytes per token",
+              "description": "Bytes stay discoverable for curious readers without a toggle."
+            },
+            {
+              "id": "c",
+              "label": "Drop bytes entirely except where needed to avoid a replacement symbol",
+              "description": "Hex still shown on partial chips (required by FOUND-06)."
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-10",
+          "title": "Does the post prose about 'peeking' and the IDs toggle change?",
+          "context": "The playground lead-in and 'Takeaways' may mention the toggle and the peek switch; pinned sentences exist in post-content.test.ts.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Rewrite the affected sentences; update pinned tests together",
+              "description": "Matches Phase 2.1 D-15 practice."
+            },
+            {
+              "id": "b",
+              "label": "Rewrite and require another non-programmer read-through of those passages",
+              "description": "Human-gated final task as in Phases 2 and 2.1."
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "compare",
+      "title": "Merged comparison and languages widget",
+      "questions": [
+        {
+          "id": "Q-11",
+          "title": "How do comparison and languages combine?",
+          "context": "Comparison: picker of five curated examples + own-text block (GPT-2 live, BERT after an explicit click showing its size) with a 'what to notice' note. Languages: static LanguagesTable.astro (sentence in six languages: bytes, GPT-2 count, BERT count) plus an optional 'Look inside' picker island (LanguagesDemo.svelte).",
+          "options": [
+            {
+              "id": "a",
+              "label": "One picker: five examples plus six language lines; right side shows GPT-2 vs BERT cuts",
+              "description": "Languages become more entries in the same list; a counts table sits under the cuts."
+            },
+            {
+              "id": "b",
+              "label": "Two tabs in one widget: 'Texts' and 'Languages'",
+              "description": "Keeps each view's own layout; one card, one height."
+            },
+            {
+              "id": "c",
+              "label": "Left = picker, right = results; languages shown as a compact table in the left column below the picker",
+              "description": "Everything visible at once, no tabs."
+            }
+          ],
+          "answer": "custom",
+          "chat_more": "FINAL: Only languages. LanguagesTable and the \"Look inside\" picker (LanguagesDemo) become one widget; the comparison stays a separate widget. (Supersedes earlier \"a\" and the first note; ComparisonSection is not merged.)",
+          "status": "answered"
+        },
+        {
+          "id": "Q-12",
+          "title": "Is the languages table still the primary accessible form?",
+          "context": "Phase 2 D-14: a text-readable table is the primary accessible form for the languages demo. check-dist and e2e may rely on server-rendered output.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Yes: table stays visible and is server-rendered by the Svelte widget",
+              "description": "Works with no JS and for screen readers."
+            },
+            {
+              "id": "b",
+              "label": "Table stays but only in the accessible/text alternative; the visual form is chips or bars",
+              "description": "More visual; table available inside the widget."
+            },
+            {
+              "id": "c",
+              "label": "Planner decides, but a no-JS readable table must remain",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "Table stays visible and server-rendered inside the merged languages widget.",
+          "status": "answered"
+        },
+        {
+          "id": "Q-13",
+          "title": "Post heading and prose for the merged section",
+          "context": "Two H2s today: 'How does GPT-2 compare with other models?' (long prose with BERT/WordPiece/[UNK] explanation and citations 26-27) and 'The same sentence in other languages'. UPDATE after Q-11: comparison stays separate, so the two H2s stay; the open point is only whether the languages prose changes.",
+          "options": [
+            {
+              "id": "a",
+              "label": "One H2 and one block of prose before the widget",
+              "description": "Languages sentence is folded into the intro; widget follows."
+            },
+            {
+              "id": "b",
+              "label": "Keep the two H2s; the single widget sits after the second prose block",
+              "description": "Prose structure unchanged; one widget serves both."
+            },
+            {
+              "id": "c",
+              "label": "One H2 with the BERT explanation above and a short languages note under the widget",
+              "description": ""
+            }
+          ],
+          "answer": "custom",
+          "chat_more": "Keep both H2s (comparison, languages); rewrite the languages prose only as the merged widget needs.",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "verify",
+      "title": "Verification",
+      "questions": [
+        {
+          "id": "Q-14",
+          "title": "How do we check the layout rules?",
+          "context": "Existing gates: Playwright e2e on the built site (e2e/), check-dist.mjs, vitest content tests. No iOS device. Constant height and breakout are visual rules, easy to regress.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Playwright assertions: widget height is identical across states at one wide viewport; stacked at narrow; no horizontal page scroll",
+              "description": "Automated and repeatable."
+            },
+            {
+              "id": "b",
+              "label": "As a, plus a manual visual check at 360, 768, 1024 and 1440px",
+              "description": "Matches earlier human-gated checks."
+            },
+            {
+              "id": "c",
+              "label": "Manual visual check only",
+              "description": ""
+            }
+          ],
+          "answer": "b",
+          "chat_more": "Playwright height/overflow/no-horizontal-scroll assertions plus manual visual check at 360, 768, 1024, 1440.",
+          "status": "answered"
+        }
+      ]
+    }
+  ]
+}

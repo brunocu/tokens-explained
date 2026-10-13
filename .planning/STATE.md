@@ -3,16 +3,16 @@ gsd_state_version: "1.0"
 current_phase: 3
 current_phase_name: Embeddings, Context & Reasoning Posts
 status: planning
-stopped_at: Phase 2.1 complete, ready to plan Phase 3
-last_updated: "2026-10-07T20:50:27.673Z"
-last_activity: 2026-10-07
-last_activity_desc: Phase 2.1 complete, transitioned to Phase 3
-state_head: 836a3819ec3dc2e7760a8f9e4372328637b31bb0
+stopped_at: Phase 02.2 complete, ready to plan Phase 3
+last_updated: "2026-10-13T17:24:47.568Z"
+last_activity: 2026-10-13
+last_activity_desc: Phase 02.2 complete, transitioned to Phase 3
+state_head: 87d6f0f45dcc3d6f8760f65cb3152b5610138ad5
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 3
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 35
+  completed_plans: 35
   percent: 50
 ---
 
@@ -23,21 +23,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** A non-programmer can play with a tokenizer in the browser and come away with a correct mental model of what a token is, and how it differs from a word, an embedding, context, and reasoning.
-**Current focus:** Phase 2.1 — Replace toy tokenizer with GPT-2 in playground and examples
+**Current focus:** Phase 2.2 — rework widgets (INSERTED)
 
 ## Current Position
 
 Phase: 3 — Embeddings, Context & Reasoning Posts
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-10-07 — Phase 2.1 complete, transitioned to Phase 3
+Last activity: 2026-10-13 — Phase 02.2 complete, transitioned to Phase 3
 
 Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27
+- Total plans completed: 35
 - Average duration: - min
 - Total execution time: 0.0 hours
 
@@ -48,6 +48,7 @@ Progress: [█████░░░░░] 50%
 | 01 | 7 | - | - |
 | 02 | 10 | - | - |
 | 2.1 | 10 | - | - |
+| 02.2 | 8 | - | - |
 
 **Recent Trend:**
 - Last 5 plans: -
@@ -81,6 +82,14 @@ Progress: [█████░░░░░] 50%
 | Phase 2.1 P06 | 7 min | 2 tasks | 9 files |
 | Phase 02.1 P07 | 14 min | 2 tasks | 4 files |
 | Phase 02.1 P08 | 12 min | 2 tasks | 23 files |
+| Phase 2.2 P01 | 13min | 3 tasks | 7 files |
+| Phase 02.2 P02 | 12 min | 2 tasks | 18 files |
+| Phase 2.2 P03 | 13 min | 2 tasks | 12 files |
+| Phase 02.2 P04 | resumed | 2 tasks | 10 files |
+| Phase 02.2 P05 | 25 min | 2 tasks | 10 files |
+| Phase 02.2 P06 | 35 min | 2 tasks | 11 files |
+| Phase 2.2 P07 | 11 min | 3 tasks | 3 files |
+| Phase 02.2 P08 | 10min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -133,6 +142,17 @@ Recent decisions affecting current work:
 - [Phase 2.1]: 02.1-06: fixture download metadata is per-tokenizer only (combined figure removed); manifest.json keeps combinedGzipBytes for the hosted-files test
 - [Phase 02.1]: 02.1-07: curated comparison locators start at the card's direct children because the own-text block repeats rows, legend and tables inside the same card
 - [Phase 02.1]: 02.1-08: Sennrich tie-break golden re-homed on trainOnPieces in stepper.test.ts (verified to fail when the comparator is flipped); isValidUtf8 now lives in chars.ts; check-core smoke-tests GPT-2 natively
+- [Phase 2.2]: 02.2-01: baseline of unchanged tree clean on Chromium, Firefox, WebKit (189/188/188 pass, 827 Vitest); MDX imports allowed only in one leading block from ../../components (.svelte or postProps.ts); checkWidgetsHtml unwired until plan 07
+- [Phase 02.2]: Stack chip anatomy single-sourced in widget.css (.stack-chip with --regular and --compact); colours stay in component palette selectors — One anatomy for the playground and the stepper without duplicating colour values
+- [Phase 02.2]: Hydrated islands are imported at the top of the MDX; build-time props come from postProps.ts, imported only by the MDX — Astro 7 MDX needs the import in the file (G-1); keeps the 47 KB comparison data out of the island chunk (G-5)
+- [Phase 2.2]: Playground --widget-h is 656px: smallest multiple of 8 where the left column fits with the failed-download message, Try again, privacy line and limit message all showing (648px overflows by 4px)
+- [Phase 2.2]: Height tests read the declared --widget-h from the root and poll, so states with a different page load (and a no-JavaScript page) need no carried number
+- [Phase 02.2]: Stepper pair-table max height 200px at 720px widget height; merges 1 and 2 still scroll the words region (42px, 30px), reported not forced
+- [Phase 02.2]: Comparison rows region keeps the tables and provenance inside it, so it scrolls for all five examples; the rows and shared legend never need scrolling
+- [Phase 02.2]: Comparison BERT failure replaces the idle paragraph in the same block; only the elastic text box gives way
+- [Phase 02.2]: 02.2-06: languages widget height is 1040px (cap) with 4fr/8fr columns and a 4px bar gap, set from measurement; 1024px is the ready-state minimum, 1040px keeps the failed state inside the card; open for the author (A-LANG-H)
+- [Phase 2.2]: 02.2-07: word ceiling 3350 (measured 3290 plus 50, rounded up); check-dist runs checkWidgetsHtml on both built pages; human visual check, read-through and A-LANG-H decision left pending for verify-work
+- [Phase 02.2]: 02.2-08: stacked layouts below 1024px are the base form; TokenRows fill/subgrid and the languages 6-column table apply from 1024px; sentence gets its own line via a 4-track grid per row with explicit ARIA table roles
 
 ### Pending Todos
 
@@ -150,10 +170,15 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 261006-riu | Evaluate dropping the toy tokenizer from the article, and just using GPT-2 tokenizer for the examples and playground | 2026-10-07 | 6ec64b6 | [261006-riu-evaluate-dropping-the-toy-tokenizer-from](./quick/261006-riu-evaluate-dropping-the-toy-tokenizer-from/) |
+| 2 | Tied-merge explainer leads with the tie | 2026-10-11 | d5aac1a | — |
+| 261011-twx | Relax e2e text assertions so prose/UI copy can change without syncing tests | 2026-10-11 | ef43903 | [261011-twx-relax-e2e-text-assertions](./quick/261011-twx-relax-e2e-text-assertions/) |
+| 261011-unh | Make TokenDisplay chips a semantic list with spoken labels (FOUND-04) | 2026-10-12 | cdd5b9a | [261011-unh-make-tokendisplay-chips-a-semantic-list-](./quick/261011-unh-make-tokendisplay-chips-a-semantic-list-/) |
+| 261011-uww | Close remaining Phase 2.2 verification gaps (check-dist hooks, D-08/TOK-02/FOUND-04 amendments, stale STATE) | 2026-10-12 | f30114f | [261011-uww-close-remaining-phase-2-2-verification-g](./quick/261011-uww-close-remaining-phase-2-2-verification-g/) |
 
 ### Roadmap Evolution
 
 - Phase 02.1 inserted after Phase 2: Replace toy tokenizer with GPT-2 in playground and examples (from quick task 261006-riu evaluation) (URGENT)
+- Phase 02.2 inserted after Phase 2: rework widgets (URGENT)
 
 ## Deferred Items
 
@@ -165,6 +190,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-07T16:06:25.005Z
-Stopped at: Phase 2.1 complete, ready to plan Phase 3
+Last session: 2026-10-13T16:40:17.181Z
+Stopped at: Phase 02.2 complete, ready to plan Phase 3
 Resume file: None

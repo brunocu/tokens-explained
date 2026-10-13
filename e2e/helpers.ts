@@ -34,3 +34,12 @@ export async function expectCompareText(card: Locator, text: string): Promise<vo
     else expect(await plain.textContent()).toBe(text);
   }).toPass();
 }
+
+/**
+ * Turn on "Show token IDs" in the playground. The chips are one line by default; with the switch on
+ * each chip gets a second line holding its ID.
+ */
+export async function showTokenIds(page: Page): Promise<void> {
+  await page.locator("[data-playground] [data-show-ids]").check();
+  await expect(page.locator("[data-playground] [data-chip-id]").first()).toBeVisible();
+}

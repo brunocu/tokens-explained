@@ -2,15 +2,18 @@
   // The shared coloured-token display (FOUND-02, FOUND-03, FOUND-06). Reused unchanged by
   // later posts. Reader text only ever reaches the DOM through text interpolation.
   import type { Token } from "../core/types.ts";
-  import { chipSegments, containsNewline, idLabel, specialKinds } from "../core/display.ts";
+  import { chipSegments, containsNewline, idLabel, speakToken } from "../core/display.ts";
   import TokenLegend from "./TokenLegend.svelte";
   import { compositeNote, splitNote } from "../core/counts.ts";
   import { byteLineSegments, groupBytes, layoutChips, visibleLabels } from "../core/chars.ts";
 
   type Props = {
     tokens: Token[];
-    mode?: "text" | "ids";
-    showBytes?: boolean;
+    /**
+     * The two-line chip of the playground: the piece on top, its ID underneath (D-08). Off by default,
+     * which is the one-line chip of the comparison and language rows and the prose figure.
+     */
+    stacked?: boolean;
     splitCount?: number;
     /** Characters on screen built from several joined parts; the caller counts them (default none). */
     compositeCount?: number;
@@ -22,28 +25,29 @@
 
   let {
     tokens,
-    mode = "text",
-    showBytes = false,
+    stacked = false,
     splitCount = 0,
     compositeCount = 0,
     legend = true,
     emptyState = true,
-    emptyBody = "Type or paste some text above, or pick an example, and it will be split into tokens here.",
+    emptyBody = "Type or paste some text, or pick an example, and it will be split into tokens here.",
   }: Props = $props();
 
   // Character frames (UI-SPEC R-01): derived here from the token bytes, callers pass nothing new.
   const grouping = $derived(groupBytes(tokens));
   const items = $derived(layoutChips(grouping));
-  // Which special-chip sentences the legend needs: [UNK] and any other special token.
-  const kinds = $derived(specialKinds(tokens));
 </script>
 
-{#snippet hex(token: Token, i: number)}{#each byteLineSegments(token, grouping.tokens[i]) as segment, k (k)}{#if k > 0}<span class="gap">{" "}</span>{/if}{#if segment.group}<span class="ch" data-ch={segment.text}>{segment.text}</span>{:else}{segment.text}{/if}{/each}{/snippet}
+{#snippet hex(token: Token, i: number)}{#each byteLineSegments(token, grouping.tokens[i]) as segment, k (k)}{#if k > 0}<span class="gap">{" "}</span>{/if}{#if segment.group}<span data-ch={segment.text}>{segment.text}</span>{:else}{segment.text}{/if}{/each}{/snippet}
 
 {#snippet chip(i: number, cut: boolean)}
   {@const token = tokens[i] as Token}
-  <span class="chip" class:cut data-chip data-partial={token.isPartial ? "true" : "false"} data-special={token.special ? "true" : undefined} data-pal={i % 4}
-    >{#if mode === "ids"}<span class="line id" data-chip-id>{idLabel(token)}</span>{#if token.isPartial}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{:else if showBytes}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{/if}{:else if token.isPartial}<span class="line bytes" data-chip-main>{@render hex(token, i)}</span>{:else}<span class="line" data-chip-main>{#each chipSegments(token) as segment}{#if segment.ws}<span class="ws" data-ws>{segment.text}</span>{:else}{segment.text}{/if}{/each}</span>{#if showBytes}<span class="line bytes" data-chip-bytes>{@render hex(token, i)}</span>{/if}{/if}</span
+  <!-- The top line is the token text, or the grouped hex bytes of a partial chip (never a replacement
+       symbol). In the stacked form its ID is the second line; the stack-chip classes come from widget.css. -->
+  <!-- Each chip is one list item. The visual spans are aria-hidden and the one .sr-only span is what
+       a screen reader speaks, from the single speakToken function (the stacked ID is spoken too). -->
+  <span class="chip" role="listitem" class:stack-chip={stacked} class:stack-chip--regular={stacked} class:cut data-chip data-partial={token.isPartial ? "true" : "false"} data-special={token.special ? "true" : undefined} data-pal={i % 4}
+    >{#if token.isPartial}<span class="line bytes" class:stack-chip-text={stacked} aria-hidden="true" data-chip-main>{@render hex(token, i)}</span>{:else}<span class="line" class:stack-chip-text={stacked} aria-hidden="true" data-chip-main>{#each chipSegments(token) as segment}{#if segment.ws}<span class="ws" data-ws>{segment.text}</span>{:else}{segment.text}{/if}{/each}</span>{/if}{#if stacked}<span class="line stack-chip-id" aria-hidden="true" data-chip-id>{idLabel(token)}</span>{/if}<span class="sr-only">{speakToken(token, grouping.tokens[i])}{#if stacked}, ID {idLabel(token)}{/if}</span></span
   >
 {/snippet}
 
@@ -53,12 +57,12 @@
     <p class="empty-body">{emptyBody}</p>
   </div>
 {:else}
-  <div class="chips" aria-hidden="true">
+  <div class="chips" role={items.length > 0 ? "list" : undefined}>
     {#each items as item, n (n)}
       {#if item.kind === "frame"}
         {@const vis = visibleLabels(item.frame)}
         <span class="frame" data-char-frame data-invalid={item.frame.invalid ? "true" : undefined}>
-          <span class="label" data-char-label>{#each vis.shown as label, k (k)}{#if k > 0}{"\u2009"}{/if}<span class="lab" data-style={label.style}>{label.text}</span>{/each}{#if vis.more > 0}{"\u2009"}<span class="lab" data-style="name">+{vis.more} more</span>{/if}</span>
+          <span class="label" aria-hidden="true" data-char-label>{#each vis.shown as label, k (k)}{#if k > 0}{"\u2009"}{/if}<span class="lab" data-style={label.style}>{label.text}</span>{/each}{#if vis.more > 0}{"\u2009"}<span class="lab" data-style="name">+{vis.more} more</span>{/if}</span>
           {#each item.indices as index, k (index)}
             {@render chip(index, k > 0)}
           {/each}
@@ -73,7 +77,7 @@
 {/if}
 
 {#if legend}
-  <TokenLegend special={kinds.unknown} marker={kinds.marker} />
+  <TokenLegend />
 {/if}
 
 {#if splitCount > 0}
@@ -90,22 +94,29 @@
     flex-wrap: wrap;
     gap: 4px;
   }
+  /* Colour and behaviour shared by both forms. The anatomy of the two-line (stacked) chip is in
+     widget.css (.stack-chip), where the stepper's compact chip takes it from too. */
   .chip {
     box-sizing: border-box;
+    border-color: var(--chip-0-line);
+    background: var(--chip-0-fill);
+    color: var(--text);
+    unicode-bidi: isolate;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  /* The one-line chip: the text only. */
+  .chip:not(.stack-chip) {
     display: inline-flex;
     flex-direction: column;
     padding: 4px 8px;
     min-height: 32px;
-    border: 2px solid var(--chip-0-line);
+    border-width: 2px;
+    border-style: solid;
     border-radius: 4px;
-    background: var(--chip-0-fill);
-    color: var(--text);
     font: 400 18px/1.4 var(--font-mono);
     font-variant-ligatures: none;
     white-space: pre;
-    unicode-bidi: isolate;
-    max-width: 100%;
-    overflow-wrap: anywhere;
   }
   .chip[data-pal="1"] {
     background: var(--chip-1-fill);
@@ -179,22 +190,20 @@
   .line {
     display: block;
   }
-  .bytes {
+  /* The hex of a partial chip, in Label size, on the chip's top line. */
+  .chip .bytes {
     font-size: 14px;
     line-height: 1.4;
   }
-  .chip:not([data-partial="true"]) .bytes {
-    color: var(--ws-color);
-  }
-  /* Byte-line grouping (R-01): the bytes of one multi-byte character are one underlined group,
-     with an 8px break between groups so the underline visibly stops. */
-  .ch {
-    border-bottom: 2px solid currentColor;
-  }
+  /* Byte-line grouping (R-01): the bytes of one multi-byte character stay together, with an 8px
+     break between groups. They are not underlined: on a character cut between tokens the underline
+     read as "complete here", which it is not. The frame label names the characters. */
   .gap {
     display: inline-block;
     width: var(--space-sm);
-    overflow: hidden;
+    /* clip, not hidden: a hidden-overflow inline-block takes its baseline from its bottom edge,
+       which lifted the byte text off the line's baseline. */
+    overflow: clip;
     white-space: pre;
   }
   .ws {

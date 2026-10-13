@@ -83,17 +83,18 @@ export function countSplitCharacters(text: string, tokens: ReadonlyArray<Token>)
  * R-01). "On screen" is judged from the grouping and the same rule the display uses for
  * hex lines: a multi-byte character is framed when its bytes lie in two or more tokens, and
  * it is underlined when one token holds two or more of its bytes and that token's hex line
- * is shown (the token is partial, or `showBytes` is on). An all-ASCII cluster such as a
- * carriage return plus line feed never counts.
+ * is shown (the token is partial, or `allHexShown` is on). The playground and the prose figures
+ * pass false: no normal chip shows hex. An all-ASCII cluster such as a carriage return plus
+ * line feed never counts.
  */
-export function countCompositeCharacters(text: string, grouping: Grouping, showBytes: boolean): number {
+export function countCompositeCharacters(text: string, grouping: Grouping, allHexShown: boolean): number {
   const multiByStart = new Map<number, CharInfo>();
   for (const c of grouping.chars) if (c.kind === "multi") multiByStart.set(c.start, c);
 
   const onScreen = (c: CharInfo): boolean => {
     if (c.firstToken !== c.lastToken) return true;
     const token = grouping.tokens[c.firstToken];
-    if (token === undefined || !(token.partial || showBytes)) return false;
+    if (token === undefined || !(token.partial || allHexShown)) return false;
     return token.pieces.some((p) => p.char === c && p.to - p.from >= 2);
   };
 

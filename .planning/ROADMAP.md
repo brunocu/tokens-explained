@@ -102,6 +102,38 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 02.2: rework widgets (INSERTED)
+
+**Goal:** The four Post 1 widgets (playground, BPE stepper, comparison, languages) look and behave consistently: a fixed height per widget on wide screens, 960px wide centred on the 680px reading column, two columns from 1024px and one automatic-height column below, no `.astro` wrappers (headings and prose in the MDX, widgets placed as Svelte islands), the languages table and its picker merged into one widget, and the playground showing token text as chips, with a "Show token IDs" switch (off by default) that stacks each token's ID under its text (D-08 amended by the author 2026-10-11).
+**Requirements**: none assigned; traced to decisions D-01 to D-14 in 02.2-CONTEXT.md
+**Depends on:** Phase 2
+**Plans:** 8/8 plans complete
+
+Plans:
+**Wave 1**
+- [x] 02.2-01-PLAN.md — Wave 0: baseline of the unchanged tree, content-test and locator migration, layout helpers and red layout spec, check-dist functions
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [x] 02.2-02-PLAN.md — Tracer: playground as a two-column widget through the MDX import (widget.css, ScrollRegion, postProps), then the two-line stack chip
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [x] 02.2-03-PLAN.md — Playground completion: neutral copy, toggle-spec migration, height across states in three browsers
+
+**Wave 4** *(blocked on Wave 3 completion)*
+- [x] 02.2-04-PLAN.md — BPE stepper at 720px with compact chips, regions and height across 14 stages
+
+**Wave 5** *(blocked on Wave 4 completion)*
+- [x] 02.2-05-PLAN.md — Comparison widget, comparisonProps, height across states
+
+**Wave 6** *(blocked on Wave 5 completion)*
+- [x] 02.2-06-PLAN.md — Merged languages widget (full-width table), six texts, height across states
+
+**Wave 7** *(blocked on Wave 6 completion)*
+- [x] 02.2-07-PLAN.md — Cleanup, dist check wired in, full three-browser gate, human-gated visual check and read-through
+
+**Gap closure** *(from 02.2-UAT.md test 1)*
+- [x] 02.2-08-PLAN.md — Stacked-view fixes: comparison rows no longer overlap below 1024px (G-02.2-1a), languages sentence on its own full-width line below 1024px (G-02.2-1b)
+
 ### Phase 02.1: Replace toy tokenizer with GPT-2 in playground and examples (from quick task 261006-riu evaluation) (INSERTED)
 
 **Goal:** A reader types into, and sees examples cut by, the real GPT-2 tokenizer everywhere in Post 1 (playground, figures, build-time claims), the comparison is GPT-2 versus BERT, the dead toy-tokenizer code is deleted, the BPE stepper stays as a labelled miniature, and the affected prose is rewritten and re-verified by a non-programmer read-through

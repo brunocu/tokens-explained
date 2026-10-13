@@ -103,9 +103,9 @@ describe("countSplitCharacters", () => {
 });
 
 const FAMILY = "\u{1F468}‍\u{1F469}‍\u{1F467}";
-const composite = (text: string, showBytes = false): number => {
+const composite = (text: string, allHexShown = false): number => {
   const tokens = tokenize(text);
-  return countCompositeCharacters(text, groupBytes(tokens), showBytes);
+  return countCompositeCharacters(text, groupBytes(tokens), allHexShown);
 };
 
 describe("countCompositeCharacters", () => {

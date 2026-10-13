@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { byteLineSegments, groupBytes, isValidUtf8, labelFor, layoutChips, visibleLabels } from "./chars.ts";
-import type { Grouping } from "./chars.ts";
+import type { Frame, Grouping } from "./chars.ts";
 import { hexBytes } from "./display.ts";
 import { REGRESSION_CORPUS } from "./fixtures/regression-corpus.ts";
 import { buildGpt2 } from "./buildTokenizer.ts";
@@ -104,6 +104,19 @@ describe("groupBytes: frames", () => {
     expect(second?.pieces[0]).toMatchObject({ first: 3, last: 3, from: 0, to: 1 });
     // The two ASCII characters are in chars but never in pieces.
     expect(g.chars.filter((c) => c.kind === "single")).toHaveLength(2);
+  });
+
+  it("labels a whole character that shares a token with the start of a cut one (の + 国)", () => {
+    // [E3 81 AE E5 9B] [BD]: の is complete in token 0, 国 (E5 9B BD) is cut across both tokens.
+    const g = groupBytes(toks([0xe3, 0x81, 0xae, 0xe5, 0x9b], [0xbd]));
+    expect(labelTexts(g)).toEqual(["の|国"]);
+    expect(g.frames[0]).toMatchObject({ first: 0, last: 1, invalid: false });
+  });
+
+  it("labels a space, new line and tab with their chip glyphs when they share a token with a cut character", () => {
+    // " " then F0 9F | 8E 89 (the party popper cut in two), with the space in token 0.
+    expect(labelTexts(groupBytes(toks([0x20, 0xf0, 0x9f], [0x8e, 0x89])))).toEqual(["␣|\u{1f389}"]);
+    expect(labelTexts(groupBytes(toks([0x0a, 0x09, 0xe5, 0xa5], [0xb3])))).toEqual(["↵|⇥|女"]);
   });
 
   it("labels EF BF BD cut into three tokens as one placeholder frame", () => {
@@ -302,7 +315,9 @@ describe("groupBytes: the UTF-8 walk", () => {
     const g = groupBytes(toks([...utf8("日本語"), 0xe3], [0x81, 0x93]));
     expect(g.tokens[0]?.pieces).toHaveLength(4);
     expect(g.frames).toHaveLength(1);
-    expect(labelTexts(g)).toEqual(["こ"]);
+    // The whole characters are named too; the display caps the visible labels at three.
+    expect(labelTexts(g)).toEqual(["日|本|語|こ"]);
+    expect(visibleLabels(g.frames[0] as Frame)).toMatchObject({ more: 1 });
   });
 });
 
@@ -464,7 +479,7 @@ describe("regression corpus through GPT-2", () => {
     const tokens = tokenize("男女 こんにちは");
     const g = groupBytes(tokens);
     expect(g.frames).toHaveLength(3);
-    expect(labelTexts(g)).toEqual(["男", "こ", "ち"]);
+    expect(labelTexts(g)).toEqual(["男", "␣|こ", "ち"]);
     expect(tokens.filter((t) => t.isPartial)).toHaveLength(6);
     expect(tokens.filter((t) => !t.isPartial)).toHaveLength(4);
   });

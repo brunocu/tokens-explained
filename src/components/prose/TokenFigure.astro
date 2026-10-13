@@ -7,7 +7,6 @@ import TokenDisplay from "../TokenDisplay.svelte";
 import { buildGpt2 } from "../../core/buildTokenizer.ts";
 import { groupBytes } from "../../core/chars.ts";
 import { countCompositeCharacters, countSplitCharacters, countWords } from "../../core/counts.ts";
-import { describeTokens } from "../../core/display.ts";
 import { assertClaims, type Claim } from "../../core/claims.ts";
 import { SAMPLE_SENTENCE } from "../../core/stepper.ts";
 
@@ -29,16 +28,15 @@ const tokens = gpt2.tokenize(text);
 assertClaims(text, claims ?? [], gpt2);
 
 const splitCount = countSplitCharacters(text, tokens);
-// Prose figures never show the byte peek, so showBytes is false here, same rule as the playground.
+// Prose figures are one-line chips with no hex on normal chips, so the third argument is false, same rule as the playground.
 const compositeCount = countCompositeCharacters(text, groupBytes(tokens), false);
 const words = countWords(text);
-const caption = `${tokens.length} ${tokens.length === 1 ? "token" : "tokens"}, ${words} ${words === 1 ? "word" : "words"}`;
+const caption = `${words} ${words === 1 ? "word" : "words"}, ${tokens.length} ${tokens.length === 1 ? "token" : "tokens"}`;
 ---
 
 <figure class="token-figure" data-figure={sample ? "sample" : undefined}>
-  <TokenDisplay tokens={tokens} mode="text" showBytes={false} splitCount={splitCount} compositeCount={compositeCount} legend={legend} emptyState={false} />
+  <TokenDisplay tokens={tokens} splitCount={splitCount} compositeCount={compositeCount} legend={legend} emptyState={false} />
   <figcaption>{caption}</figcaption>
-  <p class="sr-only">Tokens for the example: {describeTokens(tokens)}</p>
 </figure>
 
 <style>

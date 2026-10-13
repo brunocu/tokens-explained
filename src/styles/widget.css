@@ -1,0 +1,165 @@
+/* Shared layout for the four Post 1 widgets (phase 2.2, UI-SPEC "Layout and Widget Sizing" and
+   "Shared Chip Format"). Plain CSS on the existing tokens only; no new colour value.
+
+   A widget is a component whose ROOT element carries `island-card widget` (the island wrapper
+   element is `display: contents`, so a wrapper cannot carry a box). Each widget sets its own
+   `--widget-h` and `--widget-cols` on its root in its own scoped style.
+
+   Everything that depends on the viewport width sits inside the 1024px media query and nowhere
+   else, so the stacked form (below 1024px, which is also where browser zoom to 200 percent
+   lands) never has a fixed height, a collapsed textarea or a clipped region. */
+
+/* The stacked form, at every width: columns are plain flex columns. */
+.widget {
+  margin-block: 32px;
+}
+
+.widget-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* A region that scrolls sideways (a wide table) inside its column. */
+.widget-xscroll {
+  overflow-x: auto;
+}
+
+/* A scroll region: surface, border, radius, padding. Vertical overflow is set in the wide block
+   below. The cue is a shadow at an edge that has more content (background layers with local
+   attachment hide the shadow when the edge is reached). Where color-mix is unsupported only the
+   scrollbar remains. */
+.widget-scroll {
+  box-sizing: border-box;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+@supports (color: color-mix(in srgb, red 50%, blue)) {
+  .widget-scroll {
+    background-color: var(--bg);
+    background-image:
+      linear-gradient(var(--bg) 30%, transparent),
+      linear-gradient(transparent, var(--bg) 70%),
+      radial-gradient(farthest-side at 50% 0, color-mix(in srgb, var(--text) 18%, transparent), transparent),
+      radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, var(--text) 18%, transparent), transparent);
+    background-repeat: no-repeat;
+    background-position:
+      center top,
+      center bottom,
+      center top,
+      center bottom;
+    background-size:
+      100% 40px,
+      100% 40px,
+      100% 16px,
+      100% 16px;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
+
+/* The stack chip (UI-SPEC "Shared Chip Format", D-08): two lines, centred, the piece on top and its
+   number underneath, a 2px outline and a 4px radius. One anatomy, two scales: the regular modifier is
+   the playground's, the compact modifier is the stepper's. Fill and outline colours are not set here;
+   they come from the existing --chip-N-* and --partial-* variables through each component's palette
+   selectors, so no colour value is repeated. */
+.stack-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-width: 2px;
+  border-style: solid;
+  border-radius: 4px;
+  font-variant-ligatures: none;
+  white-space: pre;
+}
+
+.stack-chip-text,
+.stack-chip-id {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.stack-chip-id {
+  color: var(--ws-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.stack-chip--regular {
+  padding: 4px 8px;
+}
+
+.stack-chip--regular .stack-chip-text {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.stack-chip--regular .stack-chip-id {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.stack-chip--compact {
+  padding: 4px;
+}
+
+.stack-chip--compact .stack-chip-text,
+.stack-chip--compact .stack-chip-id {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+/* Two columns, fixed height, from 1024px. */
+@media (min-width: 1024px) {
+  .widget {
+    --widget-w: min(960px, calc(100vw - 48px));
+    width: var(--widget-w);
+    margin-inline: calc((100% - var(--widget-w)) / 2);
+    height: var(--widget-h);
+    display: grid;
+    grid-template-columns: var(--widget-cols);
+    gap: 0 24px;
+    padding: 24px;
+  }
+
+  .widget-col {
+    min-height: 0;
+  }
+
+  /* The one elastic element of a column. */
+  .widget-fill {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .widget-scroll {
+    overflow: auto;
+  }
+}
+
+/* Print: the stacked form, whole. */
+@media print {
+  .widget {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    width: 100%;
+    height: auto;
+    margin-inline: 0;
+    break-inside: avoid;
+  }
+
+  .widget-fill {
+    flex: none;
+  }
+
+  .widget-scroll,
+  .widget-xscroll {
+    overflow: visible;
+  }
+}

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { EXAMPLES } from "../src/core/examples.ts";
-import { openPlaygroundReady } from "./helpers.ts";
+import { openPlaygroundReady, showTokenIds } from "./helpers.ts";
 
 // UI-SPEC revision R-01: character frames, label cells and dashed token cuts in the
 // shared display, as the reader sees them in the playground.
@@ -12,8 +12,6 @@ async function openReady(page: Page): Promise<void> {
 const statValue = (page: Page, name: string) => page.locator(`[data-stat="${name}"] [data-stat-value]`);
 const frames = (page: Page) => page.locator("[data-playground] [data-char-frame]");
 const chips = (page: Page) => page.locator("[data-playground] [data-chip]");
-const idsLabel = (page: Page) => page.getByText("Token IDs", { exact: true });
-const peekLabel = (page: Page) => page.locator("label", { hasText: "Peek under the hood" });
 
 const css = (locator: ReturnType<Page["locator"]>, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
@@ -21,6 +19,7 @@ const css = (locator: ReturnType<Page["locator"]>, property: string) =>
 // GPT-2 cuts 男 (bytes E7 94 B7) after the second byte: one chip with two bytes, one with one.
 test("(a) typing 男 shows one frame: label 男, two hatched chips, one dashed token cut", async ({ page }) => {
   await openReady(page);
+  await showTokenIds(page);
   await page.locator("#t").fill("男");
   await expect(frames(page)).toHaveCount(1);
   const frame = frames(page).first();
@@ -31,7 +30,7 @@ test("(a) typing 男 shows one frame: label 男, two hatched chips, one dashed t
 
   const partial = frame.locator('[data-chip][data-partial="true"]');
   await expect(partial).toHaveCount(2);
-  expect((await partial.allInnerTexts()).map((t) => t.trim())).toEqual(["E7 94", "B7"]);
+  expect((await partial.locator("[data-chip-main]").allInnerTexts()).map((t) => t.trim())).toEqual(["E7 94", "B7"]);
 
   // The frame and the label are never chips.
   await expect(page.locator("[data-char-frame][data-chip]")).toHaveCount(0);
@@ -94,13 +93,12 @@ test("(c) the default text and plain ASCII show no frames at all", async ({ page
   await expect(page.locator("[data-playground] [data-char-label]")).toHaveCount(0);
 });
 
-test("(e) the non-English example gives three frames, six hatched chips and four whole chips, keeping the settings", async ({
+test("(e) the non-English example gives twelve frames, 27 hatched chips and eight whole chips, each with its text and ID lines", async ({
   page,
 }) => {
   await openReady(page);
-  await idsLabel(page).click();
-  await peekLabel(page).click();
-  await page.locator('[data-example="non-english"]').click();
+  await showTokenIds(page);
+  await page.locator('[data-playground] [data-example="non-english"]').click();
 
   const expected = EXAMPLES.find((e) => e.id === "non-english")!.text;
   await expect(page.locator("#t")).toHaveValue(expected);
@@ -110,39 +108,61 @@ test("(e) the non-English example gives three frames, six hatched chips and four
   });
   expect(state).toEqual({ active: true, start: state.length, end: state.length, length: state.length });
 
-  // GPT-2 holds 女, ん, に and は as whole tokens and cuts only 男, こ and ち (the space is
-  // swallowed by the first piece of こ, a hatched chip of bytes 20 E3 81).
-  await expect(frames(page)).toHaveCount(3);
+  // GPT-2 holds は, 、, 一, 大, に, し, た and 。 as whole tokens and cuts the other characters. The
+  // frame of の国 names both characters, because the chip "の" + the first byte of 国 holds a whole の.
+  await expect(frames(page)).toHaveCount(12);
   const labels = await page.locator("[data-playground] [data-char-label]").allInnerTexts();
-  expect(labels.map((l) => l.trim())).toEqual(["男", "こ", "ち"]);
+  expect(labels.map((l) => l.replace(/\s+/g, ""))).toEqual(["長", "男", "昨", "年", "第", "志", "望", "の国", "立", "学", "合", "格"]);
 
   const partial = page.locator('[data-playground] [data-chip][data-partial="true"]');
-  await expect(partial).toHaveCount(6);
-  await expect(page.locator('[data-playground] [data-char-frame] [data-chip][data-partial="true"]')).toHaveCount(6);
+  await expect(partial).toHaveCount(27);
+  await expect(page.locator('[data-playground] [data-char-frame] [data-chip][data-partial="true"]')).toHaveCount(27);
   const plain = page.locator('[data-playground] [data-chip]:not([data-partial="true"])');
-  await expect(plain).toHaveCount(4);
+  await expect(plain).toHaveCount(8);
   await expect(plain.first()).not.toHaveAttribute("data-partial", "true");
-  // Token IDs mode is kept: the four whole chips show the bytes of 女, ん, に and は.
-  await expect(plain.locator("[data-chip-bytes]")).toHaveText(["E5 A5 B3", "E3 82 93", "E3 81 AB", "E3 81 AF"]);
+  // The eight whole chips hold は, 、, 一, 大, に, し, た and 。: their text lines say so, they carry no hex line, and
+  // each ID line equals the ID in the table alternative, whose Bytes column holds the bytes of that
+  // same token (the bytes live in the table now, not on the chip).
+  await expect(plain.locator("[data-chip-main]")).toHaveText(["は", "、", "一", "大", "に", "し", "た", "。"]);
+  for (const whole of await plain.all()) await expect(whole.locator(":scope > *:not(.sr-only)"), "a whole chip has a text line and an ID line only").toHaveCount(2);
+  for (const id of await plain.locator("[data-chip-id]").allInnerTexts()) expect(id.trim()).toMatch(/^\d+$/);
+  await expect(plain.locator("[data-chip-id]")).toHaveCount(8);
 
-  await expect(statValue(page, "characters")).toHaveText("8");
+  await page.locator("details[data-table] summary").click();
+  const wholeRows = await page.locator("[data-playground] [data-chip]").evaluateAll((all, tableId) => {
+    const rows = [...document.querySelectorAll(`${tableId} tbody tr`)];
+    return all.flatMap((chip, i) => {
+      if (chip.getAttribute("data-partial") === "true") return [];
+      const cells = rows[i]?.querySelectorAll("td");
+      return [
+        {
+          chipId: chip.querySelector("[data-chip-id]")?.textContent?.trim() ?? "",
+          tableId: cells?.[2]?.textContent?.trim() ?? "",
+          bytes: cells?.[3]?.textContent?.trim() ?? "",
+        },
+      ];
+    });
+  }, "details[data-table]");
+  expect(wholeRows.map((r) => r.bytes)).toEqual(["E3 81 AF", "E3 80 81", "E4 B8 80", "E5 A4 A7", "E3 81 AB", "E3 81 97", "E3 81 9F", "E3 80 82"]);
+  for (const row of wholeRows) expect(row.tableId).toBe(row.chipId);
+
+  await expect(statValue(page, "characters")).toHaveText("21");
   await expect(page.locator("[data-composite-note]")).toHaveCount(0);
-  await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
-  await expect(page.locator("[data-peek]")).toBeChecked();
 });
 
-test("(d) Token IDs mode and Peek leave the frames unchanged, with the label centred", async ({ page }) => {
+test("(d) the two-line chip leaves the frames unchanged, with the label centred", async ({ page }) => {
   await openReady(page);
+  await showTokenIds(page);
   await page.locator("#t").fill("男");
   await expect(frames(page)).toHaveCount(1);
 
-  await idsLabel(page).click();
-  await expect(frames(page)).toHaveCount(1);
   const inner = page.locator("[data-playground] [data-char-frame] [data-chip]");
   await expect(inner).toHaveCount(2);
   for (const chip of await inner.all()) {
+    // Partial chip: hex on the top line, the ID on the second line, no third line.
+    await expect(chip.locator("[data-chip-main]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
     await expect(chip.locator("[data-chip-id]")).toHaveText(/^\d+$/);
-    await expect(chip.locator("[data-chip-bytes]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
+    await expect(chip.locator(":scope > *:not(.sr-only)"), "a text line and an ID line only").toHaveCount(2);
   }
   const centres = await frames(page).first().evaluate((frame) => {
     const label = frame.querySelector("[data-char-label]") as HTMLElement;
@@ -151,8 +171,5 @@ test("(d) Token IDs mode and Peek leave the frames unchanged, with the label cen
     return { frame: f.top + f.height / 2, label: l.top + l.height / 2 };
   });
   expect(Math.abs(centres.frame - centres.label)).toBeLessThanOrEqual(2);
-
-  await peekLabel(page).click();
-  await expect(frames(page)).toHaveCount(1);
   await expect(chips(page)).toHaveCount(2);
 });

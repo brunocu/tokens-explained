@@ -290,7 +290,7 @@ export function stageName(trace: SentenceTrace, stage: number): string {
   }
 }
 
-const pairText = (row: { leftText: string; rightText: string }): string => `${row.leftText} + ${row.rightText}`;
+const pairText = (row: { leftText: string; rightText: string }): string => `\`${row.leftText} + ${row.rightText}\``;
 
 /** The plain-language reason shown at one stage. Numbers come from the trace, never typed. */
 export function explainStage(trace: SentenceTrace, stage: number): string {
@@ -313,16 +313,15 @@ export function explainStage(trace: SentenceTrace, stage: number): string {
       const step = trace.merges[info.merge - 1] as SentenceMerge;
       const c = step.chosen;
       const head =
-        `Merge ${step.index} of ${m}. The most common neighbouring pair is ${pairText(c)}, ` +
-        `seen ${c.count} times.`;
-      const tie =
         step.tiedCount > 1
-          ? ` ${step.tiedCount} pairs are tied on ${c.count}. A tie goes to the pair with the smaller numeric values: here ` +
+          ? `Merge ${step.index} of ${m}. ${step.tiedCount} pairs are tied on ${c.count}. A tie goes to the pair with the smaller numeric values: here ` +
             (step.decidedBy === "left"
               ? `the first id, ${c.left}, is the smallest.`
-              : `the first ids match, so the second id, ${c.right}, decides.`)
-          : "";
-      return `${head}${tie} Every boxed spot is about to become one token, with the new id ${step.newId}.`;
+              : `the first ids match, so the second id, ${c.right}, decides.`) +
+            ` That picks ${pairText(c)}.`
+          : `Merge ${step.index} of ${m}. The most common neighbouring pair is ${pairText(c)}, ` +
+            `seen ${c.count} times.`;
+      return `${head} Every boxed spot is about to become one token, with the new id ${step.newId}.`;
     }
     case "stop":
       return (

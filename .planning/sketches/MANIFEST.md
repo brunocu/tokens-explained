@@ -12,3 +12,4 @@ The current BpeStepper.svelte (author did not like it); Phase 2 UI-SPEC.
 | # | Name | Design Question | Winner | Tags |
 |---|------|----------------|--------|------|
 | 001 | bpe-stepper-from-raw-text | How to show raw text to bytes to merges, the stop point and unseen words? | D (B + one pair box + fuse animation) | stepper, bpe |
+| 002 | widget-breakout-width | How wide should widgets break out of the 680px column (960 / 1120 / 1280)? | A (960px) | layout, widgets, phase-2.2 |

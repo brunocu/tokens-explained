@@ -1,12 +1,9 @@
-import { groupBytes } from "./chars.ts";
+import { GLYPH_NEWLINE, GLYPH_SPACE, GLYPH_TAB, WHITESPACE_GLYPHS, groupBytes } from "./chars.ts";
 import type { Piece, TokenGroups } from "./chars.ts";
 import type { Token } from "./types.ts";
 
-// Whitespace glyphs live here so a glyph fallback (UI-SPEC allows a middle dot,
-// U+00B7) is a one-line change.
-export const GLYPH_SPACE = "␣";
-export const GLYPH_NEWLINE = "↵";
-export const GLYPH_TAB = "⇥";
+// The whitespace glyphs are defined in chars.ts (frame labels use them too); re-exported here.
+export { GLYPH_NEWLINE, GLYPH_SPACE, GLYPH_TAB };
 const GLYPH_DEL = "␡";
 
 const strict = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
@@ -69,7 +66,7 @@ export function containsNewline(token: Token): boolean {
   return !token.isPartial && token.bytes.includes(0x0a);
 }
 
-/** The token id as shown in the Token IDs view. */
+/** The token id as shown on the second line of a stacked chip. */
 export function idLabel(token: Token): string {
   return String(token.id);
 }
@@ -78,11 +75,33 @@ export function idLabel(token: Token): string {
  * Which byte of which character a partial token holds, in words (UI-SPEC R-01, FOUND-04).
  * Null when the token has no multi-byte or invalid piece. Labels come from `groupBytes`,
  * which builds them from code points, so no replacement character can appear here.
+ * With the token, a space, new line or tab on it is listed too, as its glyph, the same way the
+ * frame label above the chip names it.
  */
-export function pieceWording(groups: TokenGroups | undefined): string | null {
+export function pieceWording(groups: TokenGroups | undefined, token?: Token): string | null {
   const pieces = groups?.pieces;
   if (pieces === undefined || pieces.length === 0) return null;
   if (pieces.every((p) => p.char.kind === "invalid")) return "Not a valid character";
+  if (token !== undefined) {
+    // The characters of the token in byte order: each piece, and each whitespace byte between them.
+    const names: string[] = [];
+    for (let at = 0; at < token.bytes.length; ) {
+      const piece = pieces.find((p) => p.from === at);
+      const glyph = WHITESPACE_GLYPHS.get(token.bytes[at] as number);
+      if (piece !== undefined) {
+        names.push(piece.char.label.text);
+        at = piece.to;
+      } else {
+        if (glyph !== undefined) names.push(glyph);
+        at++;
+      }
+    }
+    if (names.length > 1 && names.length !== pieces.length) {
+      const shown = names.slice(0, 3).join(", ");
+      const more = names.length > 3 ? ` and ${names.length - 3} more` : "";
+      return `Pieces of ${names.length} characters: ${shown}${more}`;
+    }
+  }
   if (pieces.length === 1) {
     const piece = pieces[0] as Piece;
     const where =
@@ -99,54 +118,67 @@ export function pieceWording(groups: TokenGroups | undefined): string | null {
 /** What the table's text column shows for a token. */
 export function tableCell(token: Token, groups?: TokenGroups): string {
   if (token.isPartial) {
-    const wording = pieceWording(groups);
+    const wording = pieceWording(groups, token);
     if (wording !== null) return wording;
   }
   return chipText(token);
 }
 
-/** Words a screen reader says for one token. */
+/** The words a screen reader says for each whitespace glyph that the piece wording can contain. */
+const GLYPH_WORDS: ReadonlyArray<readonly [string, string]> = [
+  [GLYPH_SPACE, "space"],
+  [GLYPH_NEWLINE, "new line"],
+  [GLYPH_TAB, "tab"],
+];
+
+/**
+ * Words a screen reader says for one token (the single spoken-label function). A whole token
+ * speaks its whitespace as words and keeps other text literal, joined by single spaces: " cat" is
+ * "space cat". A partial token speaks the same piece wording as the table, in lower case and with
+ * whitespace glyphs as words. A special token is announced as one. Never returns U+FFFD.
+ */
 export function speakToken(token: Token, groups?: TokenGroups): string {
+  const said = speakBody(token, groups);
+  return token.special === true ? `special token ${said}` : said;
+}
+
+function speakBody(token: Token, groups?: TokenGroups): string {
   if (token.isPartial) {
-    const wording = pieceWording(groups);
-    if (wording !== null) return wording.charAt(0).toLowerCase() + wording.slice(1);
-    return hexBytes(token.bytes);
+    const wording = pieceWording(groups, token);
+    if (wording === null) return `bytes ${hexBytes(token.bytes)}`;
+    let said = wording.charAt(0).toLowerCase() + wording.slice(1);
+    for (const [glyph, word] of GLYPH_WORDS) said = said.split(glyph).join(word);
+    return said;
   }
   let decoded: string;
   try {
     decoded = strict.decode(token.bytes);
   } catch {
-    return hexBytes(token.bytes);
+    return `bytes ${hexBytes(token.bytes)}`;
   }
-  let out = "";
+  if (decoded.includes("�")) return `bytes ${hexBytes(token.bytes)}`;
+  const parts: string[] = [];
+  let literal = "";
+  const flush = (): void => {
+    if (literal !== "") parts.push(literal);
+    literal = "";
+  };
   for (const ch of decoded) {
     const code = ch.codePointAt(0) as number;
-    if (ch === " ") out += "(space)";
-    else if (ch === "\n") out += "(new line)";
-    else if (ch === "\t") out += "(tab)";
-    else if (code < 0x20 || code === 0x7f) out += "(control character)";
-    else out += ch;
+    let word: string | undefined;
+    if (ch === " ") word = "space";
+    else if (ch === "\n") word = "new line";
+    else if (ch === "\t") word = "tab";
+    else if (code < 0x20 || code === 0x7f) word = "control character";
+    if (word === undefined) {
+      literal += ch;
+    } else {
+      flush();
+      parts.push(word);
+    }
   }
-  return out.includes("�") ? hexBytes(token.bytes) : out;
-}
-
-const UNKNOWN_TEXT = "[UNK]";
-const lenient = new TextDecoder("utf-8");
-
-/**
- * Which special-chip sentences the legend needs. A special token spelled [UNK] means the tokenizer
- * had no piece for something; any other special token (GPT-2's end-of-text marker, for example) is
- * a signal kept whole. One rule, so every caller shows the legend sentence only for chips on screen.
- */
-export function specialKinds(tokens: ReadonlyArray<Token>): { unknown: boolean; marker: boolean } {
-  let unknown = false;
-  let marker = false;
-  for (const token of tokens) {
-    if (token.special !== true) continue;
-    if (lenient.decode(token.bytes) === UNKNOWN_TEXT) unknown = true;
-    else marker = true;
-  }
-  return { unknown, marker };
+  flush();
+  return parts.length === 0 ? "empty" : parts.join(" ");
 }
 
 /** One sentence summarising a token list for a screen reader. */

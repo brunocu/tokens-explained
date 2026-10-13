@@ -12,7 +12,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **FOUND-01**: Reader can open the site as a static, deployed web page that works without any setup or account
 - [x] **FOUND-02**: Reader sees tokens in a shared colored-token display that shows token boundaries without relying on color alone (separators/outlines)
 - [x] **FOUND-03**: Reader can see whitespace inside tokens made visible (e.g. a glyph for a leading space)
-- [x] **FOUND-04**: Reader using a screen reader or keyboard can access the token display through a text/table alternative and keyboard-operable controls
+- [x] **FOUND-04**: Reader using a screen reader or keyboard can access the token display through a text/table alternative and keyboard-operable controls (note: quick 261011-unh restored a text alternative for the comparison, the languages drill-down and the prose figures through an accessible token list, `role=list` / `listitem` with spoken labels; the playground keeps its TokenTable)
 - [x] **FOUND-05**: Reader who prefers reduced motion sees no animated transitions in the token display or steppers
 - [x] **FOUND-06**: Reader sees tokens that split a single character (e.g. an emoji) shown as partial-character chips, never as a replacement symbol
 - [x] **FOUND-07**: Reader sees real tokenizer output (GPT-2, which works on bytes after a pre-split step) in the playground and the post's examples, so what they see is the pipeline real models use
@@ -20,7 +20,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Post 1: What is a token?
 
 - [x] **TOK-01**: Reader can type text into a live playground and see it split into colored tokens
-- [x] **TOK-02**: Reader can see token, character and word counts for their text
+- [x] **TOK-02**: Reader can see byte, character and token counts for their text (word count removed from the display by the author in Phase 2.2; words is still computed for the live screen-reader announcement)
 - [x] **TOK-03**: Reader can toggle the playground between token text and token IDs
 - [x] **TOK-04**: Reader can pick example texts and reset the playground to its default
 - [x] **TOK-05**: Reader can step through BPE merges one at a time with Next, Back and Reset on a small corpus

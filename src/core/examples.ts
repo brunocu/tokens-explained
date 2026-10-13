@@ -24,7 +24,7 @@ export const EXAMPLES: ReadonlyArray<{ id: string; label: string; text: string }
   },
   {
     id: "literature",
-    label: "A line of classic literature",
+    label: "Anna Karenina",
     // Opening line of Anna Karenina, translated by Constance Garnett (Project Gutenberg ebook 1399,
     // public domain). The post credits the translator in its References.
     text: "Happy families are all alike; every unhappy family is unhappy in its own way.",
@@ -32,6 +32,6 @@ export const EXAMPLES: ReadonlyArray<{ id: string; label: string; text: string }
   {
     id: "non-english",
     label: "A non-English line",
-    text: "男女 こんにちは",
+    text: "長男は昨年、第一志望の国立大学に合格した。",
   },
 ];

@@ -93,6 +93,8 @@ describe("comparison fixture", () => {
     expect(join(fixtureTokens(COMPARISON.defaultText.gpt2))).toEqual(Array.from(encoder.encode(DEFAULT_TEXT)));
     expect(COMPARISON.defaultText.gpt2).toHaveLength(gpt2.tokenize(DEFAULT_TEXT).length);
     expect(COMPARISON.defaultText.gpt2.length).toBeGreaterThan(0);
+    expect(COMPARISON.defaultText.bert).toHaveLength(bert.tokenize(DEFAULT_TEXT).length);
+    expect(COMPARISON.defaultText.bert.length).toBeGreaterThan(0);
   });
 
   it("records one download size per tokenizer, equal to the manifest figures (D-04, D-09)", () => {
@@ -147,7 +149,7 @@ describe("comparison fixture", () => {
       emoji: [9, 7],
       // Plan 02-10: the Garnett Anna Karenina line; counts equal the Rust reference in adapter-parity.json.
       literature: [16, 16],
-      "non-english": [10, 7],
+      "non-english": [35, 21],
     };
     for (const example of COMPARISON.examples) {
       expect([example.rows.gpt2.length, example.rows.bert.length], example.id).toEqual(pinned[example.id]);

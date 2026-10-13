@@ -31,7 +31,7 @@ CASES = [
         "example-literature",
         "Happy families are all alike; every unhappy family is unhappy in its own way.",
     ),
-    ("example-non-english", "男女 こんにちは"),
+    ("example-non-english", "長男は昨年、第一志望の国立大学に合格した。"),
     ("default-text", "Tokenization splits unusual words into pieces, but common words stay whole."),
     (
         "udhr-en",

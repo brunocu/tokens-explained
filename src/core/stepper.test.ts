@@ -268,7 +268,7 @@ describe("stages and sentences", () => {
 
   it("(t) a merge stage names the pair, the count and the new id", () => {
     expect(explainStage(trace, 2)).toBe(
-      "Merge 1 of 10. The most common neighbouring pair is a + t, seen 6 times. " +
+      "Merge 1 of 10. The most common neighbouring pair is `a + t`, seen 6 times. " +
         "Every boxed spot is about to become one token, with the new id 256.",
     );
   });
@@ -280,6 +280,8 @@ describe("stages and sentences", () => {
     expect(explainStage(trace, 6)).toContain(
       `6 pairs are tied on 2. A tie goes to the pair with the smaller numeric values: here the first ids match, so the second id, 99, decides.`,
     );
+    expect(explainStage(trace, 3)).toMatch(/^Merge 2 of 10\. 2 pairs are tied on 4\./);
+    expect(explainStage(trace, 3)).not.toContain("most common");
     expect(explainStage(trace, 3)).not.toMatch(/alphabetical|first seen|vocabulary order/i);
   });
 

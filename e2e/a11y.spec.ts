@@ -34,7 +34,7 @@ for (const scheme of ["light", "dark"] as const) {
 const FRAMES_TEXT = "男女 \u{1F468}‍\u{1F469}‍\u{1F467}";
 
 for (const scheme of ["light", "dark"] as const) {
-  test(`(${scheme}) axe finds no violation with frames, name labels, Token IDs and Peek on, table open`, async ({ page }) => {
+  test(`(${scheme}) axe finds no violation with frames, name labels and the table open`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.emulateMedia({ colorScheme: scheme });
     await openPlaygroundReady(page, "what-is-a-token/");
@@ -44,8 +44,6 @@ for (const scheme of ["light", "dark"] as const) {
     const labels = (await page.locator("[data-playground] [data-char-label]").allInnerTexts()).map((t) => t.trim());
     expect(labels).toContain("男");
     expect(labels.some((t) => /^[a-z ]+$/.test(t))).toBe(true);
-    await page.getByText("Token IDs", { exact: true }).click();
-    await page.locator("label", { hasText: "Peek under the hood" }).click();
     await page.locator("details[data-table] summary").click();
     await expect(page.locator("details[data-table]")).toHaveAttribute("open", "");
     const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();

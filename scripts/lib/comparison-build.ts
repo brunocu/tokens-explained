@@ -59,7 +59,7 @@ export function buildComparison(input: ComparisonInput): ComparisonFixture {
         bert: downloadFor(entryFor(input.manifest, "bert")),
       },
     },
-    defaultText: { text: input.defaultText, gpt2: tokensToFixture(input.gpt2.tokenize(input.defaultText)) },
+    defaultText: { text: input.defaultText, ...rowsFor(input.defaultText) },
     examples: input.examples.map((e) => ({ id: e.id, label: e.label, text: e.text, rows: rowsFor(e.text) })),
     languages: input.languages.map((l) => ({ id: l.id, rows: rowsFor(l.sentence) })),
   };
@@ -91,7 +91,8 @@ export function formatComparison(fixture: ComparisonFixture): string {
   const list = (items: string[]): string => (items.length === 0 ? "[]" : `[\n${items.join(",\n")}\n  ]`);
   const defaultText =
     `{\n    "text": ${JSON.stringify(fixture.defaultText.text)},\n` +
-    `    "gpt2": ${tokenLines(fixture.defaultText.gpt2, "    ")}\n  }`;
+    `    "gpt2": ${tokenLines(fixture.defaultText.gpt2, "    ")},\n` +
+    `    "bert": ${tokenLines(fixture.defaultText.bert, "    ")}\n  }`;
   return (
     `{\n  "meta": ${meta},\n  "defaultText": ${defaultText},\n` +
     `  "examples": ${list(examples)},\n  "languages": ${list(languages)}\n}\n`

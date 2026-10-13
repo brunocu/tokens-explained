@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countGraphemes, countSplitCharacters, countWords } from "./counts.ts";
 import { groupBytes } from "./chars.ts";
-import { chipText, describeTokens, speakToken, tableCell } from "./display.ts";
+import { GLYPH_NEWLINE, GLYPH_SPACE, GLYPH_TAB, chipText, describeTokens, speakToken, tableCell } from "./display.ts";
 import { REGRESSION_CORPUS } from "./fixtures/regression-corpus.ts";
 import { buildGpt2 } from "./buildTokenizer.ts";
 import type { Token } from "./types.ts";
@@ -69,7 +69,15 @@ describe("regression corpus", () => {
           expect(cell).toMatch(/^(Byte |Bytes |Pieces of |Not a valid character)/);
           const said = speakToken(t, grouping.tokens[i]);
           expect(said).toMatch(/^[a-z]/);
-          expect(said).toBe(cell.charAt(0).toLowerCase() + cell.slice(1));
+          // The table cell with its first letter lowercased and the whitespace glyphs as words.
+          const expected = (cell.charAt(0).toLowerCase() + cell.slice(1))
+            .split(GLYPH_SPACE)
+            .join("space")
+            .split(GLYPH_NEWLINE)
+            .join("new line")
+            .split(GLYPH_TAB)
+            .join("tab");
+          expect(said).toBe(expected);
         });
       });
 

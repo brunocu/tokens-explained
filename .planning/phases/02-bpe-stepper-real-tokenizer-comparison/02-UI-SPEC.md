@@ -135,7 +135,7 @@ Post 1 order after this phase (the planner edits `what-is-a-token.mdx`; this fil
 | 4 | Try it yourself | `PlaygroundSection` (unchanged) |
 | 5 | What you just saw | prose (unchanged apart from D-17) |
 | 6 | **How do real tokenizers compare?** (new) | `ComparisonSection.astro` wrapping `Comparison.svelte`, id `compare-heading` |
-| 7 | **The same sentence in other languages** (new) | `LanguagesSection.astro` wrapping `LanguagesDemo.svelte`, id `languages-heading` |
+| 7 | **The same sentence in multiple languages** (new; heading renamed 2026-10-11) | `LanguagesSection.astro` wrapping `LanguagesDemo.svelte`, id `languages-heading` |
 | 8 | How this tokenizer works | prose, third-step paragraph reworked to fit the new order (D-16) |
 
 Each new section is a `<section aria-labelledby>` tied to its H2, with one sentence of prose in the slot (the Phase 1 pattern), then the island card. Headings stay a strict outline (H1, H2, H3 only inside the stepper final screen).
@@ -306,7 +306,7 @@ Layout decision (D-15): **stacked rows, one example at a time, chosen from a pic
 
 ### Structure inside the card, top to bottom
 
-1. **Picker.** Legend (Label 600): "Pick a text". Five native radio inputs styled as wrapping bordered buttons (`gap: 8px`, `min-height: 44px`), labels exactly the playground example labels (`src/core/examples.ts`, D-12): "A rare long word", "Numbers and dates", "An emoji", "A line of classic literature", "A non-English line". Default selection: the first. Arrow keys move and select (native radio behaviour). Selected option: accent fill (Color list item 3). The list is **imported from `examples.ts`**, never retyped, so the playground and the comparison cannot drift.
+1. **Picker.** Legend (Label 600): "Pick a text". Five native radio inputs styled as wrapping bordered buttons (`gap: 8px`, `min-height: 44px`), labels exactly the playground example labels (`src/core/examples.ts`, D-12): "A rare long word", "Numbers and dates", "An emoji", "Anna Karenina" (renamed 2026-10-11), "A non-English line". Default selection: the first. Arrow keys move and select (native radio behaviour). Selected option: accent fill (Color list item 3). The list is **imported from `examples.ts`**, never retyped, so the playground and the comparison cannot drift.
 2. **Text.** Label 600 "Text" and the example text in mono 18px, `white-space: pre-wrap`, `dir="auto"`, in a `--bg` box with the Phase 1 input border (read-only display, not a form field).
 3. **Three tokenizer rows**, always in this order: Toy, GPT-2, BERT (see "Row anatomy").
 4. **One shared legend** (see "Legend").
@@ -343,8 +343,7 @@ The real-tokenizer adapter returns the existing `Token` shape (id, bytes, isPart
 
 Built from exported string constants (one source of truth shared with `TokenDisplay`'s legend; the planner either extracts a small `TokenLegend.svelte` or exports the text constants; do not retype the sentence, and coordinate with the user's uncommitted edit to `TokenDisplay.svelte` before touching that file):
 
-- always: "␣ space   ↵ new line   ⇥ tab   Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them."
-- only when a displayed row contains a special chip: "[UNK] means the tokenizer had no piece for that word or character and gave up."
+- always (amended 2026-10-11: one always-on line, no conditional sentences, and no separate sentence for other special chips such as <|endoftext|>): "␣ space   ↵ new line   ⇥ tab   Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them. [UNK] means the tokenizer had no token for that word or character and cannot represent it."
 
 The `##` meaning lives in BERT's subline, so it is always visible next to the row it explains.
 
@@ -490,7 +489,7 @@ Motion (FOUND-05): the only Phase 2 motion is the 200ms merged-chip fade (steppe
 | Pair table | caption "Pairs counted before merge {k}, most common first. Showing the top 6 of {N} pairs."; headers "Pair", "Times seen", "Outcome"; outcomes "Merged", "Tied" |
 | Comparison section | H2 "How do real tokenizers compare?"; picker legend "Pick a text"; labels from `examples.ts`; "Text"; "What to notice"; summary "View these results as tables"; source line and summary "Where the tokenizer files come from" |
 | Own-text block | heading "Try your own text"; idle, loading, ready, error, exception copy exactly as in section 2; button "Load GPT-2 and BERT (about {size} MB)"; retry "Try again"; privacy "Your text stays in your browser. Nothing is sent anywhere." |
-| Languages section | H2 "The same sentence in other languages"; table caption and column names as in section 3; "Look inside"; "What to notice"; "Where the sentences come from" |
+| Languages section | H2 "The same sentence in multiple languages"; table caption and column names as in section 3; "Look inside"; "What to notice"; "Where the sentences come from" |
 | Island loading / failed / no-JS | per lifecycle table; failed-state button "Reload page" |
 | Empty state (live own-text rows) | "Nothing to split yet" with "Type or paste some text above and it will be split into tokens here." (Phase 1 empty-state wording with "above" kept) |
 | Error state (download) | "The {GPT-2 / BERT / GPT-2 and BERT} tokenizer could not be downloaded. Check your connection and try again." |
@@ -587,7 +586,7 @@ Written by plan 02-01 after the user answered the five open research questions. 
 
 - **a. Whole Article 1 (A1, D-14).** "First sentence" becomes the whole of UDHR Article 1 in all six languages. Spanish Article 1 is one sentence, the other five have two. Source line: "Sentence: Universal Declaration of Human Rights, Article 1 (the whole article), official translations ... retrieved {date}." The per-language record gains two fields: the page actually retrieved and, where one exists, the OHCHR PDF used to cross-check it (Arabic has none). The table caption and the Languages slot sentence say "text" instead of "sentence". Touches "Verified inputs", section 3 (languages and order, caption, source line) and the data record.
 - **b. [UNK] count line (A2).** In the languages table, a count cell whose row contains at least one `[UNK]` chip shows one extra text line under the number, Label size, Muted, exactly: "{k} of these are [UNK]" (k computed from the fixture). The "What to notice" note must not claim BERT handles Chinese. User answer: show the [UNK] special tokens as visible chips and keep this count line.
-- **c. BERT subline and legend (A3).** Subline: "A different method, called WordPiece. It lower-cases text, removes accents, ignores spaces, and marks a piece that continues a word with ##." Legend conditional line: "[UNK] means the tokenizer had no piece for that word or character and gave up." User answer: show "removes accents".
+- **c. BERT subline and legend (A3).** Subline: "A different method, called WordPiece. It lower-cases text, removes accents, ignores spaces, and marks a piece that continues a word with ##." Legend line (amended 2026-10-11, now always shown): "[UNK] means the tokenizer had no token for that word or character and cannot represent it." User answer: show "removes accents".
 - **d. One shared comparator (A4, D-04).** The tie-break lives once in `src/core/bpe.ts` (`trainOnPieces`, `rankPairs`, `comparePairs`). `scripts/lib/bpe-train.ts` `trainMerges` and `src/core/stepper.ts` `trainBPE` both call it. The cross-check test runs `trainMerges` on byte pieces and compares its winners with the stepper trace. `npm run train:toy -- --check` proves the Phase 1 output is unchanged. The precompute logic lives in `scripts/lib/comparison-build.ts`, called by `scripts/precompute-comparison.ts` and by the freshness test.
 - **e. No "byte" before its definition (planner decision).** The stepper slot sentence drops "called byte-pair encoding"; it now reads "One common method builds a tokenizer's list of pieces by reading lots of text and joining the pair of neighbouring pieces it sees most often. Step through a tiny example." The "three ways production tokenizers differ" sentence (D-07) moves to "How this tokenizer works", because the post defines "byte" only in "What you just saw" and a Phase 1 content test requires the definition at first use. The prose right after the stepper keeps the "separate, tinier toy" point and the `§` explanation, without the word "byte".
 

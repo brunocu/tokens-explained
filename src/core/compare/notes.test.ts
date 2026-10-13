@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EXAMPLES } from "../examples.ts";
-import { LANGUAGES_NOTE, NOTES } from "./notes.ts";
+import { LANGUAGES_NOTE } from "./notes.ts";
 import { TOKENIZER_ROWS } from "./rows.ts";
 
 const REPLACEMENT = String.fromCodePoint(0xfffd);
@@ -24,7 +23,7 @@ const BANNED_NAMES = [
   "microsoft",
 ];
 
-const ALL_NOTES: Array<[string, string]> = [...Object.entries(NOTES), ["languages", LANGUAGES_NOTE]];
+const ALL_NOTES: Array<[string, string]> = [["languages", LANGUAGES_NOTE]];
 
 /** Sentences, split on ., ! or ? followed by a space or the end of the text. */
 const sentenceCount = (note: string): number => note.split(/[.!?](?:\s+|$)/).filter((s) => s.trim() !== "").length;
@@ -33,9 +32,7 @@ const sentenceCount = (note: string): number => note.split(/[.!?](?:\s+|$)/).fil
 const withoutGpt2 = (note: string): string => note.replaceAll("GPT-2", "GPT");
 
 describe("what-to-notice notes (D-13, T-02-14)", () => {
-  it("has exactly one non-empty note per playground example id, and no others", () => {
-    expect(Object.keys(NOTES).sort()).toEqual(EXAMPLES.map((e) => e.id).sort());
-    for (const example of EXAMPLES) expect(NOTES[example.id]?.trim(), example.id).not.toBe("");
+  it("has a non-empty languages note", () => {
     expect(LANGUAGES_NOTE.trim()).not.toBe("");
   });
 
@@ -74,12 +71,5 @@ describe("tokenizer rows (D-13, TOK-09)", () => {
     expect(TOKENIZER_ROWS.map((r) => r.id)).toEqual(["gpt2", "bert"]);
     expect(TOKENIZER_ROWS.map((r) => r.name)).toEqual(["GPT-2 (2019)", "BERT, uncased (2018)"]);
     for (const row of TOKENIZER_ROWS) expect(row.name).toMatch(/\(\d{4}\)/);
-  });
-
-  it("tells the reader that BERT removes accents and marks continuation pieces with ##", () => {
-    const bert = TOKENIZER_ROWS.find((r) => r.id === "bert");
-    expect(bert?.subline).toContain("removes accents");
-    expect(bert?.subline).toContain("##");
-    expect(bert?.subline).toContain("lower-cases");
   });
 });

@@ -170,6 +170,63 @@ export function checkIndexHtml(html) {
   return errors;
 }
 
+/** The four widget roots of Post 1, each a hook on the widget's root element. */
+const WIDGET_ROOT_HOOKS = ["data-playground", "data-stepper", "data-compare", "data-languages"];
+
+/**
+ * Strings of the two controls phase 2.2 removes (the "Show" radio group and the peek switch).
+ * The built page must carry none of them.
+ */
+// Written in two pieces each, so a repository search for the removed control names finds no source
+// line that still uses them; the joined values are unchanged.
+const REMOVED_CONTROL_STRINGS = [
+  "Peek under" + " the hood",
+  "Show the raw bytes" + " behind every token.",
+  "Token" + " IDs",
+  'name="' + 'view"',
+  "data-" + "peek",
+];
+
+/** Number of times an HTML attribute named `name` appears (so data-chip does not match data-chip-id). */
+function countAttr(html, name) {
+  return [...html.matchAll(new RegExp(`\\s${name}(?![\\w-])`, "g"))].length;
+}
+
+/** True when an <input type="radio"> with this value carries the `checked` attribute. */
+function radioIsChecked(html, value) {
+  return [...html.matchAll(/<input\b[^>]*>/g)].some((m) => {
+    const tag = m[0];
+    return /\stype\s*=\s*["']?radio\b/.test(tag) && new RegExp(`\\svalue\\s*=\\s*["']?${value}["'\\s/>]`).test(tag) && /\schecked(?![\w-])/.test(tag);
+  });
+}
+
+/**
+ * The post page must be server-rendered with all four widgets, so it works with no JavaScript
+ * (phase 2.2, D-12; UI-SPEC verification hook 9): the four widget roots, chips, the languages
+ * table (data-languages-table) with its six rows (data-lang-row) and six sentence cells
+ * (data-table-sentence), a checked English radio, and none of the removed controls.
+ *
+ * Plan 02.2-07 wired this into the main branch below: it runs on the built home page and on the
+ * built post page at its own URL.
+ */
+export function checkWidgetsHtml(html) {
+  const errors = [];
+  for (const hook of WIDGET_ROOT_HOOKS) {
+    if (countAttr(html, hook) === 0) errors.push(`post page has no ${hook} widget root`);
+  }
+  if (countAttr(html, "data-chip") === 0) errors.push("post page has no server-rendered data-chip");
+  const rows = countAttr(html, "data-lang-row");
+  if (rows !== 6) errors.push(`post page has ${rows} data-lang-row rows, expected 6`);
+  if (countAttr(html, "data-languages-table") === 0) errors.push("post page has no data-languages-table");
+  const sentences = countAttr(html, "data-table-sentence");
+  if (sentences !== 6) errors.push(`post page has ${sentences} data-table-sentence cells, expected 6`);
+  if (!radioIsChecked(html, "en")) errors.push("post page has no checked English radio in the languages picker");
+  for (const removed of REMOVED_CONTROL_STRINGS) {
+    if (html.includes(removed)) errors.push(`post page still contains the removed control text "${removed}"`);
+  }
+  return errors;
+}
+
 function walk(dir, rel = "") {
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -246,6 +303,59 @@ function selfTest() {
     throw new Error("self-test: good index rejected");
   }
   if (checkIndexHtml("<p>nothing</p>").length === 0) throw new Error("self-test: bad index accepted");
+
+  // checkWidgetsHtml (plan 02.2-01): one passing fixture, and one failing fixture per rule. A
+  // failing fixture must be rejected for the rule it breaks (the error names it), not by accident.
+  const widgetsFixture = ({
+    roots = WIDGET_ROOT_HOOKS,
+    chips = 3,
+    rows = 6,
+    table = true,
+    sentences = null,
+    englishChecked = true,
+    extra = "",
+  } = {}) => {
+    // One sentence cell per row by default; `sentences` sets the cell count independently of the rows.
+    const sentenceCount = sentences ?? rows;
+    const ids = ["en", "es", "fr", "ru", "ar", "zh"].slice(0, rows);
+    const rowHtml = ids
+      .map((id, i) => `<tr data-lang-row="${id}">${i < sentenceCount ? "<td data-table-sentence>s</td>" : ""}</tr>`)
+      .join("");
+    const extraSentences = "<td data-table-sentence>s</td>".repeat(Math.max(0, sentenceCount - ids.length));
+    return [
+      ...roots.map((hook) => `<section ${hook} data-island data-state="loading">`),
+      "<span data-chip></span>".repeat(chips),
+      '<span data-chip-main>a</span><span data-chip-id>1</span>',
+      table ? "<table data-languages-table>" : "<table>",
+      rowHtml,
+      extraSentences,
+      "</table>",
+      `<input type="radio" name="languages-inside" value="en"${englishChecked ? ' checked=""' : ""} class="svelte-x"/>`,
+      '<input type="radio" name="languages-inside" value="es" class="svelte-x"/>',
+      extra,
+    ].join("\n");
+  };
+  const widgetErrors = (label, fixture, want) => {
+    const errors = checkWidgetsHtml(fixture);
+    if (want === null) {
+      if (errors.length !== 0) throw new Error(`self-test: ${label} should pass but failed: ${errors.join("; ")}`);
+    } else if (!errors.some((e) => want.test(e))) {
+      throw new Error(`self-test: ${label} should fail on ${want} but gave: ${errors.length === 0 ? "no errors" : errors.join("; ")}`);
+    }
+  };
+  widgetErrors("a complete widgets page", widgetsFixture(), null);
+  widgetErrors("a page without the stepper root", widgetsFixture({ roots: ["data-playground", "data-compare", "data-languages"] }), /data-stepper widget root/);
+  widgetErrors("a page whose only languages hook is the table", widgetsFixture({ roots: ["data-playground", "data-stepper", "data-compare"] }), /data-languages widget root/);
+  // The fixture still holds data-chip-main and data-chip-id, which must not count as chips.
+  widgetErrors("a page without chips", widgetsFixture({ chips: 0 }), /server-rendered data-chip/);
+  widgetErrors("a page with five language rows", widgetsFixture({ rows: 5 }), /5 data-lang-row rows/);
+  widgetErrors("a page without the languages table", widgetsFixture({ table: false }), /data-languages-table/);
+  widgetErrors("a page with English not checked", widgetsFixture({ englishChecked: false }), /checked English radio/);
+  widgetErrors("a page with five table sentences", widgetsFixture({ sentences: 5 }), /5 data-table-sentence/);
+  widgetErrors("a page with seven table sentences", widgetsFixture({ sentences: 7 }), /7 data-table-sentence/);
+  for (const removed of REMOVED_CONTROL_STRINGS) {
+    widgetErrors(`a page that still has "${removed}"`, widgetsFixture({ extra: `<p>${removed}</p>` }), /removed control text/);
+  }
   console.log("check-dist self-test OK");
 }
 
@@ -283,7 +393,16 @@ if (process.argv.includes("--self-test")) {
   }
   const indexPath = `${outDir}/index.html`;
   if (!existsSync(indexPath)) errors.push(`${outDir}/index.html is missing`);
-  else errors.push(...checkIndexHtml(readFileSync(indexPath, "utf8")));
+  else {
+    const indexHtml = readFileSync(indexPath, "utf8");
+    errors.push(...checkIndexHtml(indexHtml));
+    // The home page carries the post, so the four server-rendered widgets are checked there ...
+    errors.push(...checkWidgetsHtml(indexHtml).map((e) => `index.html: ${e}`));
+  }
+  // ... and again on the post page at its own URL (phase 2.2, D-12; UI-SPEC verification hook 9).
+  const postPath = `${outDir}/what-is-a-token/index.html`;
+  if (!existsSync(postPath)) errors.push(`${outDir}/what-is-a-token/index.html is missing`);
+  else errors.push(...checkWidgetsHtml(readFileSync(postPath, "utf8")).map((e) => `what-is-a-token/index.html: ${e}`));
   if (errors.length > 0) {
     for (const e of [...new Set(errors)]) console.error(`check-dist: ${e}`);
     process.exit(1);

@@ -1,15 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DEFAULT_TEXT, EXAMPLES } from "../src/core/examples.ts";
-import { openPlaygroundReady as openReady } from "./helpers.ts";
+import { openPlaygroundReady as openReady, showTokenIds } from "./helpers.ts";
 
-// Task 2 contract: example buttons, Reset text, the Show control and the Peek switch.
+// Task 2 contract: example buttons, Reset text, and the two-line chip (text over ID) that every
+// example and Reset leaves on screen. The Show control and the peek switch no longer exist (D-08).
 
 const statValues = async (page: Page) =>
   page.locator("[data-stat-value]").allInnerTexts();
-const chipTexts = (page: Page) => page.locator("[data-playground] [data-chip]").allInnerTexts();
-const idsLabel = (page: Page) => page.getByText("Token IDs", { exact: true });
-const textLabel = (page: Page) => page.getByText("Token text", { exact: true });
-const peekLabel = (page: Page) => page.locator("label", { hasText: "Peek under the hood" });
 
 async function expectFocusAtEnd(page: Page, expected: string) {
   await expect(page.locator("#t")).toHaveValue(expected);
@@ -27,57 +24,79 @@ async function expectFocusAtEnd(page: Page, expected: string) {
   expect(state.end).toBe(state.length);
 }
 
+/** Every chip in the playground has a text line and a numeric ID line, and there is at least one. */
+async function expectTwoLineChips(page: Page, what: string) {
+  const chips = page.locator("[data-playground] [data-chip]");
+  const count = await chips.count();
+  expect(count, `${what}: chips on screen`).toBeGreaterThan(0);
+  expect(await page.locator("[data-playground] [data-chip-main]").count(), `${what}: text lines`).toBe(count);
+  const ids = await page.locator("[data-playground] [data-chip-id]").allInnerTexts();
+  expect(ids.length, `${what}: ID lines`).toBe(count);
+  for (const id of ids) expect(id.trim(), `${what}: ID line`).toMatch(/^\d+$/);
+}
+
 test("(a) every example button loads its text with focus and the caret at the end", async ({ page }) => {
   await openReady(page);
   expect(EXAMPLES.length).toBe(5);
   for (const example of EXAMPLES) {
-    await page.locator(`[data-example="${example.id}"]`).click();
+    await page.locator(`[data-playground] [data-example="${example.id}"]`).click();
     await expectFocusAtEnd(page, example.text);
   }
 });
 
 test("(b) Reset text restores the default text with the same focus rule", async ({ page }) => {
   await openReady(page);
-  await page.locator('[data-example="emoji"]').click();
+  await page.locator('[data-playground] [data-example="emoji"]').click();
   await expect(page.locator("#t")).not.toHaveValue(DEFAULT_TEXT);
   await page.locator("[data-playground] [data-reset]").click();
   await expectFocusAtEnd(page, DEFAULT_TEXT);
 });
 
-test("(c) examples and Reset keep Token IDs and Peek under the hood as they were", async ({ page }) => {
+test("(c) after any example and after Reset text the chips are the two-line form with an ID line", async ({ page }) => {
   await openReady(page);
-  await idsLabel(page).click();
-  await peekLabel(page).click();
-  await page.locator('[data-example="numbers-dates"]').click();
-  await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
-  await expect(page.locator("[data-peek]")).toBeChecked();
-  await page.locator("[data-playground] [data-reset]").click();
-  await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
-  await expect(page.locator("[data-peek]")).toBeChecked();
-});
-
-test("(d) Token IDs shows numeric ids, changes no counts and toggling back is identical", async ({ page }) => {
-  await openReady(page);
-  const beforeTexts = await chipTexts(page);
-  const beforeStats = await statValues(page);
-  const beforeCount = await page.locator("[data-playground] [data-chip]").count();
-
-  await idsLabel(page).click();
-  await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
-  const chips = page.locator("[data-playground] [data-chip]");
-  expect(await chips.count()).toBe(beforeCount);
-  for (let i = 0; i < beforeCount; i++) {
-    await expect(chips.nth(i).locator("[data-chip-id]")).toHaveText(/^\d+$/);
+  await showTokenIds(page);
+  await expectTwoLineChips(page, "default text");
+  for (const example of EXAMPLES) {
+    await page.locator(`[data-playground] [data-example="${example.id}"]`).click();
+    await expect(page.locator("#t")).toHaveValue(example.text);
+    await expectTwoLineChips(page, `example ${example.id}`);
   }
-  expect(await statValues(page)).toEqual(beforeStats);
-
-  await textLabel(page).click();
-  await expect(page.locator('input[name="view"][value="text"]')).toBeChecked();
-  expect(await chipTexts(page)).toEqual(beforeTexts);
-  expect(await statValues(page)).toEqual(beforeStats);
+  await page.locator("[data-playground] [data-reset]").click();
+  await expect(page.locator("#t")).toHaveValue(DEFAULT_TEXT);
+  await expectTwoLineChips(page, "after Reset text");
 });
 
-test("(e) with empty text both views keep the empty state and raise no console error", async ({ page }) => {
+test("(d) the ID on each chip equals the ID column of the table for the same token, and opening the table changes no count", async ({
+  page,
+}) => {
+  await openReady(page);
+  await showTokenIds(page);
+  const details = page.locator("details[data-table]");
+  const chipIds = () => page.locator("[data-playground] [data-chip-id]").allInnerTexts();
+  const tableIds = () => details.locator("tbody tr td:nth-child(3)").evaluateAll((cells) => cells.map((c) => c.textContent?.trim() ?? ""));
+
+  const beforeStats = await statValues(page);
+  const beforeChips = await chipIds();
+  expect(beforeChips.length).toBeGreaterThan(0);
+
+  await details.locator("summary").click();
+  await expect(details).toHaveAttribute("open", "");
+  expect(await statValues(page)).toEqual(beforeStats);
+  expect(await chipIds()).toEqual(beforeChips);
+
+  // Same tokens, same order: the two lists are equal, and neither is empty.
+  expect(await tableIds()).toEqual(beforeChips.map((id) => id.trim()));
+
+  // Still true for an example whose tokens are cut mid-character (the emoji example).
+  await page.locator('[data-playground] [data-example="emoji"]').click();
+  await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
+  const emojiChips = (await chipIds()).map((id) => id.trim());
+  expect(emojiChips.length).toBeGreaterThan(0);
+  expect(await tableIds()).toEqual(emojiChips);
+  await expect(details.locator("tbody tr")).toHaveCount(emojiChips.length);
+});
+
+test("(e) with empty text the empty state shows and no console error is raised", async ({ page }) => {
   const errors: string[] = [];
   page.on("console", (m) => {
     if (m.type() === "error") errors.push(m.text());
@@ -86,59 +105,15 @@ test("(e) with empty text both views keep the empty state and raise no console e
   await openReady(page);
   await page.locator("#t").fill("");
   await expect(page.locator("[data-empty]")).toBeVisible();
-  await idsLabel(page).click();
-  await expect(page.locator("[data-empty]")).toBeVisible();
-  await peekLabel(page).click();
-  await textLabel(page).click();
+  await page.locator("details[data-table] summary").click();
   await expect(page.locator("[data-empty]")).toBeVisible();
   expect(errors).toEqual([]);
-});
-
-test("(f) Peek adds a hex line to normal chips; partial chips always show hex", async ({ page }) => {
-  await openReady(page);
-  // GPT-2 keeps " 🙂" whole (one token), but cuts " 🎉" into three partial pieces, so the party
-  // popper gives the mix of a whole chip ("hi") and partial chips this test needs.
-  await page.locator("#t").fill("hi \u{1F389}");
-  await expect(page.locator('[data-playground] [data-chip][data-partial="true"]').first()).toBeVisible();
-
-  // Text mode, peek off: partial chips show hex once, as their main line.
-  for (const chip of await page.locator('[data-playground] [data-chip][data-partial="true"]').all()) {
-    await expect(chip.locator("[data-chip-bytes]")).toHaveCount(0);
-    await expect(chip.locator("[data-chip-main]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
-  }
-
-  await peekLabel(page).click();
-  for (const chip of await page.locator('[data-playground] [data-chip][data-partial="false"]').all()) {
-    await expect(chip.locator("[data-chip-bytes]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
-  }
-  // Text mode, peek on: still no second hex line on partial chips.
-  for (const chip of await page.locator('[data-playground] [data-chip][data-partial="true"]').all()) {
-    await expect(chip.locator("[data-chip-bytes]")).toHaveCount(0);
-  }
-
-  await idsLabel(page).click();
-  for (const chip of await page.locator('[data-playground] [data-chip][data-partial="true"]').all()) {
-    await expect(chip.locator("[data-chip-id]")).toHaveText(/^\d+$/);
-    await expect(chip.locator("[data-chip-bytes]")).toHaveText(/^[0-9A-F]{2}( [0-9A-F]{2})*$/);
-  }
-});
-
-test("(g) the keyboard moves between views and toggles the peek switch", async ({ page }) => {
-  await openReady(page);
-  await page.locator('input[name="view"][value="text"]').focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(page.locator('input[name="view"][value="ids"]')).toBeChecked();
-  await page.locator("[data-peek]").focus();
-  await page.keyboard.press("Space");
-  await expect(page.locator("[data-peek]")).toBeChecked();
-  await page.keyboard.press("Space");
-  await expect(page.locator("[data-peek]")).not.toBeChecked();
 });
 
 test("(h) reduced motion removes every button transition", async ({ page }) => {
   await openReady(page);
   const duration = () =>
-    page.locator("[data-example]").first().evaluate((el) => getComputedStyle(el).transitionDuration);
+    page.locator("[data-playground] [data-example]").first().evaluate((el) => getComputedStyle(el).transitionDuration);
   await page.emulateMedia({ reducedMotion: "reduce" });
   expect(await duration()).toBe("0s");
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -148,17 +123,16 @@ test("(h) reduced motion removes every button transition", async ({ page }) => {
 test("(i) every control is at least 44 by 44 CSS pixels", async ({ page }) => {
   await openReady(page);
   const targets = [
-    ...(await page.locator("[data-example]").all()),
+    ...(await page.locator("[data-playground] [data-example]").all()),
     page.locator("[data-playground] [data-reset]"),
-    page.locator("label.seg").first(),
-    page.locator("label.seg").nth(1),
-    peekLabel(page),
+    page.locator("[data-playground] details[data-table] summary"),
   ];
-  expect(targets.length).toBe(9);
+  expect(targets.length).toBe(7);
   for (const target of targets) {
     const box = await target.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    // 0.01px of slack: Firefox reports a 44px box as 43.99997px.
+    expect(box!.width).toBeGreaterThanOrEqual(43.99);
+    expect(box!.height).toBeGreaterThanOrEqual(43.99);
   }
 });

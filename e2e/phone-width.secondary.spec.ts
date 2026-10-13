@@ -43,17 +43,16 @@ test("(b) the long word and 1,000 CJK characters cause no horizontal page scroll
   expect(await overflowX(page)).toBeLessThanOrEqual(0);
 });
 
-test("(d) frames at 360 px in Token IDs mode: no horizontal page scroll and every frame inside its chips container", async ({
+test("(d) frames at 360 px with the stack chip: no horizontal page scroll and every frame inside its chips container", async ({
   page,
 }) => {
   await openReady(page);
-  await page.getByText("Token IDs", { exact: true }).click();
   const inputs: Array<() => Promise<void>> = [
     async () => {
       await page.locator("#t").fill("日本語");
     },
     async () => {
-      await page.locator('[data-example="emoji"]').click();
+      await page.locator('[data-playground] [data-example="emoji"]').click();
     },
   ];
   for (const apply of inputs) {

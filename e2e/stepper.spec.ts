@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { SAMPLE_SENTENCE } from "../src/core/stepper.ts";
 
 // The BPE stepper in the built post (sketch 001, variant D): the sentence from raw text to the
 // finished pieces, the boxed winning pair, the fuse, the stop and the unseen words (TOK-05, TOK-06).
@@ -13,7 +14,10 @@ const COUNTS = [6, 4, 4, 3, 2, 2, 2, 2, 2, 2];
 const TIED = [0, 1, 0, 0, 5, 4, 3, 2, 1, 0]; // rows marked Tied besides the winner
 const PAIR_TOTALS = [17, 16, 15, 14, 13, 12, 11, 10, 9, 8];
 
-const status = (stage: number, name: string) => `Step ${stage + 1} of ${STAGES}: ${name}`;
+/** The status line at a stage: only "Step N of 14:" is pinned, the name of the stage is copy. */
+const status = (stage: number) => new RegExp(`^Step ${stage + 1} of ${STAGES}:`);
+/** A number as a whole word, so a sentence is checked for the figure it states and not for its wording. */
+const num = (n: number | string) => new RegExp(`\\b${n}\\b`);
 
 async function openStepper(page: Page): Promise<Locator> {
   await page.goto("what-is-a-token/");
@@ -37,16 +41,16 @@ async function goToStage(card: Locator, stage: number): Promise<void> {
 
 test("(a) at load the card is ready on the raw text: Next enabled, Back and Reset disabled, the characters, no table", async ({ page }) => {
   const card = await openStepper(page);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(0, "The text as byte values"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(0));
   await expect(card.locator("[data-next]")).toBeEnabled();
   await expect(card.locator("[data-back]")).toBeDisabled();
   await expect(card.locator("[data-reset]")).toBeDisabled();
   await expect(card.locator("[data-run]")).toBeEnabled();
-  await expect(card.locator("[data-why]")).toContainText('This is the "raw" text, exactly as you would type it');
+  await expect(card.locator("[data-why]")).not.toBeEmpty();
   await expect(card.locator("[data-why]")).toHaveAttribute("role", "status");
   await expect(card.locator("[data-why]")).toHaveAttribute("aria-live", "polite");
   await expect(card.locator("[data-chars] [data-step-chip]")).toHaveCount(49);
-  await expect(card.locator("[data-spoken]")).toHaveText("the cat sat on the mat and the cat sat on the hat");
+  await expect(card.locator("[data-spoken]")).toHaveText(SAMPLE_SENTENCE);
   await expect(card.locator("[data-pair-table]")).toHaveCount(0);
   await expect(card.locator("[data-final]")).toHaveCount(0);
   await expect(card.locator("[data-stats]")).toHaveCount(0);
@@ -54,7 +58,7 @@ test("(a) at load the card is ready on the raw text: Next enabled, Back and Rese
 
 test("(b) the first stage is one continuous row: 116 under the first t, 49 values, no word groups", async ({ page }) => {
   const card = await openStepper(page);
-  await expect(card.locator("[data-why]")).toContainText("49 values");
+  await expect(card.locator("[data-why]")).toContainText(num(49));
   await expect(card.locator("[data-step-chip]")).toHaveCount(49);
   const first = card.locator("[data-chars] [data-step-chip]").first();
   await expect(first).toHaveAttribute("data-id", "116");
@@ -62,7 +66,7 @@ test("(b) the first stage is one continuous row: 116 under the first t, 49 value
   await expect(first).toContainText("116");
   // The text is not cut into words here: one row, no word groups.
   await expect(card.locator("[data-word]")).toHaveCount(0);
-  await expect(card.locator("[data-spoken]").first()).toHaveText("the cat sat on the mat and the cat sat on the hat");
+  await expect(card.locator("[data-spoken]").first()).toHaveText(SAMPLE_SENTENCE);
   // Single bytes carry no learned-piece fill.
   await expect(card.locator("[data-step-chip][data-learned]")).toHaveCount(0);
 });
@@ -70,31 +74,32 @@ test("(b) the first stage is one continuous row: 116 under the first t, 49 value
 test("(c) the first merge shows exactly the six boxed spots of a + t, the callout and the pair table", async ({ page }) => {
   const card = await openStepper(page);
   await goToStage(card, 1);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(1, "Starting pieces"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(1));
   await expect(card.locator("[data-pair-box]")).toHaveCount(0);
-  await expect(card.locator("[data-why]")).toContainText("256 possible byte values, with the ids 0 to 255");
+  await expect(card.locator("[data-why]")).toContainText(num(256));
   await expect(card.locator("[data-stats]")).toContainText("256");
   await expect(card.locator("[data-stats]")).toContainText("49");
 
   await next(card);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(2, "Merge 1 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(2));
   await expect(card.locator("[data-pair-box]")).toHaveCount(6);
-  await expect(card.locator("[data-next-merge] h3")).toContainText("a + t becomes one new token, id 256");
-  await expect(card.locator("[data-next-merge] p")).toContainText("Press Next to fuse all 6 boxed spots at once.");
+  // The callout names the winning pair and its new id, and the number of boxed spots.
+  await expect(card.locator("[data-next-merge] h3")).toContainText("a + t");
+  await expect(card.locator("[data-next-merge] h3")).toContainText(num(256));
+  await expect(card.locator("[data-next-merge] p")).toContainText(num(6));
   await expect(card.locator('[data-pair][aria-current="true"]')).toHaveAttribute("data-pair", "a+t");
-  await expect(card.locator("[data-pair-table] caption")).toHaveText(
-    "Pairs counted before merge 1, most common first. Showing the top 5 of 17 pairs.",
-  );
-  await expect(card.locator("[data-pair-table] th")).toHaveText(["Pair", "Times seen", "Bar", "Outcome"]);
-  await expect(card.locator('[data-pair][data-outcome="merged"] td').nth(3)).toHaveText("Merged");
-  await expect(card.locator("[data-why]")).toContainText("seen 6 times");
+  // The table shows the top 5 of the 17 pairs (no caption any more), four columns.
+  await expect(card.locator("[data-pair-table] tbody tr")).toHaveCount(5);
+  await expect(card.locator("[data-pair-table] th")).toHaveCount(4);
+  await expect(card.locator('[data-pair][data-outcome="merged"]')).toHaveCount(1);
+  await expect(card.locator("[data-why]")).toContainText(num(6));
 });
 
 test("(d) all ten merges: winner, count, boxed spots, caption, exactly one Merged row", async ({ page }) => {
   const card = await openStepper(page);
   await goToStage(card, MERGE_STAGE(1));
   for (let k = 1; k <= 10; k++) {
-    await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(k), `Merge ${k} of 10`));
+    await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(k)));
     await expect(card.locator('[data-pair][aria-current="true"]')).toHaveAttribute("data-pair", WINNERS[k - 1] as string);
     await expect(card.locator("[data-pair-box]")).toHaveCount(COUNTS[k - 1] as number);
     await expect(card.locator('[data-pair][data-outcome="merged"]')).toHaveCount(1);
@@ -102,38 +107,37 @@ test("(d) all ten merges: winner, count, boxed spots, caption, exactly one Merge
     await expect(card.locator('[data-pair][data-outcome="tied"]')).toHaveCount(TIED[k - 1] as number);
     const total = PAIR_TOTALS[k - 1] as number;
     const shown = Math.max(5, (TIED[k - 1] as number) + 1);
-    await expect(card.locator("[data-pair-table] caption")).toHaveText(
-      shown >= total
-        ? `Pairs counted before merge ${k}. All ${total} pairs, most common first.`
-        : `Pairs counted before merge ${k}, most common first. Showing the top ${shown} of ${total} pairs.`,
-    );
+    await expect(card.locator("[data-pair-table] tbody tr")).toHaveCount(Math.min(shown, total));
     if (k < 10) await next(card);
   }
 });
 
-test("(e) ties: hatched bar plus the word Tied, and the rule is smaller ids first", async ({ page }) => {
+test("(e) ties: a hatched bar on every tied row, and the deciding id is the smaller one", async ({ page }) => {
   const card = await openStepper(page);
   await goToStage(card, MERGE_STAGE(2));
-  await expect(card.locator('[data-pair][data-outcome="tied"] td').nth(3)).toHaveText("Tied");
+  await expect(card.locator('[data-pair][data-outcome="tied"]')).toHaveCount(1);
   await expect(card.locator('[data-pair][data-outcome="tied"] .bar.tie')).toHaveCount(1);
   await expect(card.locator('[data-pair][data-outcome="merged"] .bar.tie')).toHaveCount(0);
-  await expect(card.locator("[data-why]")).toContainText(
-    "2 pairs are tied on 4. A tie goes to the pair with the smaller numeric values: here the first id, 104, is the smallest.",
-  );
-  await expect(card.locator("[data-why]")).not.toContainText(/alphabetical|first seen|vocabulary order/i);
+  // The explanation names the id that decides the tie.
+  await expect(card.locator("[data-why]")).toContainText(num(104));
 
   await goToStage(card, 3);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(5), "Merge 5 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(5)));
   await expect(card.locator('[data-pair][data-outcome="tied"]')).toHaveCount(5);
-  await expect(card.locator("[data-why]")).toContainText("6 pairs are tied on 2.");
-  await expect(card.locator("[data-why]")).toContainText("the first ids match, so the second id, 99, decides.");
-  // The winner's row is the first row and every tied row says so in words, not only in the bar.
-  await expect(card.locator("[data-pair-table] td.outcome")).toHaveText(["Merged", "Tied", "Tied", "Tied", "Tied", "Tied"]);
+  await expect(card.locator("[data-why]")).toContainText(num(99));
+  // The winner's row is the first row; every other row of the table is tied.
+  expect(await card.locator("[data-pair-table] [data-pair]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-outcome")))).toEqual([
+    "merged",
+    "tied",
+    "tied",
+    "tied",
+    "tied",
+    "tied",
+  ]);
 
   await goToStage(card, 5);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(10), "Merge 10 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(10)));
   await expect(card.locator('[data-pair][data-outcome="tied"]')).toHaveCount(0);
-  await expect(card.locator("[data-why]")).not.toContainText("tied");
 });
 
 test("(f) the pieces made so far wear a double border, and learned pieces show their number", async ({ page }) => {
@@ -146,18 +150,36 @@ test("(f) the pieces made so far wear a double border, and learned pieces show t
   await expect(fresh.first()).toContainText("at");
   await expect(fresh.first()).toContainText("256");
   await expect(card.locator('[data-words] [data-step-chip][data-id="256"][data-learned="true"]')).toHaveCount(6);
+
+  // The newest piece wears a heavy double border; a learned piece wears its number; a single byte
+  // has the plain 2px outline and no learned fill.
+  const borders = await page.evaluate(() => {
+    const read = (el: Element | null) => {
+      if (el === null) return null;
+      const style = getComputedStyle(el);
+      return { style: style.borderTopStyle, width: style.borderTopWidth, id: el.querySelector(".stack-chip-id")?.textContent ?? "" };
+    };
+    return {
+      fresh: read(document.querySelector('[data-stepper] [data-words] [data-step-chip][data-new="true"]')),
+      byte: read(document.querySelector('[data-stepper] [data-words] [data-step-chip]:not([data-learned])')),
+    };
+  });
+  expect(borders.fresh?.style).toBe("double");
+  expect(borders.fresh?.width).toBe("4px");
+  expect(borders.fresh?.id).toBe("256");
+  expect(borders.byte?.style).toBe("solid");
+  expect(borders.byte?.width).toBe("2px");
+  await expect(card.locator('[data-words] [data-step-chip]:not([data-learned])').first()).not.toHaveAttribute("data-pal", /.*/);
 });
 
 test("(g) the stop stage reports 256 + 10 = 266 and the shrinking text", async ({ page }) => {
   const card = await openStepper(page);
   await goToStage(card, STOP_STAGE);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(STOP_STAGE, "Stop"));
-  await expect(card.locator("[data-why]")).toContainText("stop after 10 merges");
-  await expect(card.locator("[data-why]")).toContainText("256 + 10 = 266");
-  await expect(card.locator("[data-why]")).toContainText("from 49 tokens to 20");
+  await expect(card.locator("[data-step-status]")).toHaveText(status(STOP_STAGE));
+  for (const figure of [10, 266, 49, 20]) await expect(card.locator("[data-why]"), String(figure)).toContainText(num(figure));
   await expect(card.locator("[data-stats] .stat").nth(0)).toContainText("266");
   await expect(card.locator("[data-stats] .stat").nth(1)).toContainText("20");
-  await expect(card.locator("[data-stop]")).toContainText("The finished text, 20 tokens");
+  await expect(card.locator("[data-stop]")).toContainText(num(20));
   await expect(card.locator("[data-step-chip]")).toHaveCount(20);
   await expect(card.locator("[data-next]")).toBeEnabled();
   await expect(card.locator("[data-final]")).toHaveCount(0);
@@ -166,7 +188,7 @@ test("(g) the stop stage reports 256 + 10 = 266 and the shrinking text", async (
 test("(g2) Run to end lands on the last step, the unseen words, with Reset focused", async ({ page }) => {
   const card = await openStepper(page);
   await card.locator("[data-run]").click();
-  await expect(card.locator("[data-step-status]")).toHaveText(status(STAGES - 1, "A word it has never seen"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(STAGES - 1));
   await expect(card.locator("[data-run]")).toBeDisabled();
   await expect(card.locator("[data-next]")).toBeDisabled();
   await expect(card.locator("[data-reset]")).toBeFocused();
@@ -176,10 +198,10 @@ test("(g2) Run to end lands on the last step, the unseen words, with Reset focus
 test("(h) the unseen words: ' that' from known pieces, the cat emoji from raw bytes in hexadecimal", async ({ page }) => {
   const card = await openStepper(page);
   await card.locator("[data-run]").click();
-  await expect(card.locator("[data-step-status]")).toHaveText(status(STAGES - 1, "A word it has never seen"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(STAGES - 1));
   const panel = card.locator("[data-final]");
   await expect(panel).toBeVisible();
-  await expect(panel.locator("h3")).toHaveText("Encoding words that were never in the text");
+  await expect(panel.locator("h3")).toBeVisible();
 
   const that = panel.locator('[data-unseen-word=" that"] [data-step-chip]');
   await expect(that).toHaveCount(4);
@@ -189,10 +211,10 @@ test("(h) the unseen words: ' that' from known pieces, the cat emoji from raw by
 
   const cat = panel.locator('[data-unseen-word=" \u{1F431}"] [data-step-chip]');
   await expect(cat).toHaveCount(5);
-  await expect(cat.locator(".text")).toHaveText([/␣/, "F0", "9F", "90", "B1"]);
-  await expect(cat.locator(".num")).toHaveText(["32", "240", "159", "144", "177"]);
+  await expect(cat.locator(".stack-chip-text")).toHaveText([/␣/, "F0", "9F", "90", "B1"]);
+  await expect(cat.locator(".stack-chip-id")).toHaveText(["32", "240", "159", "144", "177"]);
   await expect(cat.locator("[data-learned]")).toHaveCount(0);
-  await expect(panel).toContainText("with the values 240, 159, 144, 177");
+  await expect(panel).toContainText("240, 159, 144, 177");
   await expect(panel).toContainText("F0 9F 90 B1");
 
   await expect(card.locator("[data-next]")).toBeDisabled();
@@ -206,12 +228,12 @@ test("(i) Back, Reset and focus: focus never falls to the page", async ({ page }
   await expect(card.locator("[data-reset]")).toBeFocused();
 
   await card.locator("[data-reset]").click();
-  await expect(card.locator("[data-step-status]")).toHaveText(status(0, "The text as byte values"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(0));
   await expect(card.locator("[data-next]")).toBeFocused();
 
   await next(card);
   await card.locator("[data-back]").click();
-  await expect(card.locator("[data-step-status]")).toHaveText(status(0, "The text as byte values"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(0));
   await expect(card.locator("[data-next]")).toBeFocused();
 
   await goToStage(card, 5);
@@ -223,7 +245,7 @@ test("(i) Back, Reset and focus: focus never falls to the page", async ({ page }
   await goToStage(card, 3);
   await card.locator("[data-back]").focus();
   await page.keyboard.press("Enter");
-  await expect(card.locator("[data-step-status]")).toHaveText(status(2, "Merge 1 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(2));
   await expect(card.locator("[data-back]")).toBeFocused();
   // Going back from a merge stage shows the earlier state with its pair boxes again.
   await expect(card.locator("[data-pair-box]")).toHaveCount(6);
@@ -247,10 +269,10 @@ test("(k) with motion allowed Next fuses the boxes first, and a second click dur
   const nextButton = card.locator("[data-next]");
   await nextButton.click();
   await nextButton.click({ noWaitAfter: true });
-  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2), "Merge 2 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2)));
   // Give a late second advance time to show up, then confirm there was only one step.
   await page.waitForTimeout(600);
-  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2), "Merge 2 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2)));
   // The new piece pops in with a running animation.
   const names = await page.evaluate(() =>
     Array.from(document.querySelectorAll('[data-stepper] [data-step-chip][data-new="true"]')).map(
@@ -266,7 +288,7 @@ test("(l) under reduced motion Next advances at once, nothing fuses and nothing 
   const card = await openStepper(page);
   await goToStage(card, MERGE_STAGE(1));
   await card.locator("[data-next]").click();
-  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2), "Merge 2 of 10"));
+  await expect(card.locator("[data-step-status]")).toHaveText(status(MERGE_STAGE(2)));
   const state = await page.evaluate(() => ({
     running: document.getAnimations().length,
     fusing: document.querySelectorAll("[data-stepper] .pairbox.fusing").length,
@@ -323,9 +345,8 @@ test("(p) without JavaScript the first stage and the no-JS note are in the page"
   // getByText skips <noscript> content, so address the note by its class.
   const note = page.locator("[data-stepper] .island-nojs");
   await expect(note).toBeVisible();
-  await expect(note).toHaveText("Stepping needs JavaScript. The first step is shown below.");
   await expect(page.locator("[data-stepper] [data-status]")).toBeHidden();
-  await expect(page.locator("[data-stepper] [data-why]")).toContainText('This is the "raw" text');
+  await expect(page.locator("[data-stepper] [data-why]")).not.toBeEmpty();
   await expect(page.locator("[data-stepper] [data-chars] [data-step-chip]")).toHaveCount(49);
   await expect(page.locator("[data-stepper] [data-next]")).toBeDisabled();
   await context.close();

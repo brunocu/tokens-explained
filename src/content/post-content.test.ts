@@ -38,16 +38,18 @@ const REQUIRED_SENTENCES = [
   "Tokens are not the same thing as words.",
   "The same sentence can contain more tokens than words.",
   // The author cut the two sentences "Many everyday words are a single token..." and "A space can be
-  // part of a token." from the correction in the final edits of plan 02.1-09; the Takeaways bullets
-  // below say the same things.
-  "Spaces belong to tokens. A word with a space in front of it is often a single token.",
+  // part of a token." from the correction in the final edits of plan 02.1-09; the bullets after the
+  // playground say the same things.
+  "Spaces can belong to tokens. A word with a space in front of it is often a single token.",
   "Rare words split into several tokens, while many everyday words stay whole.",
   // playground instruction
   "Type or paste anything, or pick an example, and watch it split into tokens.",
+  // the second lead-in sentence says what the second line of every chip is (D-08); plan 07's read-through settles the final wording (D-10)
+  "Under each piece of text is its ID, the number the model works with.",
   // the byte sentence of the first section (the final text no longer defines bit or byte separately)
   "Most English letters take up one byte, other characters may take several.",
   // ids are labels (D-08)
-  "these ids are only labels in a list. A bigger number does not mean a rarer or more important word, and a different tokenizer would give the same token a different id.",
+  "these ids are only labels in a list. A bigger number does not mean a rarer or more important word, and a different tokenizer can give the same token a different id.",
   // the emoji bullet and the byte example (R-01, TOK-10). The frame sentence of the earlier text was
   // cut by the author in the Task 3 notes pass; the figure's own split note explains hatched chips.
   "An emoji takes several bytes, and the tokenizer can cut between them.",
@@ -59,10 +61,9 @@ const REQUIRED_SENTENCES = [
   // softened claim and bullet (D-17)
   "while many everyday words stay whole.",
   // the differences (D-07, D-16). The "work on bytes" difference is gone: the stepper works on bytes now.
-  "Compared with the miniature in the step by step example, real tokenizers differ in three ways.",
-  "They split text with a rule before merging, so tokens do not run across spaces and punctuation. And their vocabularies hold tens of thousands of tokens or more.",
+  "Compared with the step by step example, real tokenizers differ in three ways.",
+  "They split text with a larger set of rules before merging, so tokens do not run across spaces and punctuation. And their vocabularies hold tens of thousands of tokens or more.",
   // the id difference (D-13), the bridge from the stepper to GPT-2 (D-12) and the choice of an older tokenizer (D-14)
-  "each tokenizer may have its own list of starting values and its own order, so the same letter may have a different id in another tokenizer.",
   "GPT-2's list of tokens is far longer, so it already has a token for every word of this sentence.",
   "GPT-2 is an older tokenizer. I chose it because its tokenizer file is only about",
   "Newer models cut text differently.",
@@ -78,16 +79,30 @@ const STEPPER_SLOT_SENTENCE =
 // Task 3 notes pass: the comparison is framed as GPT-2 set against other models (BERT now), not as
 // "real tokenizers" against each other, and the languages lead-in names the new Bytes column.
 const COMPARISON_SLOT_SENTENCE =
-  "GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with <Cite n={26} />. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for \"unknown\", which stands in for the whole word and hides what it said <Cite n={26} />. A token like this is \"special\" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start <Cite n={27} />.";
+  "GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with <Cite n={25} />. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for \"unknown\", which stands in for the whole sequence and hides what it said <Cite n={25} />. A token like this is \"special\" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start <Cite n={26} />.";
 
+// Plan 02.2-06: the lead-in names no direction ("on the right", "below"), because the picker and the
+// results sit below the table band in the merged widget.
 const LANGUAGES_SLOT_SENTENCE =
-  "The same sentence, in six languages: its size in bytes, and its token count with the same two tokenizers. Look at how the numbers differ.";
+  "The same sentence, in six languages: its size in bytes, and its token count with the same two tokenizers. Look at how the numbers differ. Pick a language to see where each tokenizer cuts it.";
 
-const ANALOGY_WORDS = ["syllable", "building-block", "building block", "puzzle", "jigsaw", "brick", "lego"];
+/** The playground island as written in the MDX: imported at the top, placed with a load directive and its shared props (D-06, D-07). */
+const PLAYGROUND_TAG = "<Playground client:load {...playgroundProps} />";
+
+/** The stepper island as written in the MDX: imported at the top, placed with a visibility directive, under its own heading (D-06). */
+const STEPPER_TAG = "<BpeStepper client:visible />";
+
+/** The comparison island as written in the MDX: imported at the top, placed with a visibility directive and its shared props, under its own heading (D-06, D-07). */
+const COMPARISON_TAG = "<Comparison client:visible {...comparisonProps} />";
+
+/** The languages island as written in the MDX: imported at the top, placed with a visibility directive, under its own heading (D-06, D-13). */
+const LANGUAGES_TAG = "<LanguagesWidget client:visible />";
+
+const ANALOGY_WORDS =["syllable", "building-block", "building block", "puzzle", "jigsaw", "brick", "lego"];
 const PROMISE_PHRASES = ["coming soon", "next up", "stay tuned", "part 2", "later post", "upcoming", "future post"];
 const NUMBER_WORDS = "two|three|four|five|six|seven|eight|nine|ten|eleven|twelve";
 
-/** The h2 headings written in the Markdown (the section wrappers add four more). */
+/** The h2 headings written in the Markdown (every widget has its own heading since phase 2.2). */
 const HEADINGS = [
   "How does a computer store text?",
   "What is a language model, and why numbers?",
@@ -97,9 +112,12 @@ const HEADINGS = [
   "A practical compromise: tokens",
   "Tokens are not words",
   "How the numbers are assigned",
+  "Build a vocabulary",
   "What the step by step example showed",
   "A real tokenizer: GPT-2",
-  "Takeaways",
+  "Try it yourself",
+  "How does GPT-2 compare with other models?",
+  "The same sentence in multiple languages",
   "References",
 ];
 
@@ -138,7 +156,7 @@ describe("Post 1 content rules", () => {
     expect(body).not.toContain("common words often stay whole");
   });
 
-  it("keeps the section order, with every wrapper where the plan puts it (plan 02-10)", () => {
+  it("keeps the section order, with every widget where the plan puts it (plan 02-10)", () => {
     const markers = [
       "## How does a computer store text?",
       "## What is a language model, and why numbers?",
@@ -148,14 +166,17 @@ describe("Post 1 content rules", () => {
       "## A practical compromise: tokens",
       "## Tokens are not words",
       "## How the numbers are assigned",
-      "<StepperSection>",
+      "## Build a vocabulary",
+      STEPPER_TAG,
       "## What the step by step example showed",
       "## A real tokenizer: GPT-2",
       "<TokenFigure sample",
-      "<PlaygroundSection>",
-      "## Takeaways",
-      "<ComparisonSection>",
-      "<LanguagesSection>",
+      "## Try it yourself",
+      PLAYGROUND_TAG,
+      "## How does GPT-2 compare with other models?",
+      COMPARISON_TAG,
+      "## The same sentence in multiple languages",
+      LANGUAGES_TAG,
       "## References",
     ];
     let previous = -1;
@@ -165,22 +186,23 @@ describe("Post 1 content rules", () => {
       expect(at, marker).toBeGreaterThan(previous);
       previous = at;
     }
-    for (const tag of ["PlaygroundSection", "StepperSection", "ComparisonSection", "LanguagesSection"]) {
-      expect(body.match(new RegExp(`<${tag}>`, "g"))?.length, tag).toBe(1);
-    }
+    expect(body.split(PLAYGROUND_TAG).length - 1, "the playground island").toBe(1);
+    expect(body.split(STEPPER_TAG).length - 1, "the stepper island").toBe(1);
+    expect(body.split(COMPARISON_TAG).length - 1, "the comparison island").toBe(1);
+    expect(body.split(LANGUAGES_TAG).length - 1, "the languages island").toBe(1);
   });
 
   it("carries each section lead-in word for word", () => {
-    expect(body).toContain(`<StepperSection>${STEPPER_SLOT_SENTENCE}</StepperSection>`);
-    expect(body).toContain(`<ComparisonSection>${COMPARISON_SLOT_SENTENCE}</ComparisonSection>`);
-    expect(body).toContain(`<LanguagesSection>${LANGUAGES_SLOT_SENTENCE}</LanguagesSection>`);
+    expect(body).toContain(`${STEPPER_SLOT_SENTENCE}\n\n${STEPPER_TAG}`);
+    expect(body).toContain(`${COMPARISON_SLOT_SENTENCE}\n\n${COMPARISON_TAG}`);
+    expect(body).toContain(`${LANGUAGES_SLOT_SENTENCE}\n\n${LANGUAGES_TAG}`);
   });
 
   it("introduces GPT-2 after the stepper, then the first token chips, then the playground", () => {
-    const closing = body.indexOf("</StepperSection>");
+    const closing = body.indexOf(STEPPER_TAG);
     const real = body.indexOf("The examples below use the real tokenizer of GPT-2");
     const firstChips = body.indexOf("<TokenFigure", real);
-    const playground = body.indexOf("<PlaygroundSection>");
+    const playground = body.indexOf(PLAYGROUND_TAG);
     expect(real).toBeGreaterThan(closing);
     expect(firstChips).toBeGreaterThan(real);
     expect(playground).toBeGreaterThan(firstChips);
@@ -191,7 +213,7 @@ describe("Post 1 content rules", () => {
     expect(body).not.toContain("## How real tokenizers differ");
     expect(body).not.toContain("## The tokenizer behind the demos");
     const start = body.indexOf("## A real tokenizer: GPT-2");
-    const end = body.indexOf("<PlaygroundSection>");
+    const end = body.indexOf(PLAYGROUND_TAG);
     const section = body.slice(start, end);
     expect(section).toContain("real tokenizers differ in three ways");
     expect(section).toContain("The tokenizer of GPT-2 has");
@@ -205,7 +227,7 @@ describe("Post 1 content rules", () => {
     const why = body.indexOf("GPT-2 is an older tokenizer.");
     const lead = body.indexOf("Here is the same sentence as the step by step example, but tokenized by GPT-2.");
     const bridge = body.indexOf("<TokenFigure sample");
-    const playground = body.indexOf("<PlaygroundSection>");
+    const playground = body.indexOf(PLAYGROUND_TAG);
     expect(unseen).toBeGreaterThan(-1);
     expect(heading).toBeGreaterThan(unseen);
     expect(why).toBeGreaterThan(heading);
@@ -227,8 +249,8 @@ describe("Post 1 content rules", () => {
     const paragraph = body.slice(start, body.indexOf("\n", start));
     expect(paragraph).toContain('<Fact of="byteOfT" />');
     expect(paragraph).toContain('<Fact of="gpt2IdOfT" />');
-    expect(start).toBeGreaterThan(body.indexOf("would give the same token a different id."));
-    expect(start).toBeLessThan(body.indexOf("<StepperSection>"));
+    expect(start).toBeGreaterThan(body.indexOf("The vocabulary is a numbered list"));
+    expect(start).toBeLessThan(body.indexOf(STEPPER_TAG));
   });
 
   it("explains why GPT-2 was chosen without comparing licences or openness with newer tokenizers (D-14, RESEARCH G8)", () => {
@@ -237,7 +259,7 @@ describe("Post 1 content rules", () => {
     expect(paragraph).toContain('<Fact of="gpt2FileMb" />');
     expect(paragraph).toContain("permissive licence");
     expect(paragraph).not.toMatch(/\bMIT licen[cs]e\b/);
-    const section = body.slice(body.indexOf("## A real tokenizer: GPT-2"), body.indexOf("<PlaygroundSection>")).toLowerCase();
+    const section = body.slice(body.indexOf("## A real tokenizer: GPT-2"), body.indexOf(PLAYGROUND_TAG)).toLowerCase();
     for (const phrase of ["closed", "not free", "proprietary", "secret", "not open"]) {
       expect(section, phrase).not.toContain(phrase);
     }
@@ -263,20 +285,20 @@ describe("Post 1 content rules", () => {
   });
 
   it("introduces ids at the tokenizer sentence, where the first use is the definition (D-08 relaxed: ids name a token's number)", () => {
-    const definition = body.indexOf("turns them into numbers, called ids");
+    const definition = body.indexOf("turns them into numbers, called indices or ids");
     const firstId = body.search(/\bids?\b/i);
     expect(definition).toBeGreaterThan(-1);
     // The first use of "id" sits inside the definition sentence.
     expect(firstId).toBeGreaterThan(definition);
     expect(body.indexOf("A token is a small piece of text")).toBeLessThan(definition);
-    expect(body).toContain("Each token has an id,");
+    expect(body).toContain("the id of a token is its position in the list");
   });
 
   it("first uses byte in the first section, in the sentence that says how many values one byte can hold, followed by the English-letters sentence (the final text assumes the reader knows bits)", () => {
     const first = body.search(/\bbytes?\b/i);
     expect(first).toBeGreaterThan(-1);
     expect(body.slice(first)).toMatch(
-      /^byte can be set in <Fact of="byteValues" \/> different ways, which gives the values 0 to <Fact of="lastByteValue" \/>\. Most English letters take up one byte, other characters may take several\./,
+      /^byte can store <Fact of="byteValues" \/> different values: 0 to <Fact of="lastByteValue" \/>\. Most English letters take up one byte, other characters may take several\./,
     );
     expect(first).toBeLessThan(body.indexOf("## What is a language model"));
   });
@@ -301,7 +323,7 @@ describe("Post 1 content rules", () => {
       [/out-of-vocabulary/, "is called out-of-vocabulary"],
       [/\bBPE\b/, "Byte-pair encoding, or BPE,"],
       [/\bmorphem/i, "morphemes, the smallest parts of a word that carry meaning"],
-      [/\bids?\b/i, "turns them into numbers, called ids"],
+      [/\bids?\b/i, "turns them into numbers, called indices or ids"],
     ];
     const visible = body.replace(/^## .*$/gm, (h) => " ".repeat(h.length));
     for (const [term, definition] of definitions) {
@@ -322,16 +344,17 @@ describe("Post 1 content rules", () => {
     expect(quoted).toBe(real);
   });
 
-  it("puts the emoji bullet and the byte example inside 'Takeaways'", () => {
-    const heading = body.indexOf("## Takeaways");
-    const next = body.indexOf("## References");
+  it("puts the emoji bullet and the byte example in the list after the playground", () => {
+    const lead = body.indexOf("Three things are worth remembering from this demo:");
+    const next = body.indexOf("## How does GPT-2 compare with other models?");
     const emoji = body.indexOf("An emoji takes several bytes, and the tokenizer can cut between them.");
     const example = body.indexOf("For example, the character [男]");
-    expect(heading).toBeGreaterThan(-1);
-    expect(emoji).toBeGreaterThan(heading);
+    expect(lead).toBeGreaterThan(body.indexOf(PLAYGROUND_TAG));
+    expect(emoji).toBeGreaterThan(lead);
     expect(example).toBeGreaterThan(emoji);
     expect(example).toBeLessThan(next);
   });
+
 
   it("states the stepper's merge budget in words only where it equals the engine's number", () => {
     // The stepper lead-in says "ten merges" in plain text (the lead-in is a slot, not a <Fact>).
@@ -385,25 +408,60 @@ describe("Post 1 content rules", () => {
     for (const use of uses) expect(use).toMatch(/\bexpect=/);
   });
 
-  it("uses a closed component vocabulary: no import lines, only the registered components", () => {
-    expect(raw.split("\n").some((line) => line.startsWith("import "))).toBe(false);
+  it("uses a closed component vocabulary: imports only at the top from an allow-list, only the registered components", () => {
+    // Phase 2.2 (D-06, RESEARCH G-1): Astro 7's MDX pipeline needs every hydrated island imported in
+    // the MDX itself, and the import must come before the first use of the tag. So import lines are
+    // allowed, but only in one block directly under the frontmatter, only from the component
+    // folder, and the set of tags stays closed.
+    const lines = body.split("\n");
+    const importAt = lines.flatMap((line, i) => (line.startsWith("import ") ? [i] : []));
+    const lastImport = importAt.at(-1) ?? -1;
+
+    // (1) One leading block: nothing but blank lines and import lines before the last import.
+    for (let i = 0; i < lastImport; i++) {
+      const line = lines[i] as string;
+      expect(line.trim() === "" || line.startsWith("import "), `line ${i + 1} sits above a later import: ${line}`).toBe(true);
+    }
+
+    // (2) Each import is a default or named import from a .svelte file under ../../components/,
+    // or from exactly ../../components/postProps.ts (the shared props module, D-07).
+    const importForm = /^import\s+(?:[A-Za-z_$][\w$]*|\{[^}]*\})\s+from\s+"([^"]+)";?\s*$/;
+    const svelteFile = /^\.\.\/\.\.\/components\/[\w-]+(?:\/[\w-]+)*\.svelte$/;
+    for (const i of importAt) {
+      const line = lines[i] as string;
+      const path = importForm.exec(line)?.[1];
+      expect(path, `import line ${i + 1} is not a plain import from a path: ${line}`).toBeDefined();
+      const ok = svelteFile.test(path as string) || path === "../../components/postProps.ts";
+      expect(ok, `import path "${path}" is outside the component allow-list`).toBe(true);
+    }
+
+    // (3) The closed tag set: the static prose components and the four islands.
     const allowed = new Set([
-      "PlaygroundSection",
-      "StepperSection",
-      "ComparisonSection",
-      "LanguagesSection",
+      // static prose components (the PostLayout component map)
       "TokenFigure",
       "Fact",
       "Cite",
       "References",
       "Reference",
       "TextAsNumbers",
+      // the four islands, imported at the top of the MDX
+      "Playground",
+      "BpeStepper",
+      "Comparison",
+      "LanguagesWidget",
     ]);
     const used = new Set([...body.matchAll(/<([A-Z]\w*)\b/g)].map((m) => m[1] as string));
     for (const name of used) expect(allowed.has(name), name).toBe(true);
+
+    // (4) The wrapper era is over (D-06): no tag ends in "Section", and no import comes from a
+    // wrappers folder. The islands are placed straight in the MDX under headings written in Markdown.
+    for (const name of used) expect(name.endsWith("Section"), `${name} looks like a section wrapper`).toBe(false);
+    for (const i of importAt) {
+      expect(/wrappers/i.test(lines[i] as string), `import line ${i + 1} comes from a wrappers folder`).toBe(false);
+    }
   });
 
-  it("is between 350 and 3300 words including frontmatter and References", () => {
+  it("is between 350 and 3350 words including frontmatter and References", () => {
     // Phase 1 capped the post at 800, plan 02-09 at 950 (870 measured). The editorial rewrite of
     // plan 02-10 adds six narrative sections, the new stepper text and a References list; the
     // re-check of the cited claims then restored five sentences and two references, measured at
@@ -416,10 +474,18 @@ describe("Post 1 content rules", () => {
     // on meaning?" into three sections with six new references, and added the BERT/[UNK]
     // explanation and two references, and the final wording pass (a clearer token definition and an
     // explicit note that "vocabulary" is a technical term), and the author's last edits (the emoji
-    // figure and a few sentences cut): 3224 words, so the ceiling is 3300.
-    const words = raw.split(/\s+/).filter((w) => w.length > 0).length;
+    // figure and a few sentences cut): 3224 words, so the ceiling is 3300. Phase 2.2 puts import
+    // lines under the frontmatter; they are excluded from the count because they are module
+    // wiring, not prose. The end of phase 2.2 (plan 07) measures 3290 words with the headings now in
+    // the Markdown, the rewritten widget lead-ins and the new tags: 3350 (measured plus 50, rounded
+    // up to a multiple of 50).
+    const prose = raw
+      .split("\n")
+      .filter((line) => !line.startsWith("import "))
+      .join("\n");
+    const words = prose.split(/\s+/).filter((w) => w.length > 0).length;
     expect(words).toBeGreaterThanOrEqual(350);
-    expect(words).toBeLessThanOrEqual(3300);
+    expect(words).toBeLessThanOrEqual(3350);
   });
 
   it("speaks to the reader: the word you appears at least 2 times (the final text uses it 2 times)", () => {
@@ -468,10 +534,10 @@ describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
   });
 
   it("gives every web source an access date", () => {
-    // Most references were read on Oct. 6, 2026. The GPT-2 licence (25), the Unicode segmentation
-    // annex (9) and the two Hugging Face pages (26, 27) were read on Oct. 7, 2026, in plans
+    // Most references were read on Oct. 6, 2026. The GPT-2 licence (24), the Unicode segmentation
+    // annex (9) and the two Hugging Face pages (25, 26) were read on Oct. 7, 2026, in plans
     // 02.1-04 and 02.1-09; each entry keeps the day it was actually read.
-    const readOn: Record<number, string> = { 9: "Oct. 7, 2026", 25: "Oct. 7, 2026", 26: "Oct. 7, 2026", 27: "Oct. 7, 2026" };
+    const readOn: Record<number, string> = { 9: "Oct. 7, 2026", 24: "Oct. 7, 2026", 25: "Oct. 7, 2026", 26: "Oct. 7, 2026" };
     const webHosts = ["web.stanford.edu", "github.com", "www.gutenberg.org", "cdn.openai.com", "www.unicode.org", "huggingface.co"];
     for (const r of references) {
       if (webHosts.includes(new URL(r.url).host)) expect(r.accessed, r.url).toBe(readOn[r.n] ?? "Oct. 6, 2026");
@@ -491,7 +557,9 @@ describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
       "1987": ["unicode.org/history"],
       // W3Techs share of websites with a known encoding that use UTF-8, written "over 99%".
       "99": ["w3techs.com"],
-      // The GPT-2 paper is dated 2019 (reference 16).
+      // Aduriz et al. 2000: a single Basque noun generates at least 135 inflected forms.
+      "135": ["aclanthology.org/C00-1001"],
+      // The GPT-2 paper is dated 2019 (reference 15).
       "2019": ["language_models_are_unsupervised"],
       "50,257": ["language_models_are_unsupervised", "openai/tiktoken"],
       "100,257": ["openai/tiktoken"],

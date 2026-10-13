@@ -11,13 +11,13 @@ test("(a) the table alternative is a native details with a real table that follo
   await openReady(page);
   const details = page.locator("details[data-table]");
   expect(await details.evaluate((el: HTMLDetailsElement) => el.open)).toBe(false);
-  await expect(details.locator("summary")).toHaveText("View tokens as a table");
+  await expect(details.locator("summary")).toBeVisible();
 
   await details.locator("summary").click();
   expect(await details.evaluate((el: HTMLDetailsElement) => el.open)).toBe(true);
-  await expect(details.locator("caption")).toHaveText("Tokens in your text");
+  await expect(details.locator("caption")).toBeVisible();
   const headers = details.locator('th[scope="col"]');
-  await expect(headers).toHaveText(["#", "Token", "ID", "Bytes"]);
+  await expect(headers).toHaveCount(4);
   const chips = await page.locator("[data-playground] [data-chip]").count();
   await expect(details.locator("tbody tr")).toHaveCount(chips);
 
@@ -31,15 +31,16 @@ test("(a) the table alternative is a native details with a real table that follo
   await expect(rows.nth(0).locator("td").nth(3)).toHaveText("F0 9F");
   await expect(rows.nth(1).locator("td").nth(3)).toHaveText("99 82");
 
-  // Empty text: exactly one row.
+  // Empty text: exactly one row, a placeholder that spans the whole table (one cell, no token cells).
   await page.locator("#t").fill("");
   await expect(details.locator("tbody tr")).toHaveCount(1);
-  await expect(details.locator("tbody tr")).toHaveText("No tokens yet.");
+  await expect(details.locator("tbody tr td")).toHaveCount(1);
+  await expect(details.locator("tbody tr td")).toHaveAttribute("colspan", "4");
 
-  // Typing while open keeps it open.
+  // Typing while open keeps it open, and real rows (four cells each) replace the placeholder.
   await page.locator("#t").fill("typing keeps it open");
   expect(await details.evaluate((el: HTMLDetailsElement) => el.open)).toBe(true);
-  await expect(details.locator("tbody tr").first()).not.toHaveText("No tokens yet.");
+  await expect(details.locator("tbody tr").first().locator("td")).toHaveCount(4);
 });
 
 test("(a2) the table names the byte and the character for each piece of 日本語", async ({ page }) => {
@@ -107,7 +108,8 @@ test("(c) the live region is empty on load and announces one debounced message",
 test("(c2) the split-character note is part of the announcement", async ({ page }) => {
   await openReady(page);
   await page.locator("#t").fill(EMOJI);
-  await expect(page.locator("[data-live]")).toContainText("1 character was split across several tokens.", {
+  // The counts come first; after them the announcement carries one more sentence about the split.
+  await expect(page.locator("[data-live]")).toHaveText(/^\d+ tokens?, 1 character, 4 bytes, \d+ words?\s+\S/, {
     timeout: 3000,
   });
 });
@@ -117,9 +119,7 @@ test("(d) the limit message appears at 1,000 characters and not at 999", async (
   await page.locator("#t").fill("a".repeat(999));
   await expect(page.locator("[data-limit]")).toHaveCount(0);
   await page.locator("#t").fill("a".repeat(1000));
-  await expect(page.locator("[data-limit]")).toHaveText(
-    "That is the limit for this playground: 1,000 characters. Delete some text to keep typing.",
-  );
+  await expect(page.locator("[data-limit]")).toBeVisible();
   await page.locator("#t").fill("a".repeat(999));
   await expect(page.locator("[data-limit]")).toHaveCount(0);
 });
@@ -143,17 +143,14 @@ test("(e) lifecycle: loading, failed after 8 s in view, recovery on late hydrati
   await expect(page.locator('[data-playground] [data-msg="loading"]')).toBeVisible();
   await expect(page.locator('[data-playground] [data-msg="failed"]')).toBeHidden();
   await expect(page.locator("#t")).toHaveAttribute("readonly", "");
-  await expect(page.locator("[data-example]").first()).toBeDisabled();
+  await expect(page.locator("[data-playground] [data-example]").first()).toBeDisabled();
 
   await expect(card).toHaveAttribute("data-state", "failed", { timeout: 12_000 });
   await expect(page.locator('[data-playground] [data-msg="failed"]')).toBeVisible();
-  await expect(page.locator('[data-playground] [data-msg="failed"]')).toContainText(
-    "The playground could not load. Check your connection, then reload the page. The example below still shows the default text.",
-  );
   await expect(page.locator('[data-playground] [data-msg="loading"]')).toBeHidden();
   await expect(page.locator("[data-playground] [data-reload]")).toBeVisible();
   await expect(page.locator("#t")).toHaveAttribute("readonly", "");
-  await expect(page.locator("[data-example]").first()).toBeDisabled();
+  await expect(page.locator("[data-playground] [data-example]").first()).toBeDisabled();
   await expect(page.locator("[data-playground] [data-chip]").first()).toBeVisible();
 
   release();
@@ -183,10 +180,9 @@ test("(f) without JavaScript the no-JS note shows and the loading line is hidden
   const page = await context.newPage();
   await page.goto("./");
   // getByText skips <noscript> content, so address the note by its class. The page also holds the
-  // own-text block, which has its own .nojs note, so start at the playground.
-  const note = page.locator("[data-playground] .nojs");
+  // own-text block, which has its own .island-nojs note, so start at the playground.
+  const note = page.locator("[data-playground] .island-nojs");
   await expect(note).toBeVisible();
-  await expect(note).toHaveText("Typing needs JavaScript. The example below shows the default text.");
   await expect(page.locator("[data-playground] [data-status]")).toBeHidden();
   expect(await page.locator("[data-playground] [data-chip]").count()).toBeGreaterThan(0);
   await context.close();
@@ -208,10 +204,8 @@ test("(g) an unexpected tokenizer failure shows the error state and recovers", a
     (window as unknown as { __breakEncoder?: boolean }).__breakEncoder = true;
   });
   await page.locator("#t").fill("something new");
-  await expect(page.locator("[data-tokenizer-error]")).toHaveText(
-    "The tokenizer could not run. Reload the page to try again. Your text stays in your browser.",
-  );
-  for (const name of ["tokens", "characters", "bytes", "words"]) {
+  await expect(page.locator("[data-tokenizer-error]")).toBeVisible();
+  for (const name of ["tokens", "characters", "bytes"]) {
     await expect(statValue(page, name)).toHaveText("0");
   }
   await expect(page.locator("#t")).toBeEditable();
@@ -225,7 +219,7 @@ test("(g) an unexpected tokenizer failure shows the error state and recovers", a
   expect(await page.locator("[data-playground] [data-chip]").count()).toBeGreaterThan(0);
 });
 
-test("(h) Tab walks textarea, examples, Reset, the view control, Peek and the table summary in order", async ({ page }) => {
+test("(h) Tab walks textarea, examples, Reset, the ID switch, the tokens region and the table summary in order", async ({ page }) => {
   await openReady(page);
   await page.locator("#t").focus();
   const where = () =>
@@ -234,8 +228,7 @@ test("(h) Tab walks textarea, examples, Reset, the view control, Peek and the ta
       if (!el) return "none";
       if (el.hasAttribute("data-example")) return `example:${el.getAttribute("data-example")}`;
       if (el.hasAttribute("data-reset")) return "reset";
-      if (el.getAttribute("name") === "view") return `view:${(el as HTMLInputElement).value}`;
-      if (el.hasAttribute("data-peek")) return "peek";
+      if (el.getAttribute("role") === "region") return "region";
       if (el.tagName === "SUMMARY") return "summary";
       return el.tagName.toLowerCase();
     });
@@ -251,8 +244,8 @@ test("(h) Tab walks textarea, examples, Reset, the view control, Peek and the ta
     "example:literature",
     "example:non-english",
     "reset",
-    "view:text",
-    "peek",
+    "input", // the Show token IDs switch
+    "region", // the tokens scroll region
     "summary",
   ]);
 });

@@ -63,7 +63,7 @@ Exceptions (not part of the spacing scale, listed so the executor does not "fix"
 - Textarea `min-height: 128px`, `max-height: 320px`, vertical resize only.
 - Chip `min-height: 32px` (visual size; chips are not interactive).
 - Line-height values are unitless ratios and are not spacing tokens.
-- R-01 character frame: outline 2px solid (dotted for invalid bytes), label-cell divider 2px solid, dashed token dividers 2px, byte-line underline 2px. Label cell padding 4px 8px (xs, sm). Gap between byte groups in a byte line 8px (sm). No new spacing values.
+- R-01 character frame: outline 2px solid (dotted for invalid bytes), label-cell divider 2px solid, dashed token dividers 2px, no byte-line underline (removed 2026-10-11). Label cell padding 4px 8px (xs, sm). Gap between byte groups in a byte line 8px (sm). No new spacing values.
 
 ---
 
@@ -191,7 +191,7 @@ Vertical order inside the card, top to bottom, `gap: 32px (xl)` between blocks:
      | Numbers and dates | `On 2026-10-03 I paid $1,234.56 for 3 tickets.` |
      | An emoji | `Great job 🎉 see you soon 🙂` (party popper U+1F389, slightly smiling face U+1F642; each is a 4-byte character and must produce hatched partial chips unless the toy has a merge for it, which D-02 says it does not) |
      | A line of classic literature | `It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.` (Jane Austen, Pride and Prejudice, 1813, public domain) |
-     | A non-English line | `男女 こんにちは` (R-01, user decision 2026-10-05; adjacent multi-byte characters so the reader sees one character frame per character: 男 and 女 are 3 bytes each, each hiragana is 3 bytes) |
+     | A non-English line | `長男は昨年、第一志望の国立大学に合格した。` (R-01; amended 2026-10-11, replacing `男女 こんにちは` from the 2026-10-05 user decision: a full Japanese sentence, so the reader sees many multi-byte characters and some cut between tokens) |
    - "Reset text" (text-style button, accent not used, underline on hover/focus) restores the default text and moves focus to the textarea. No confirmation dialog: the action only replaces a short scratch text, so it is not treated as destructive.
    - Choosing an example replaces the textarea content, keeps the current view toggles, and moves focus to the textarea with the caret at the end.
    - Default text **(default)**: `Tokenization splits unusual words into pieces, but common words stay whole.` Acceptance check at implementation time: with the shipped merge list, the default must produce at least one word that splits into two or more tokens, at least one token with a leading-space glyph, and at least one common word that is a single token. If it does not, change the sentence, not the contract.
@@ -284,11 +284,12 @@ Reference rendering (text mode, toy tokenizer), `男女` typed in the box:
 
 Applies to every hex line: partial chips, the extra line under "Peek under the hood", the second line in Token IDs mode.
 
-- The bytes of a multi-byte character that has two or more of its bytes on that hex line are wrapped in one `.ch` group with `border-bottom: 2px solid currentColor` (one continuous underline from its first byte to its last, including the spaces between those bytes).
-- Between two groups, and between a group and a neighbouring single-byte byte, leave an 8px gap with no underline, so the underline visibly breaks.
-- A lone leftover byte of a split character (one byte on that line) is not underlined, because the frame already groups it.
-- Single-byte (ASCII) bytes are never underlined, so a normal line such as `48 65 6C` is unchanged.
-- Example, one chip holding two whole characters under Peek: `E6 97 A5` and `E6 9C AC` are two separate underlined groups with a gap between them, not a six-byte run. In the toy tokenizer this case does not occur (non-ASCII bytes are never merged), so today this rule is dormant; it is still built and unit-tested with synthetic tokens because `TokenDisplay` is shared with Phases 2-4.
+- Amended 2026-10-11: the groups are NOT underlined. On a character cut between tokens the underline read as "complete here", which it is not; the frame label names the characters instead.
+- The bytes of a multi-byte character that has two or more of its bytes on that hex line stay together as one group (`data-ch` attribute, no styling).
+- Between two groups, and between a group and a neighbouring single-byte byte, leave an 8px gap, so the groups stay visibly apart.
+- A lone leftover byte of a split character (one byte on that line) is its own group of one, because the frame already groups it.
+- Single-byte (ASCII) bytes are never grouped, so a normal line such as `48 65 6C` is unchanged.
+- Example, one chip holding two whole characters under Peek: `E6 97 A5` and `E6 9C AC` are two separate groups with a gap between them, not a six-byte run. In the toy tokenizer this case does not occur (non-ASCII bytes are never merged), so today this rule is dormant; it is still built and unit-tested with synthetic tokens because `TokenDisplay` is shared with Phases 2-4.
 - The table's Bytes column stays plain hex (one token per row); its Token cell carries the grouping in words.
 
 ### Labels (what appears in the label cell)
@@ -319,7 +320,7 @@ Name style: Label size 14px, weight 400, Muted color, plain lowercase words. ASC
 
 | Element | Copy |
 |---------|------|
-| Legend (replaces its fourth item) | "Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them." |
+| Legend (replaces its fourth item) | "Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them. [UNK] means the tokenizer had no token for that word or character and cannot represent it." (amended 2026-10-11: the [UNK] sentence is part of the same item and always shown) |
 | Combined-character note (new; Label size, Muted, directly under the split-character note) | "1 character on screen is built from several parts joined together. Each part is marked on its own." Plural: "{n} characters on screen are built from several parts joined together. Each part is marked on its own." |
 | Table Token cell, partial chip with one byte of one character | "Byte {i} of {n} of {label}" (for example "Byte 1 of 3 of 男"; user chose this simpler wording 2026-10-05) |
 | Table Token cell, partial chip with several bytes of one character | "Bytes {i} to {j} of {n} of {label}" |
@@ -329,15 +330,15 @@ Name style: Label size 14px, weight 400, Muted color, plain lowercase words. ASC
 
 Unchanged: the split-character note ("1 character was split across several tokens. Each hatched chip holds a piece of it." and its plural), the "Peek under the hood" label and helper, the counts and the live-region sentence. The combined-character note is not added to the live region (it is an explanation, and the table already says it per token). Existing tests assert the legend and the table text, see Test impact.
 
-The combined-character note is shown when at least one on-screen character (grapheme) has two or more code points, at least one of them multi-byte, and a frame or an underline group is actually visible for it. It counts those graphemes. Examples: a family emoji (5 parts: three emoji and two joiners), a flag (2 parts), a letter plus a separate accent, an emoji plus an emoji-style mark. A grapheme like a carriage return plus line feed (all ASCII) never triggers it.
+The combined-character note is shown when at least one on-screen character (grapheme) has two or more code points, at least one of them multi-byte, and a frame is actually visible for it. It counts those graphemes. Examples: a family emoji (5 parts: three emoji and two joiners), a flag (2 parts), a letter plus a separate accent, an emoji plus an emoji-style mark. A grapheme like a carriage return plus line feed (all ASCII) never triggers it.
 
 ### Edge and empty states
 
 | Situation | Behavior |
 |-----------|----------|
-| Empty text | No frames, no underline, no notes. The existing empty state applies. |
-| ASCII-only text | No frames, no underlines, no combined-character note. The legend still shows its (R-01) text because the legend is always visible. Nothing about R-01 appears on screen. |
-| One multi-byte character kept whole inside a normal chip (non-toy tokenizers) | No frame (the chip already shows the character). Under Peek its hex bytes are one underlined group. |
+| Empty text | No frames, no notes. The existing empty state applies. |
+| ASCII-only text | No frames, no combined-character note. The legend still shows its (R-01) text because the legend is always visible. Nothing about R-01 appears on screen. |
+| One multi-byte character kept whole inside a normal chip (non-toy tokenizers) | No frame (the chip already shows the character). Under Peek its hex bytes are one group. |
 | Adjacent multi-byte characters (`男女`, `日本語`) | One frame per character, each with its own label, separated by the 4px chip gap. Three kanji give three frames of three chips, not nine loose chips. |
 | Character split across token boundaries | One frame around the chips of that character; dashed dividers inside the frame show where the tokenizer cut. This is every non-ASCII character in the toy. |
 | Emoji (4 bytes) | One frame, the emoji (system color emoji font) as label, four chips. |
@@ -431,7 +432,7 @@ Do not add a links list, related posts, or "next up" block.
 | Failed to load (status line) | "The playground could not load. Check your connection, then reload the page. The example below still shows the default text." Button: "Reload page" |
 | No-JS note | "Typing needs JavaScript. The example below shows the default text." |
 | Privacy line | "Your text stays in your browser. Nothing is sent anywhere." |
-| Legend (R-01) | "␣ space   ↵ new line   ⇥ tab   Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them." |
+| Legend (R-01) | "␣ space   ↵ new line   ⇥ tab   Hatched chips are raw bytes. Hatched chips in the same frame make up one character, which is shown in front of them. [UNK] means the tokenizer had no token for that word or character and cannot represent it." |
 | Combined-character note (R-01) | "1 character on screen is built from several parts joined together. Each part is marked on its own." (plural: "{n} characters on screen are built from several parts joined together. Each part is marked on its own.") |
 | Character labels and table wording (R-01) | See "Byte-to-Character Grouping Contract": labels table and the "Byte {i} of {n} of {label}" forms |
 | Split-character note | "1 character was split across several tokens. Each hatched chip holds a piece of it." (plural: "{n} characters were split across several tokens. Each hatched chip holds a piece of them.") |
@@ -457,7 +458,7 @@ Applicable state considerations (UI probe: 37 across 7 surfaces) resolved: 0 unr
 | partial | token display, table (list-collection) | ✅ covered | Characters split across tokens render as hatched dashed partial chips with hex bytes, grouped per character inside a character frame with the character shown first (R-01); the split-character note appears; table Token cell says "Byte {i} of {n} of {label}"; no U+FFFD ever rendered |
 | partial | token display, adjacent multi-byte characters (list-collection) | ✅ covered | R-01: one frame per character, solid outline plus 4px gap between frames, dashed token cuts inside; `日本語` is three frames, not nine loose chips |
 | partial | token display, invalid bytes and unpaired emoji halves (list-collection) | ✅ covered | R-01: dotted frame labeled "invalid", or label "placeholder" for EF BF BD; never U+FFFD |
-| empty | token display, ASCII-only text (list-collection) | ✅ covered | R-01 adds nothing visible: no frames, underlines or combined-character note |
+| empty | token display, ASCII-only text (list-collection) | ✅ covered | R-01 adds nothing visible: no frames or combined-character note |
 | overflow | token display, character frames at 360px (list-collection) | ✅ covered | R-01: frames never break internally and wrap as a whole; widest realistic frame is about 240px against 294px of card inner width; `min-width: 0` plus `overflow-wrap: anywhere` as safety valve |
 | zero-one-many | token display, frames (list-collection) | ✅ covered | R-01: one frame for a single split character, one frame per character for many; up to 1,000 frames and 3,000 chips for an all-CJK maximum input, no virtualization |
 | overflow | token display (list-collection) | ✅ covered | Chip row wraps (`flex-wrap`), chips use `overflow-wrap: anywhere` and `max-width: 100%`; textarea max-height 320px with internal scroll; table wrapper scrolls horizontally |

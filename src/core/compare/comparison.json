@@ -1,6 +1,6 @@
 {
   "meta": {
-    "generatedAt": "2026-10-07",
+    "generatedAt": "2026-10-11",
     "tokenizers": {
       "gpt2": {
         "repo": "openai-community/gpt2",
@@ -43,6 +43,22 @@
       {"id":2652,"hex":"20 73 74 61 79"},
       {"id":2187,"hex":"20 77 68 6F 6C 65"},
       {"id":13,"hex":"2E"}
+    ],
+    "bert": [
+      {"id":19204,"hex":"74 6F 6B 65 6E"},
+      {"id":3989,"hex":"23 23 69 7A 61 74 69 6F 6E"},
+      {"id":19584,"hex":"73 70 6C 69 74 73"},
+      {"id":5866,"hex":"75 6E 75 73 75 61 6C"},
+      {"id":2616,"hex":"77 6F 72 64 73"},
+      {"id":2046,"hex":"69 6E 74 6F"},
+      {"id":4109,"hex":"70 69 65 63 65 73"},
+      {"id":1010,"hex":"2C"},
+      {"id":2021,"hex":"62 75 74"},
+      {"id":2691,"hex":"63 6F 6D 6D 6F 6E"},
+      {"id":2616,"hex":"77 6F 72 64 73"},
+      {"id":2994,"hex":"73 74 61 79"},
+      {"id":2878,"hex":"77 68 6F 6C 65"},
+      {"id":1012,"hex":"2E"}
     ]
   },
   "examples": [
@@ -167,7 +183,7 @@
     },
     {
       "id": "literature",
-      "label": "A line of classic literature",
+      "label": "Anna Karenina",
       "text": "Happy families are all alike; every unhappy family is unhappy in its own way.",
       "rows": {
         "gpt2": [
@@ -211,28 +227,67 @@
     {
       "id": "non-english",
       "label": "A non-English line",
-      "text": "男女 こんにちは",
+      "text": "長男は昨年、第一志望の国立大学に合格した。",
       "rows": {
         "gpt2": [
+          {"id":165,"hex":"E9"},
+          {"id":243,"hex":"95"},
+          {"id":115,"hex":"B7"},
           {"id":18796,"hex":"E7 94"},
           {"id":115,"hex":"B7"},
-          {"id":42637,"hex":"E5 A5 B3"},
-          {"id":23294,"hex":"20 E3 81"},
-          {"id":241,"hex":"93"},
-          {"id":22174,"hex":"E3 82 93"},
+          {"id":31676,"hex":"E3 81 AF"},
+          {"id":23626,"hex":"E6 98"},
+          {"id":101,"hex":"A8"},
+          {"id":33176,"hex":"E5 B9"},
+          {"id":112,"hex":"B4"},
+          {"id":23513,"hex":"E3 80 81"},
+          {"id":163,"hex":"E7"},
+          {"id":105,"hex":"AC"},
+          {"id":105,"hex":"AC"},
+          {"id":31660,"hex":"E4 B8 80"},
+          {"id":33232,"hex":"E5 BF"},
+          {"id":245,"hex":"97"},
+          {"id":17312,"hex":"E6 9C"},
+          {"id":249,"hex":"9B"},
+          {"id":15474,"hex":"E3 81 AE E5"},
+          {"id":249,"hex":"9B"},
+          {"id":121,"hex":"BD"},
+          {"id":44165,"hex":"E7 AB"},
+          {"id":233,"hex":"8B"},
+          {"id":32014,"hex":"E5 A4 A7"},
+          {"id":27764,"hex":"E5 AD"},
+          {"id":99,"hex":"A6"},
           {"id":28618,"hex":"E3 81 AB"},
-          {"id":2515,"hex":"E3 81"},
-          {"id":94,"hex":"A1"},
-          {"id":31676,"hex":"E3 81 AF"}
+          {"id":28938,"hex":"E5 90"},
+          {"id":230,"hex":"88"},
+          {"id":43718,"hex":"E6 A0"},
+          {"id":120,"hex":"BC"},
+          {"id":22180,"hex":"E3 81 97"},
+          {"id":25224,"hex":"E3 81 9F"},
+          {"id":16764,"hex":"E3 80 82"}
         ],
         "bert": [
+          {"id":1967,"hex":"E9 95 B7"},
           {"id":1912,"hex":"E7 94 B7"},
-          {"id":1815,"hex":"E5 A5 B3"},
-          {"id":1655,"hex":"E3 81 93"},
-          {"id":30217,"hex":"23 23 E3 82 93"},
-          {"id":30194,"hex":"23 23 E3 81 AB"},
-          {"id":30188,"hex":"23 23 E3 81 A1"},
-          {"id":30198,"hex":"23 23 E3 81 AF"}
+          {"id":1672,"hex":"E3 81 AF"},
+          {"id":100,"hex":"5B 55 4E 4B 5D","special":true},
+          {"id":1840,"hex":"E5 B9 B4"},
+          {"id":1635,"hex":"E3 80 81"},
+          {"id":100,"hex":"5B 55 4E 4B 5D","special":true},
+          {"id":1740,"hex":"E4 B8 80"},
+          {"id":1851,"hex":"E5 BF 97"},
+          {"id":100,"hex":"5B 55 4E 4B 5D","special":true},
+          {"id":1671,"hex":"E3 81 AE"},
+          {"id":1799,"hex":"E5 9B BD"},
+          {"id":1931,"hex":"E7 AB 8B"},
+          {"id":1810,"hex":"E5 A4 A7"},
+          {"id":1817,"hex":"E5 AD A6"},
+          {"id":1668,"hex":"E3 81 AB"},
+          {"id":1792,"hex":"E5 90 88"},
+          {"id":100,"hex":"5B 55 4E 4B 5D","special":true},
+          {"id":1657,"hex":"E3 81 97"},
+          {"id":30187,"hex":"23 23 E3 81 9F"},
+          {"id":1636,"hex":"E3 80 82"}
         ]
       }
     }

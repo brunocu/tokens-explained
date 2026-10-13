@@ -20,4 +20,4 @@ if (Object.hasOwn(STEPPER_FACTS, of)) {
   throw new Error(`Unknown fact "${of}" (not a stepper fact and not a GPT-2 fact)`);
 }
 ---
-{value}
+<span data-fact={of}>{value}</span>

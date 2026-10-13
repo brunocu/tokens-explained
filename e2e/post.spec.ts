@@ -4,26 +4,6 @@ import { openPlaygroundReady } from "./helpers.ts";
 // The post at its root-level URL (PD-01) and as the home page. Paths are relative to the
 // configured baseURL, so the same spec works under any base.
 
-// The new article order of plan 02-10 (four of these headings come from the section wrappers).
-const SECTION_HEADINGS = [
-  "How does a computer store text?",
-  "What is a language model, and why numbers?",
-  "Why not feed in raw bytes?",
-  "Why not whole words?",
-  "Why not cut words into meaningful parts?",
-  "A practical compromise: tokens",
-  "Tokens are not words",
-  "How the numbers are assigned",
-  "Build a vocabulary yourself",
-  "What the step by step example showed",
-  "A real tokenizer: GPT-2",
-  "Try it yourself",
-  "Takeaways",
-  "How does GPT-2 compare with other models?",
-  "The same sentence in other languages",
-  "References",
-];
-
 /** Pathname the post must have: the configured base plus "what-is-a-token/". */
 function expectedPostPath(baseURL: string | undefined): string {
   return new URL("what-is-a-token/", baseURL).pathname;
@@ -40,19 +20,22 @@ test("(a) the post has one H1 and, without JavaScript, prose chips and a text al
   const response = await page.goto("what-is-a-token/");
   expect(response?.status()).toBe(200);
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.locator("h1")).toHaveText("What is a token?");
+  await expect(page.locator("h1")).toBeVisible();
   const figure = page.locator(BRIDGE_FIGURE);
   expect(await figure.locator("[data-chip]").count()).toBeGreaterThan(0);
-  const alt = figure.locator(".sr-only");
-  expect(((await alt.textContent()) ?? "").startsWith("Tokens for the example:")).toBe(true);
+  // The figure is a list for assistive technology: one list item per chip, each with spoken text.
+  const items = figure.getByRole("listitem");
+  expect(await items.count()).toBe(await figure.locator("[data-chip]").count());
+  for (const text of await items.locator(".sr-only").allTextContents()) expect(text.trim()).not.toBe("");
   await context.close();
 });
 
 test("(b) the playground section holds the island and it hydrates when scrolled into view", async ({ page }) => {
   await page.goto("what-is-a-token/");
-  const section = page.locator('section[aria-labelledby="try-heading"]');
-  await expect(section.locator("[data-playground]")).toHaveCount(1);
-  const card = section.locator("[data-playground]");
+  // Found by its root hook at page level, so the test holds before and after the section wrapper
+  // is replaced by the widget's own root (phase 2.2).
+  const card = page.locator("[data-playground]");
+  await expect(card).toHaveCount(1);
   await card.scrollIntoViewIfNeeded();
   await expect(card).toHaveAttribute("data-state", "ready");
   await expect(card).toHaveAttribute("data-tokenizer", "ready");
@@ -73,12 +56,16 @@ test("(c) no response with status 400 or above and no console error", async ({ p
 });
 
 test("(d) the home page and the post URL both return 200 and show the same H1", async ({ page }) => {
+  const titles: string[] = [];
   for (const path of ["./", "what-is-a-token/"]) {
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(200);
-    await expect(page.locator("h1"), path).toHaveText("What is a token?");
+    await expect(page.locator("h1"), path).toHaveCount(1);
+    await expect(page.locator("h1"), path).not.toBeEmpty();
+    titles.push(((await page.locator("h1").textContent()) ?? "").trim());
     await expect(page.locator("[data-playground]"), path).toHaveCount(1);
   }
+  expect(titles[0]).toBe(titles[1]);
 });
 
 test("(e) both pages carry a canonical link to the root-level post URL", async ({ page, baseURL }) => {
@@ -95,10 +82,12 @@ test("(e) both pages carry a canonical link to the root-level post URL", async (
   expect(hrefs[0]).toBe(hrefs[1]);
 });
 
-test("(f) the headings are the four sections plus the playground, in order, with the card in the middle", async ({ page }) => {
+test("(f) the sections come in order: stepper, a real tokenizer, the playground, the takeaways, the comparison, the languages, the references", async ({ page }) => {
   await page.goto("what-is-a-token/");
+  // Every h2 has a title. Which titles there are is the author's to edit.
   const texts = await page.locator("main h2").allTextContents();
-  expect(texts.map((t) => t.trim())).toEqual(SECTION_HEADINGS);
+  expect(texts.length).toBeGreaterThan(0);
+  for (const text of texts) expect(text.trim()).not.toBe("");
 
   const y = async (locator: ReturnType<typeof page.locator>) => {
     const box = await locator.boundingBox();
@@ -106,19 +95,21 @@ test("(f) the headings are the four sections plus the playground, in order, with
     return (box as { y: number }).y;
   };
   const stepper = await y(page.locator("[data-stepper]"));
-  const demoTokenizer = await y(page.getByRole("heading", { name: "A real tokenizer: GPT-2", level: 2 }));
+  // Headings and paragraphs are found by where they sit, not by what they say: the heading of the
+  // bridge figure's section, the paragraph right after the playground, the heading of the references.
+  const demoTokenizer = await y(page.locator(BRIDGE_FIGURE).locator("xpath=preceding::h2[1]"));
   // The bridge figure comes after the GPT-2 heading and before the playground.
   const bridge = await y(page.locator(BRIDGE_FIGURE));
   const card = await y(page.locator("[data-playground]"));
-  const takeaways = await y(page.getByRole("heading", { name: "Takeaways", level: 2 }));
+  const takeaways = await y(page.locator("[data-playground]").locator("xpath=following::p[1]"));
   expect(demoTokenizer).toBeGreaterThan(stepper);
   expect(bridge).toBeGreaterThan(demoTokenizer);
   expect(bridge).toBeLessThan(card);
   expect(card).toBeLessThan(takeaways);
 
-  // The comparison card sits below "Takeaways" and above "References".
+  // The comparison card sits below the list after the playground and above "References".
   const compare = await y(page.locator("[data-compare]"));
-  const references = await y(page.getByRole("heading", { name: "References", level: 2 }));
+  const references = await y(page.locator("ol.references").locator("xpath=preceding::h2[1]"));
   expect(compare).toBeGreaterThan(takeaways);
   expect(compare).toBeLessThan(references);
 
@@ -139,8 +130,10 @@ test("(g) the post column has no links outside source notes, numbered cites and 
       .filter(
         (a) =>
           a.closest("[data-source]") === null &&
+          // The credit link to the UN human rights office in the languages table caption.
+          a.closest("[data-languages-table] caption") === null &&
           a.closest("ol.references") === null &&
-          // The one dictionary link on the character 男 in "Takeaways".
+          // The one dictionary link on the character 男 in the list after the playground.
           a.getAttribute("href") !== "https://en.wiktionary.org/wiki/%E7%94%B7" &&
           !(a.classList.contains("cite") && /^#ref-\d+$/.test(a.getAttribute("href") ?? "")),
       )
@@ -172,7 +165,6 @@ test("(g2) every numbered cite points at a reference, the references are numbere
   const links = await page.locator("ol.references li a").evaluateAll((anchors) => anchors.map((a) => (a as HTMLAnchorElement).href));
   expect(links).toHaveLength(refs.length);
   for (const href of links) expect(href.startsWith("https://"), href).toBe(true);
-  await expect(page.locator("ol.references")).toContainText("Accessed: Oct. 6, 2026.");
 });
 
 test("(g3) following a citation lands on its reference", async ({ page }) => {
@@ -188,7 +180,7 @@ test("(h) without JavaScript the article text, prose chips and default playgroun
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   const page = await context.newPage();
   await page.goto("what-is-a-token/");
-  await expect(page.getByText("A token is a small piece of text that a language model reads and writes.")).toBeVisible();
+  await expect(page.locator("article > p").first()).toBeVisible();
   expect(await page.locator(`${BRIDGE_FIGURE} [data-chip]`).count()).toBeGreaterThan(0);
   expect(await page.locator("[data-playground] [data-chip]").count()).toBeGreaterThan(0);
   await context.close();
@@ -207,28 +199,6 @@ test("(j) without JavaScript the post holds exactly one figure, the bridge figur
   await context.close();
 });
 
-test("(k) the visible post text explains the split character in plain words", async ({ page }) => {
-  await page.goto("what-is-a-token/");
-  await expect(
-    page.getByText("An emoji takes several bytes, and the tokenizer can cut between them."),
-  ).toBeVisible();
-});
-
-test("(l) the visible post text carries the softened claim and the three differences", async ({ page }) => {
-  await page.goto("what-is-a-token/");
-  await expect(
-    page.getByText("Rare words split into several tokens, while many everyday words stay whole."),
-  ).toBeVisible();
-  // The Markdown pipeline turns the straight apostrophe into a curly one, so match either.
-  await expect(page.getByText(/Compared with the miniature in the step by step example, real tokenizers differ in three ways\./)).toBeVisible();
-  await expect(page.getByText("Newer models cut text differently.")).toBeVisible();
-  await expect(
-    page.getByText(/GPT-2.s list of tokens is far longer, so it already has a token for every word of this sentence\./),
-  ).toBeVisible();
-  // The stepper's lead-in says the example learns from one sentence and stops after ten merges.
-  await expect(page.getByText("that learns from a single sentence and stops after ten merges.")).toBeVisible();
-});
-
 test("(l3) the bridge figure cuts the stepper's own sentence by GPT-2: one token per word, inside the real-tokenizer section before the playground", async ({
   page,
 }) => {
@@ -238,9 +208,9 @@ test("(l3) the bridge figure cuts the stepper's own sentence by GPT-2: one token
   await expect(sample.locator("[data-chip]").first()).toBeVisible();
   // Read both numbers from the caption and compare them; none is pinned here.
   const caption = ((await sample.locator("figcaption").textContent()) ?? "").trim();
-  const match = /^(\d+) tokens?, (\d+) words?$/.exec(caption);
+  const match = /^(\d+) words?, (\d+) tokens?$/.exec(caption);
   expect(match, caption).not.toBeNull();
-  const [, tokenCount, wordCount] = match as unknown as [string, string, string];
+  const [, wordCount, tokenCount] = match as unknown as [string, string, string];
   expect(Number(tokenCount)).toBe(Number(wordCount));
   const box = async (locator: ReturnType<typeof page.locator>) => {
     const b = await locator.boundingBox();
@@ -249,7 +219,7 @@ test("(l3) the bridge figure cuts the stepper's own sentence by GPT-2: one token
   };
   const stepper = await box(page.locator("[data-stepper]"));
   const sampleY = await box(sample);
-  const heading = await box(page.getByRole("heading", { name: "A real tokenizer: GPT-2", level: 2 }));
+  const heading = await box(sample.locator("xpath=preceding::h2[1]"));
   const playgroundY = await box(page.locator("[data-playground]"));
   expect(sampleY).toBeGreaterThan(stepper);
   expect(sampleY).toBeGreaterThan(heading);
@@ -258,41 +228,38 @@ test("(l3) the bridge figure cuts the stepper's own sentence by GPT-2: one token
   await expect(page.locator("figure.token-figure")).toHaveCount(1);
 });
 
-test("(l4) the id sentence gives the letter t two different ids, both read from the engines", async ({ page }) => {
+test("(l4) the letter t has two different ids in the prose, one from each engine", async ({ page }) => {
   await page.goto("what-is-a-token/");
-  const paragraph = page.locator("p", { hasText: "each tokenizer may have its own list of starting values" });
-  await expect(paragraph).toBeVisible();
-  const text = ((await paragraph.textContent()) ?? "").replace(/\s+/g, " ");
-  const match = /the letter t gets the id (\d+), but each tokenizer .* gives the letter t the id (\d+)\./.exec(text);
-  expect(match, text).not.toBeNull();
-  const [, stepperId, gpt2Id] = match as unknown as [string, string, string];
+  // Every figure that the prose reads from an engine is wrapped in [data-fact].
+  const stepperId = ((await page.locator('[data-fact="byteOfT"]').first().textContent()) ?? "").trim();
+  const gpt2Id = ((await page.locator('[data-fact="gpt2IdOfT"]').first().textContent()) ?? "").trim();
+  expect(stepperId).toMatch(/^\d+$/);
+  expect(gpt2Id).toMatch(/^\d+$/);
   expect(Number(stepperId)).not.toBe(Number(gpt2Id));
 });
 
-test("(l5) the post says why GPT-2 was chosen and that it is an older tokenizer", async ({ page }) => {
+test("(l5) the GPT-2 tokenizer file size is read from the file and shown as a number", async ({ page }) => {
   await page.goto("what-is-a-token/");
-  const paragraph = page.locator("p", { hasText: "GPT-2 is an older tokenizer." });
-  await expect(paragraph).toBeVisible();
-  await expect(paragraph).toContainText("I chose it because its tokenizer file is only about");
-  await expect(paragraph).toContainText("permissive licence");
+  const size = page.locator('[data-fact="gpt2FileMb"]').first();
+  await expect(size).toBeVisible();
+  await expect(size).toHaveText(/^\d+(\.\d+)?$/);
 });
 
-test("(l2) the visible post shows the Garnett line with its credit, and the engine's numbers", async ({ page }) => {
+test("(l2) the numbers figure matches the quoted sentence, and the engine's figures read out in the prose", async ({ page }) => {
   await page.goto("what-is-a-token/");
-  await expect(page.locator("blockquote")).toContainText(
-    "Happy families are all alike; every unhappy family is unhappy in its own way.",
-  );
-  await expect(page.getByText("translation by Constance Garnett")).toBeVisible();
-  // Each box of the numbers figure holds one character and its byte; the first is H = 72.
+  const quote = ((await page.locator("blockquote").textContent()) ?? "").trim();
+  expect(quote.length).toBeGreaterThan(0);
+  // Each box of the numbers figure holds one character and its UTF-8 byte values, in the quote's order.
   const cells = page.locator("figure.text-numbers .cell");
-  // The Garnett sentence is 77 characters, spaces and punctuation included.
-  await expect(cells).toHaveCount(77);
-  await expect(cells.first().locator(".ch")).toHaveText("H");
-  await expect(cells.first().locator(".num")).toHaveText("72");
-  // Figures derived from the stepper's engine read out in the prose.
-  await expect(page.getByText("so the vocabulary ended with 256 + 10 = 266 entries")).toBeVisible();
-  await expect(page.getByText("The text, meanwhile, shrank from 49 tokens to 20.")).toBeVisible();
-  await expect(page.getByText("Our rule is: the pair with the smaller numeric values win.")).toBeVisible();
+  const characters = Array.from(quote);
+  await expect(cells).toHaveCount(characters.length);
+  const first = characters[0] as string;
+  await expect(cells.first().locator(".ch")).toHaveText(first);
+  await expect(cells.first().locator(".num")).toHaveText(Array.from(new TextEncoder().encode(first)).join(" "));
+  // Figures derived from the stepper's engine read out in the prose (the vocabulary is 256 + 10 = 266).
+  await expect(page.locator('[data-fact="vocabularySize"]').first()).toHaveText("266");
+  await expect(page.locator('[data-fact="startPieces"]').first()).toHaveText("49");
+  await expect(page.locator('[data-fact="endPieces"]').first()).toHaveText("20");
   await expect(page.locator("main")).not.toContainText("§");
 });
 

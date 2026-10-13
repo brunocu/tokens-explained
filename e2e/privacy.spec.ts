@@ -8,7 +8,7 @@ import { openPlaygroundReady } from "./helpers.ts";
 const isNetwork = (url: string) => /^https?:/i.test(url);
 const pathOf = (url: string) => new URL(url).pathname;
 
-test("typing, examples, view toggles and the table make zero network requests; all loads are same-origin", async ({
+test("typing, examples, Reset and the table make zero network requests; all loads are same-origin", async ({
   page,
 }) => {
   const urls: string[] = [];
@@ -26,12 +26,9 @@ test("typing, examples, view toggles and the table make zero network requests; a
   const before = urls.length;
   await page.locator("#t").fill("my secret text \u{1F642}");
   for (const id of ["rare-word", "numbers-dates", "emoji", "literature", "non-english"]) {
-    await page.locator(`[data-example="${id}"]`).click();
+    await page.locator(`[data-playground] [data-example="${id}"]`).click();
   }
   await page.locator("[data-playground] [data-reset]").click();
-  await page.getByText("Token IDs", { exact: true }).click();
-  await page.locator("label", { hasText: "Peek under the hood" }).click();
-  await page.getByText("Token text", { exact: true }).click();
   await page.locator("details[data-table] summary").click();
   await page.waitForTimeout(700);
 
@@ -61,12 +58,10 @@ test("the post page requests the GPT-2 file once and the BERT file only after it
 
   const before = urls.length;
   for (const label of ["Numbers and dates", "An emoji", "A non-English line"]) {
-    await card.locator("label.opt", { hasText: label }).click();
+    await card.locator("button[data-example]", { hasText: label }).click();
   }
-  await card.locator("details[data-alt-tables] summary").click();
-  await card.locator("details[data-source] summary").click();
   await page.waitForTimeout(700);
-  // The picker, the alternative tables and the source details cause no request of any kind.
+  // The example buttons cause no request of any kind.
   expect(urls.slice(before)).toEqual([]);
 
   expect(urls.filter((url) => pathOf(url).includes("bert"))).toEqual([]);

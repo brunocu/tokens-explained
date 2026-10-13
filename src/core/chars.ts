@@ -72,6 +72,20 @@ const NAMED: ReadonlyMap<number, string> = new Map([
   [0xfffd, "placeholder"],
 ]);
 
+// Whitespace glyphs live here so a glyph fallback (UI-SPEC allows a middle dot,
+// U+00B7) is a one-line change.
+export const GLYPH_SPACE = "␣";
+export const GLYPH_NEWLINE = "↵";
+export const GLYPH_TAB = "⇥";
+
+// One-byte characters that are still labelled in a frame (with their chip glyph), because the hex
+// line would otherwise show them only as 20, 0A or 09 beside the cut character.
+export const WHITESPACE_GLYPHS: ReadonlyMap<number, string> = new Map([
+  [0x20, GLYPH_SPACE],
+  [0x09, GLYPH_TAB],
+  [0x0a, GLYPH_NEWLINE],
+]);
+
 const CONTROL = /^\p{Cc}$/u;
 const SPACE_SEPARATOR = /^\p{Zs}$/u;
 const COMBINING_MARK = /^\p{M}$/u;
@@ -218,10 +232,17 @@ export function groupBytes(tokens: ReadonlyArray<Token>): Grouping {
     const first = t;
     while (t + 1 < groups.length && framed[t + 1] && linked[t]) t++;
     const last = t;
-    const labels = splitChars
-      .filter((c) => c.firstToken >= first && c.firstToken <= last)
-      .map((c) => c.label);
-    const invalid = labels.length === 0;
+    // Name every multi-byte character on the frame's chips, whole ones too: a hatched chip such as
+    // "の国" holds a complete の beside the cut 国, and the label must not leave の out. A space, tab
+    // or new line on the chip is named as well.
+    const labels: Label[] = [];
+    for (const c of chars) {
+      if (c.firstToken < first || c.firstToken > last) continue;
+      const glyph = c.kind === "single" ? WHITESPACE_GLYPHS.get(c.codePoint as number) : undefined;
+      if (glyph !== undefined) labels.push({ text: glyph, style: "char" });
+      else if (c.kind === "multi") labels.push(c.label);
+    }
+    const invalid = !splitChars.some((c) => c.firstToken >= first && c.firstToken <= last);
     const frame: Frame = { first, last, invalid, labels: invalid ? [INVALID_LABEL] : labels };
     for (let k = first; k <= last; k++) (groups[k] as TokenGroups).frame = frames.length;
     frames.push(frame);

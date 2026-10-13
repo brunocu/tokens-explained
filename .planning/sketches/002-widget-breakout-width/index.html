@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sketch 002: widget breakout width</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:18px/1.6 var(--font-serif);padding-top:52px}
+#variant-nav{position:fixed;top:0;left:0;right:0;z-index:9998;background:var(--bg);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:8px;flex-wrap:wrap;font-family:system-ui;align-items:center}
+.variant-tab,.vp,.demo{font:14px system-ui;padding:6px 12px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:6px;cursor:pointer;transition:all .15s ease}
+.variant-tab:hover,.vp:hover,.demo:hover{background:var(--bg-2)}
+.variant-tab.active,.vp.active,.demo.active{background:var(--text);color:var(--bg)}
+.sep{width:1px;height:24px;background:var(--border);margin:0 6px}
+/* simulated browser window; --vp is set by JS */
+#screen{--vp:1440px;--w:960px;width:var(--vp);max-width:100%;margin:0 auto;border-inline:1px dashed var(--border);min-height:100vh;position:relative}
+.vp-label{position:absolute;top:4px;right:8px;font:11px system-ui;color:var(--muted)}
+article{width:680px;max-width:calc(var(--vp) - 32px);margin:0 auto;padding:0 0 64px}
+@media (max-width:760px){article{max-width:calc(100% - 32px)}}
+h1{font-size:34px;line-height:1.2;margin:40px 0 8px}
+h2{font-size:24px;margin:40px 0 12px}
+p{margin:12px 0}
+.deck{color:var(--muted);margin:0}
+/* breakout: width = min(--w, viewport - 48px), centred on the 680 column */
+.widget{--ww:min(var(--w),calc(var(--vp) - 48px));--h:560px;width:var(--ww);margin-inline:calc((min(680px,100% ) - var(--ww))/2);
+  background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:20px;height:var(--h);
+  display:grid;grid-template-columns:minmax(280px,5fr) 7fr;gap:24px;font:14px/1.4 var(--font-sans);position:relative}
+#screen.stacked .widget{width:100%;margin-inline:0;height:auto;grid-template-columns:1fr}
+.col{display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0}
+.col-scroll{overflow:auto;min-height:0;flex:1;border:1px solid var(--border);border-radius:6px;background:var(--bg);padding:12px}
+label.l{font-weight:600}
+textarea{width:100%;height:96px;font:16px/1.4 var(--font-sans);padding:8px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);resize:none}
+.examples{display:flex;flex-wrap:wrap;gap:8px}
+.ex{min-height:44px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);font:14px var(--font-sans);cursor:pointer}
+.ex:hover{background:var(--bg)}
+.counts{display:flex;gap:16px;color:var(--muted)}.counts b{color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:flex;flex-direction:column;align-items:center;border:1.5px solid;border-radius:4px;padding:2px 8px;font:16px/1.3 ui-monospace,Menlo,Consolas,monospace}
+.chip small{font-size:12px;color:var(--muted);border-top:1px solid currentColor;margin-top:2px;padding-top:2px;width:100%;text-align:center}
+.c0{background:var(--chip-0-fill);border-color:var(--chip-0-line)}.c1{background:var(--chip-1-fill);border-color:var(--chip-1-line)}
+.c2{background:var(--chip-2-fill);border-color:var(--chip-2-line)}.c3{background:var(--chip-3-fill);border-color:var(--chip-3-line)}
+.cp{background:var(--partial-fill);border-color:var(--partial-line);border-style:dashed}
+.row-h{font-weight:600;margin:8px 0 6px}
+.badge{position:absolute;right:12px;bottom:6px;font:11px system-ui;color:var(--muted)}
+.ann{margin:8px auto;font:12px system-ui;color:var(--muted);text-align:center}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--text);color:var(--bg);font:12px system-ui}
+/* overlay showing the 680 column */
+#guide .g{position:absolute;top:52px;bottom:0;border-inline:1px dashed var(--accent);pointer-events:none;opacity:.5;display:none}
+body.guides #guide .g{display:block}
+#sketch-tools{position:fixed;bottom:12px;right:12px;z-index:9999;font:12px system-ui;background:rgba(0,0,0,.7);color:#fff;padding:8px 12px;border-radius:8px;opacity:.5;transition:opacity .2s}
+#sketch-tools:hover{opacity:1}
+#sketch-tools select{font:inherit}
+</style></head><body>
+<div id="variant-nav">
+  <button class="variant-tab active" data-w="960" onclick="setW(960,this)">A: 960px</button>
+  <button class="variant-tab" data-w="1120" onclick="setW(1120,this)">B: 1120px</button>
+  <button class="variant-tab" data-w="1280" onclick="setW(1280,this)">C: 1280px</button>
+  <span class="sep"></span>
+  <span style="font:13px system-ui">Screen:</span>
+  <button class="vp active" onclick="setVp(1440,this)">1440</button>
+  <button class="vp" onclick="setVp(1280,this)">1280</button>
+  <button class="vp" onclick="setVp(1024,this)">1024</button>
+  <button class="vp" onclick="setVp(768,this)">768</button>
+  <span class="sep"></span>
+  <button class="demo active" onclick="setDemo('play',this)">Playground</button>
+  <button class="demo" onclick="setDemo('cmp',this)">Comparison</button>
+  <span class="sep"></span>
+  <label style="font:13px system-ui"><input type="checkbox" onchange="document.body.classList.toggle('guides',this.checked)"> show 680 column</label>
+</div>
+
+<div id="screen">
+  <div class="vp-label" id="vplabel"></div>
+  <article>
+    <h1>What is a token?</h1>
+    <p class="deck">A plain-language look at the pieces a language model reads.</p>
+    <h2>Try it yourself</h2>
+    <p>Type or paste anything, or pick an example, and watch it split into tokens. Reading text stays in the narrow column; the widget below may stretch beyond it.</p>
+
+    <!-- PLAYGROUND -->
+    <section class="widget" id="w-play" aria-label="Token playground">
+      <div class="col">
+        <label class="l" for="t">Your text</label>
+        <textarea id="t" oninput="fake()">Tokenization splits unusual words into pieces, but common words stay whole.</textarea>
+        <div class="examples" id="exs"></div>
+        <div class="counts"><span><b id="n-tok">13</b> tokens</span><span><b id="n-chr">75</b> characters</span><span><b id="n-wd">11</b> words</span></div>
+        <p class="island-muted" style="color:var(--muted);margin:0">␣ is a space, ↵ a new line. Dashed grey chips are a piece of a character.</p>
+      </div>
+      <div class="col">
+        <div class="row-h" style="margin:0">Tokens (text on top, ID underneath)</div>
+        <div class="col-scroll"><div class="chips" id="chips"></div></div>
+      </div>
+      <span class="badge" id="hbadge"></span>
+    </section>
+
+    <!-- COMPARISON -->
+    <section class="widget" id="w-cmp" aria-label="Tokenizer comparison" style="display:none">
+      <div class="col">
+        <div class="row-h" style="margin:0">Pick a text</div>
+        <div class="examples" id="exs2"></div>
+        <label class="l" for="t2">Or type your own</label>
+        <textarea id="t2">Tokenization is unbelievably useful.</textarea>
+        <button class="ex" type="button">Load BERT (about 0.2 MB)</button>
+        <p style="margin:0;color:var(--muted)">What to notice: GPT-2 keeps leading spaces inside its tokens; BERT lowercases and marks pieces with ##.</p>
+      </div>
+      <div class="col">
+        <div class="col-scroll">
+          <div class="row-h" style="margin-top:0">GPT-2 <span class="pill">8 tokens</span></div>
+          <div class="chips" id="g2"></div>
+          <div class="row-h">BERT <span class="pill">9 tokens</span></div>
+          <div class="chips" id="bert"></div>
+          <div class="row-h">Same sentence, other languages: bytes and token counts</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <tr style="text-align:left"><th>Language</th><th>Bytes</th><th>GPT-2</th><th>BERT</th></tr>
+            <tr><td>English</td><td>38</td><td>8</td><td>9</td></tr>
+            <tr><td>German</td><td>46</td><td>14</td><td>12</td></tr>
+            <tr><td>Greek</td><td>82</td><td>46</td><td>11</td></tr>
+            <tr><td>Japanese</td><td>51</td><td>34</td><td>13</td></tr>
+          </table>
+        </div>
+      </div>
+      <span class="badge" id="hbadge2"></span>
+    </section>
+
+    <div class="ann" id="ann"></div>
+    <p>After the widget, the text goes back to the normal reading width. Notice how much surrounding whitespace the widget leaves, and how the two columns feel at each size.</p>
+    <p>Below 1024px the widget stacks into one column and grows with its content, so nothing needs to scroll sideways.</p>
+  </article>
+  <div id="guide"></div>
+</div>
+
+<div id="sketch-tools">Sketch 002 · widths sketch · mock data</div>
+
+<script>
+const screenEl=document.getElementById('screen');
+const EX=[
+ ['Default','Tokenization splits unusual words into pieces, but common words stay whole.'],
+ ['Rare word','Antidisestablishmentarianism'],
+ ['Numbers','On 2026-10-07 it cost 1,234.50'],
+ ['Emoji','I love pizza 🍕'],
+ ['Non-English','男女 こんにちは']];
+const TOK={
+ 0:[['Token',30642],['ization',1634],[' splits',30778],[' unusual',10084],[' words',2456],[' into',656],[' pieces',5207],[',',11],[' but',475],[' common',2219],[' words',2456],[' stay',2652],[' whole',2187],['.',13]],
+ 1:[['Ant',13217],['id',312],['ises',4016],['tablishment',4163],['arian',20516],['ism',1042]],
+ 2:[['On',2202],[' 2026',32165],['-',12],['10',940],['-',12],['07',2998],[' it',340],[' cost',1575],[' 1',352],[',',11],['234',24409],['.',13],['50',1120]],
+ 3:[['I',40],[' love',1842],[' pizza',14256],[' ',220],['⁠F0',0,1],['9F',0,1],['8D',0,1],['95',0,1]],
+ 4:[['ç',163,1],['⁠',0,1],['·',0,1],['å',0,1],['·',0,1],[' ',220],['ã',0,1],['·',0,1]]};
+let cur=0;
+function chipHtml(list){return list.map((t,i)=>{const p=t[2];return `<span class="chip ${p?'cp':'c'+(i%4)}">${esc(t[0]).replace(/ /g,'␣')}<small>${p?'hex':t[1]}</small></span>`}).join('')}
+function esc(s){return s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function pick(i){cur=i;document.getElementById('t').value=EX[i][1];paint()}
+function paint(){const v=document.getElementById('t').value;
+ document.getElementById('chips').innerHTML=chipHtml(TOK[cur]);
+ document.getElementById('n-tok').textContent=TOK[cur].length;
+ document.getElementById('n-chr').textContent=[...v].length;
+ document.getElementById('n-wd').textContent=v.trim()?v.trim().split(/\s+/).length:0;}
+function fake(){/* mock: typing keeps showing the last example's chips */paint()}
+['exs','exs2'].forEach(id=>{document.getElementById(id).innerHTML=EX.map((e,i)=>`<button class="ex" type="button" onclick="pick(${i})">${e[0]}</button>`).join('')});
+document.getElementById('g2').innerHTML=chipHtml([['Token',30642],['ization',1634],[' is',318],[' unbel',555],['iev',11203],['ably',1346],[' useful',4465],['.',13]]);
+document.getElementById('bert').innerHTML=chipHtml([['token',19204],['##ization',3989],['is',2003],['un',4895],['##bel',8671],['##ie',2666],['##vably',22789],['useful',6179],['.',1012]]);
+paint();
+
+let W=960,VP=1440,demo='play';
+function apply(){
+ screenEl.style.setProperty('--w',W+'px');
+ screenEl.style.setProperty('--vp',VP+'px');
+ const stacked=VP<1024;screenEl.classList.toggle('stacked',stacked);
+ const ww=Math.min(W,VP-48), col=680;
+ document.getElementById('vplabel').textContent=`screen ${VP}px`;
+ const used=stacked?Math.min(col,VP-32):ww;
+ document.getElementById('ann').innerHTML=stacked
+  ? `<b>Stacked</b>: widget = column width (${used}px), height grows with content`
+  : `Widget <b>${ww}px</b> wide (${Math.round(ww/col*100)}% of the 680px column) · side margins ${Math.max(0,Math.round((VP-ww)/2))}px each · height fixed 560px`;
+ ['hbadge','hbadge2'].forEach(id=>document.getElementById(id).textContent=stacked?'auto height':`${ww} × 560`);
+}
+function setW(w,b){W=w;document.querySelectorAll('.variant-tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');apply()}
+function setVp(v,b){VP=v;document.querySelectorAll('.vp').forEach(x=>x.classList.remove('active'));b.classList.add('active');apply()}
+function setDemo(d,b){demo=d;document.querySelectorAll('.demo').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+ document.getElementById('w-play').style.display=d==='play'?'':'none';document.getElementById('w-cmp').style.display=d==='cmp'?'':'none'}
+apply();
+</script></body></html>
