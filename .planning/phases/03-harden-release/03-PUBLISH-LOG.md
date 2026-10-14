@@ -82,4 +82,13 @@ Only `main` is ever pushed, with `git push origin main` after a `git push --dry-
 - **`git ls-remote --heads origin`:** printed nothing (the repository is empty).
 - **`git push --dry-run origin main` (`GIT_TERMINAL_PROMPT=0`):** one ref line, ` * [new branch]      main -> main`. No other ref.
 - Local refs not in the dry run: `archive/pre-publish`, `gsd/phase-3-harden-release`, `worktree-agent-ac842b555a9311e5e`.
-- Nothing has been pushed.
+- Nothing had been pushed at this point.
+
+## First push and first deployment (2026-10-14, plan 03-07 Task 3)
+
+- **Go:** the author answered "Go" at the Task 2 checkpoint. `git push -u origin main` pushed `270f2c2`; no tags, no other branches.
+- **Run 38601720497 (`270f2c2`): failure.** The `test` job failed at `npm run test:e2e`, `deploy` skipped. Cause (from the author's `test-results.zip`): `@languages the height is the declared height while the script loads and when it never loads` failed in chromium, firefox and webkit: "column 2 spills 12px past the card's inner edge". On the runner the table's fallback fonts are taller, so the band grew; locally the margin was only 8px (Firefox, WebKit) to 28px (Chromium). No history was rewritten.
+- **Fix (`d5ccf30`):** `--widget-h` of the languages widget raised from 1136px to 1200px. Locally the full suite passed (775 passed, 2 skipped) and the failed-state margin became 72px to 92px.
+- **Run 38605524896 (`d5ccf30`): success.** `test` 17:18:40 to 17:32:16 UTC, `deploy` 17:32:21 to 17:33:57 UTC.
+- **Live responses:** `/`, `/what-is-a-token/`, `/favicon.svg`, `/tokenizers/gpt2.json` and an `_astro` font asset all return 200 under `https://brunocu.github.io/tokens-explained/`; the root HTML contains the post title and is served with `cache-control: max-age=600`. The `.nojekyll` contingency (D-08) was not needed: `_astro` assets load.
+- **Remote refs:** `git ls-remote --heads --tags origin` lists only `refs/heads/main`.
