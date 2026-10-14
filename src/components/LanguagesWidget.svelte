@@ -196,12 +196,16 @@
      the top of the results region. 1024px is the smallest multiple of 8 at which all three show without
      scrolling; the value was 1040px, raised to 1136px on 2026-10-11 (the table gained a Text column, so the band is taller) because the failed state adds 88px to the band (the failed
      line and Reload page), and only at 1136px does the lower-left column still end inside the card then.
+     Raised again to 1200px on 2026-10-14: on the GitHub runner (Ubuntu fonts) the table's six scripts fall back to
+     taller fonts than on the Nix dev shell, the band grew and the lower-left column spilled 12px past the card
+     in the failed state, in all three browsers. Locally the margin there was 8px (Firefox, WebKit) to 28px
+     (Chromium), so 1136px was too tight for any machine whose fallback fonts differ.
      It is this one custom property; the author can lower it, at the cost of more scrolling in the
      results region. The columns are 4fr and 8fr, not the 5fr and 7fr first planned: at 5fr and 7fr the
      English GPT-2 row ends 529px down and the widget would need 1088px, above the old 1040px cap. */
   .widget--languages {
     --widget-cols: minmax(0, 4fr) minmax(0, 8fr);
-    --widget-h: 1136px;
+    --widget-h: 1200px;
   }
   @media (min-width: 1024px) {
     .widget--languages {
