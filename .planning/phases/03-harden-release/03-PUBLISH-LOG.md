@@ -56,6 +56,15 @@ Tree of `main` and of `archive/pre-publish`: `989f84d50b9a158f5bcffd48b18d1e740c
 - **gitleaks:** `git` scan 280 commits (all refs, including `archive/pre-publish`), no leaks found; `dir` scan, no leaks found. gitleaks 8.30.1.
 - **First run (same day, tip `5b222ca`):** every step passed up to the secret scan, where `gitleaks git` reported one finding: rule `generic-api-key` on `scripts/measure-bundle.mjs` line 170 (`wide.tokenizer.gzip = LIMITS.initialWithGpt2 + 1;`), from commit `36c19af` (plan 03-05). It is a false positive: a byte-count limit plus one in the bundle self-test, matched because the property is named `tokenizer`. Fix (commit `33974b6`, decision D-16: incorrect or unusable is fixed here): an inline `gitleaks:allow` on the line, and a `.gitleaksignore` entry for the same line as it appears in the earlier phase-branch commit, because a history scan reads that commit and a later fix cannot change it. The whole gate was then re-run from the start.
 
+## Phase 3 squash-merge (2026-10-14, plan 03-06)
+
+- **Squash commit on `main`:** `f72eb4e` "Phase 3: Harden & Release", directly on the six baselines (`git rev-list --count main` is 7 with it). Created by the author's own `git commit` after `git merge --squash gsd/phase-3-harden-release` (the executor's commit attempt was denied by the permission system).
+- **Tree check:** `git diff --quiet f72eb4e gsd/phase-3-harden-release` exits 0 (identical to the phase branch tip `23e1106`).
+- **Identity:** one distinct author and committer email on `main`, `brunocu@msn.com`.
+- **Scans after the merge:** `gitleaks git --no-banner --redact .` (282 commits, all refs) no leaks found; `gitleaks dir --no-banner --redact .` no leaks found.
+- **Remote:** `git remote` prints nothing; nothing has been pushed. The phase branch and `archive/pre-publish` are kept locally.
+- **Hash map (phase branch to main):** the detailed branch history of Phase 3 (including `33974b6`, `23e1106` and the commits before them) exists only locally; its published form is `f72eb4e`.
+
 ## Standing rule
 
 Only `main` is ever pushed, with `git push origin main` after a `git push --dry-run origin main`. Never `--all`, `--mirror` or `--tags`: they would publish `archive/pre-publish` and the stray branch (T-03-06).
