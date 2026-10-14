@@ -75,3 +75,11 @@ Tree of `main` and of `archive/pre-publish`: `989f84d50b9a158f5bcffd48b18d1e740c
 ## Standing rule
 
 Only `main` is ever pushed, with `git push origin main` after a `git push --dry-run origin main`. Never `--all`, `--mirror` or `--tags`: they would publish `archive/pre-publish` and the stray branch (T-03-06).
+
+## Remote read-back and dry run (2026-10-14, plan 03-07 Task 1)
+
+- **Remote:** `origin` = `https://github.com/brunocu/tokens-explained.git`. The SSH URL was tried first and rejected (`Permission denied (publickey)`); the author chose HTTPS instead. No credential helper is configured yet, so the real push needs credentials set up first.
+- **`git ls-remote --heads origin`:** printed nothing (the repository is empty).
+- **`git push --dry-run origin main` (`GIT_TERMINAL_PROMPT=0`):** one ref line, ` * [new branch]      main -> main`. No other ref.
+- Local refs not in the dry run: `archive/pre-publish`, `gsd/phase-3-harden-release`, `worktree-agent-ac842b555a9311e5e`.
+- Nothing has been pushed.
