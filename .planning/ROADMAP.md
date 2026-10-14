@@ -214,7 +214,7 @@ Plans:
 - [x] 03-05-PLAN.md — Hardening evidence (budget, reflow/print/dark, freeze guard, audit) and manual-check kits with reader questionnaire
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step) (Tasks 1-2 done; Task 3 human step pending)
+- [x] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 03-07-PLAN.md — Remote read-back, publish go/no-go, push main only, first deployment and live URL

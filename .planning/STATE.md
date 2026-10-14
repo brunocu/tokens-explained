@@ -5,7 +5,7 @@ milestone_name: ) — deferred from the MVP on 2026-10-13
 current_phase: 03
 current_phase_name: Harden & Release
 status: executing
-stopped_at: "03-06 Task 3 checkpoint: awaiting empty public repo and Pages source"
+stopped_at: "Completed 03-06-PLAN.md"
 last_updated: "2026-10-14T16:41:32.920Z"
 last_activity: 2026-10-14
 last_activity_desc: Phase 03 execution started
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-10-02)
 ## Current Position
 
 Phase: 03 (Harden & Release) — EXECUTING
-Plan: 6 of 8 (03-06 Tasks 1-2 done; Task 3 human step pending)
-Status: Waiting on the author: create the empty public repo brunocu/tokens-explained and set the Pages source to GitHub Actions
-Last activity: 2026-10-14 — 03-06 gate passed, Phase 3 squashed to main as f72eb4e (nothing pushed)
+Plan: 7 of 8 (03-06 complete)
+Status: Ready to execute 03-07 (verify the Pages source reads "GitHub Actions": unconfirmed by the author)
+Last activity: 2026-10-14 — Completed 03-06 (gate passed, Phase 3 squashed to main as f72eb4e, repo brunocu/tokens-explained created; nothing pushed)
 
 Progress: [████████░░] 80%
 
@@ -209,5 +209,5 @@ Items acknowledged and deferred at milestone close, most recent first:
 ## Session Continuity
 
 Last session: 2026-10-14T16:41:32.881Z
-Stopped at: 03-06 Task 3 checkpoint: awaiting empty public repo and Pages source
+Stopped at: Completed 03-06-PLAN.md
 Resume file: None

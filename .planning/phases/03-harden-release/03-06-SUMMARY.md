@@ -16,8 +16,8 @@ key-files:
 key-decisions:
   - "gitleaks false positive on a byte-count line fixed with an inline allow plus a .gitleaksignore fingerprint for the earlier branch commit (D-16)"
 requirements-completed: []
-status: partial
-tasks_complete: 2
+status: complete
+tasks_complete: 3
 tasks_total: 3
 commits: 3
 plan_head_before: 5b222ca61bc060c1d8d59d216dc5b5a21f1c54ec
@@ -29,13 +29,13 @@ duration: ~25 min
 completed: 2026-10-14
 ---
 
-# Phase 3 Plan 06: Local gate, squash-merge, repository handoff (partial) Summary
+# Phase 3 Plan 06: Local gate, squash-merge, repository handoff Summary
 
-The full local gate passed on the phase branch under the production base, Phase 3 is one commit on main with a tree identical to the branch and clean scans; the plan is not complete until the author creates the empty public repository (Task 3, pending).
+The full local gate passed on the phase branch under the production base, Phase 3 is one commit on main with a tree identical to the branch and clean scans, and the author created the public repository brunocu/tokens-explained (Pages source unconfirmed by the user).
 
 ## Status
 
-Tasks 1 and 2 are done. Task 3 (`checkpoint:human-action`: create `brunocu/tokens-explained` empty and public, set Pages source to GitHub Actions) is pending. `requirements: [FOUND-01]` is intentionally not marked complete yet. `commits: 3` counts the executor's commits (`33974b6`, `23e1106`, `b66061b`); `f72eb4e` is the author's squash commit. `plan_head_before..HEAD` is not a valid range on main after the squash, so the count is by listing.
+All three tasks are done. Task 3 (`checkpoint:human-action`) is complete: the author replied "created https://github.com/brunocu/tokens-explained". The author did not say whether the Pages source shows "GitHub Actions", so that setting is **unconfirmed by the user**; plan 03-07 must verify it before the push. FOUND-01 is not re-marked: REQUIREMENTS.md already lists it Complete for the static build, and its deployed verification belongs to plan 03-07. `commits: 3` counts the executor's commits (`33974b6`, `23e1106`, `b66061b`); `f72eb4e` is the author's squash commit. `plan_head_before..HEAD` is not a valid range on main after the squash, so the count is by listing.
 
 ## Accomplishments
 
@@ -75,7 +75,7 @@ None.
 
 ## Next
 
-Task 3 (author, web UI), then plan 03-07 (add remote, dry-run, push `main` only).
+Plan 03-07: read back the remote, check that the repository is empty and that Pages shows "GitHub Actions" (unconfirmed by the user), add the remote, dry-run, push `main` only.
 
 ## Self-Check: PASSED
 
