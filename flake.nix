@@ -32,7 +32,12 @@
     {
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
-          packages = [ pkgs.nodejs_24 ];
+          # gitleaks: secret scan of the working tree and the git history before
+          # the first push and before every merge to main (D-06). It is the same
+          # version (8.30.1) that .github/workflows/deploy.yml pins in CI. It
+          # comes from the pinned nixpkgs revision above, so adding it does not
+          # move flake.lock or the Playwright browsers.
+          packages = [ pkgs.nodejs_24 pkgs.gitleaks ];
           env = {
             PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
             PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";

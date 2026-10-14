@@ -1,0 +1,8 @@
+# gitleaks false positives, one fingerprint per line (commit:file:rule:line).
+#
+# scripts/measure-bundle.mjs line 170 assigns a byte count to a property whose
+# name contains "token" ("tokenizer"), which the generic-api-key rule reads as a
+# credential. The value is the size-budget limit plus one, in a self-test. The
+# line now carries an inline "gitleaks:allow"; this entry covers the same line
+# as it appears in the earlier phase-branch commit, which a history scan reads.
+36c19af45453dcb92c61bbbba4ec04c8bc50e2b0:scripts/measure-bundle.mjs:generic-api-key:170

@@ -10,6 +10,7 @@ Sizes, hashes and the exact commits are also listed in `manifest.json` next to t
 - Commit: 86b5e0934494bd15c9632b12f734a8a67f723594
 - Source URL: https://huggingface.co/google-bert/bert-base-uncased/resolve/86b5e0934494bd15c9632b12f734a8a67f723594/tokenizer.json
 - Licence: Apache License 2.0. The full text below is the LICENSE file of that repository at that commit, downloaded and not retyped.
+- Confirmed upstream on 2026-10-13: the original BERT code repository, github.com/google-research/bert, is licensed Apache-2.0 and its LICENSE file has the same text as below. That repository is now archived (read-only).
 
 ```text
                                  Apache License
@@ -220,7 +221,7 @@ Sizes, hashes and the exact commits are also listed in `manifest.json` next to t
 - Repository: openai-community/gpt2 on Hugging Face
 - Commit: 607a30d783dfa663caf39e06633721c8d4cfcd7e
 - Source URL: https://huggingface.co/openai-community/gpt2/resolve/607a30d783dfa663caf39e06633721c8d4cfcd7e/tokenizer.json
-- Licence: MIT per the Hugging Face model card. The Hugging Face repository itself ships no LICENSE file, so the licence text below is the one in the upstream OpenAI repository, github.com/openai/gpt-2, which calls it the "Modified MIT License" (Software Copyright (c) 2019 OpenAI). It was downloaded from https://raw.githubusercontent.com/openai/gpt-2/master/LICENSE on 2026-10-06 and not retyped.
+- Licence: MIT per the Hugging Face model card. The Hugging Face repository itself ships no LICENSE file, so the licence text below is the one in the upstream OpenAI repository, github.com/openai/gpt-2, which calls it the "Modified MIT License" (Software Copyright (c) 2019 OpenAI). It was downloaded from https://raw.githubusercontent.com/openai/gpt-2/master/LICENSE on 2026-10-06 and not retyped. Checked again on 2026-10-13: the upstream file is unchanged.
 
 ```text
 Modified MIT License

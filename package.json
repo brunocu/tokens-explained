@@ -23,10 +23,12 @@
     "precompute:comparison": "node scripts/precompute-comparison.ts"
   },
   "dependencies": {
+    "@astrojs/markdown-remark": "7.3.2",
     "@astrojs/mdx": "8.0.2",
     "@astrojs/svelte": "9.0.1",
     "@huggingface/tokenizers": "0.2.0",
     "astro": "7.3.5",
+    "rehype-citation": "2.3.2",
     "svelte": "5.57.1"
   },
   "devDependencies": {

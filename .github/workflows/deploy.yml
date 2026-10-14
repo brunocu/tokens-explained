@@ -1,0 +1,107 @@
+# Test, then deploy to GitHub Pages (Phase 3, D-07).
+#
+# Rules:
+# - Runs only on a push to main and on a manual start. There is no
+#   pull-request trigger: phase branches are never pushed (D-04, D-09).
+# - The `test` job builds once, tests that exact build and uploads that same
+#   dist as the Pages artifact, so the deployed bytes are the tested bytes.
+# - Only the deploy job gets the two write permissions that publishing needs
+#   (the Pages one and the OIDC one); everything else is read-only.
+# - No stored repository secret is used. The automatic token that GitHub supplies to every
+#   run is the only secret reference.
+# - Only official actions (actions/*), plus the gitleaks organization's own
+#   gitleaks/gitleaks-action, each at a major-version tag.
+#
+# Sources checked 2026-10-14: docs.astro.build/en/guides/deploy/github/
+# (triggers, github-pages environment, deploy-pages major) and the action
+# tags on github.com (checkout v7, setup-node v7, upload-pages-artifact v5,
+# deploy-pages v5, upload-artifact v7, gitleaks-action v3).
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  SITE_URL: https://brunocu.github.io
+  SITE_BASE: /tokens-explained
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the secret scan reads the commit history
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm # package.json has no packageManager field, so say it
+      - run: npm ci
+      # On a push this scans only the commits in that push. On the very first
+      # push it scans nothing (its range starts before the root commit), so the
+      # local pre-push scan covers the first publish; a manual start of this
+      # workflow scans the whole history.
+      - name: Secret scan (gitleaks, same version as the dev shell)
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_VERSION: 8.30.1 # no v prefix; the action's own default is older
+          GITLEAKS_ENABLE_COMMENTS: "false" # nothing to comment on, no pull requests
+      - run: npm run check:deps
+      - run: npm run check:repo
+      - run: npm run check
+      - run: npm run check:svelte
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:dist
+      # Position reserved for the report-only size budget step (plan 03-05),
+      # if it is wired into CI at all. Today it does nothing (decision 4).
+      - name: Playwright browsers and guard variables
+        # scripts/check-env.mjs wants PLAYWRIGHT_BROWSERS_PATH to hold one
+        # directory per browser revision and PLAYWRIGHT_NIX_VERSION to equal
+        # the pinned @playwright/test. On this runner the first is where
+        # `playwright install` puts the browsers, the second comes from
+        # package.json, so the guard still compares real values.
+        run: |
+          echo "PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright" >> "$GITHUB_ENV"
+          echo "PLAYWRIGHT_NIX_VERSION=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> "$GITHUB_ENV"
+      - name: Install every default Playwright browser
+        run: npx playwright install --with-deps
+      - run: npm run test:e2e
+      - name: Keep test results when the suite fails
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

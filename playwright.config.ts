@@ -9,20 +9,30 @@ const port = process.env.E2E_PORT ?? "4321";
 // Trailing slash so page.goto("./") resolves under the base.
 const url = `http://localhost:${port}${base === "/" ? "/" : `${base}/`}`;
 const secondary = process.env.E2E_SECONDARY === "1";
+// Rule: E2E_BASE_URL (a full address such as the live site) exists only for
+// the one-off smoke run against the deployed page (D-08). It points the specs
+// at that address and starts no local server. CI never sets it. Run it inside
+// the Nix shell like every other e2e command; test:e2e still checks the
+// environment first.
+const remote = process.env.E2E_BASE_URL
+  ? process.env.E2E_BASE_URL.replace(/\/*$/, "/")
+  : undefined;
 
 export default defineConfig({
   testDir: "e2e",
-  use: { baseURL: url },
+  use: { baseURL: remote ?? url },
   // --ignore-lock: astro preview otherwise auto-backgrounds in agent
   // environments and Playwright would see the process exit. The preview
   // process inherits SITE_BASE and SITE_OUT_DIR, so it serves whichever
   // build those variables name.
-  webServer: {
-    command: `npx astro preview --ignore-lock --port ${port}`,
-    url,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: remote
+    ? undefined
+    : {
+        command: `npx astro preview --ignore-lock --port ${port}`,
+        url,
+        reuseExistingServer: !process.env.CI,
+        timeout: 60_000,
+      },
   projects: secondary
     ? [
         {

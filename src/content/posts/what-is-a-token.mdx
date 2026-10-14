@@ -17,15 +17,15 @@ A _character_ is a single letter, digit, space or punctuation mark. A computer d
 
 A byte can store <Fact of="byteValues" /> different values: 0 to <Fact of="lastByteValue" />. Most English letters take up one byte, other characters may take several. The difference comes from history.
 
-The first widely used encoding was ASCII, published in the United States in 1963 <Cite n={1} />. It had room for 128 characters, which was enough for English letters, digits and punctuation, plus a few control codes such as line ends and carriage returns <Cite n={1} />. Every ASCII character fit in a single byte, with room to spare.
+The first widely used encoding was ASCII, published in the United States in 1963 [@asciiEthw]. It had room for 128 characters, which was enough for English letters, digits and punctuation, plus a few control codes such as line ends and carriage returns [@asciiEthw]. Every ASCII character fit in a single byte, with room to spare.
 
-Computers soon used that spare room for more characters, such as accented letters. But every country and every company filled it differently, so the same value could mean different letters on different machines, and text arrived garbled. Languages such as Japanese and Chinese, with thousands of characters, needed several bytes for each one and ended up with encodings of their own, which did not agree with each other either <Cite n={2} />.
+Computers soon used that spare room for more characters, such as accented letters. But every country and every company filled it differently, so the same value could mean different letters on different machines, and text arrived garbled. Languages such as Japanese and Chinese, with thousands of characters, needed several bytes for each one and ended up with encodings of their own, which did not agree with each other either [@mojibake].
 
-In 1987, engineers at Apple and Xerox began the Unicode project, which aimed to give every character in every language its own unique number <Cite n={3} />. Unicode decides the number, and UTF-8 defines how to store that number as bytes. UTF-8 keeps the ASCII values exactly as they were and uses between one and four bytes for every other character <Cite n={4} />. Today, over 99% of the websites whose encoding is known use UTF-8 <Cite n={5} />.
+In 1987, engineers at Apple and Xerox began the Unicode project, which aimed to give every character in every language its own unique number [@unicodeHistory]. Unicode decides the number, and UTF-8 defines how to store that number as bytes. UTF-8 keeps the ASCII values exactly as they were and uses between one and four bytes for every other character [@rfc3629]. Today, over 99% of the websites whose encoding is known use UTF-8 [@w3techs].
 
 For example, in ASCII and UTF-8 alike, the letter _t_ has the value <Fact of="byteOfT" />, and a space is <Fact of="byteOfSpace" />.
 
-Here is the opening line of *Anna Karenina*, by Leo Tolstoy (translation by Constance Garnett <Cite n={6} />):
+Here is the opening line of *Anna Karenina*, by Leo Tolstoy (translation by Constance Garnett [@karenina]):
 
 > Happy families are all alike; every unhappy family is unhappy in its own way.
 
@@ -36,7 +36,7 @@ To the computer, the sentence is a row of byte values, each between 0 and <Fact 
 
 ## What is a language model, and why numbers?
 
-Natural language processing, or NLP, is the field of computer science whose goal is to get computers to perform useful tasks involving human language. A language model is a computational system that can predict the next word from previous words <Cite n={7} />. A language model is the kind of AI program behind chat assistants.
+Natural language processing, or NLP, is the field of computer science whose goal is to get computers to perform useful tasks involving human language. A language model is a computational system that can predict the next word from previous words [@jurafskySlp3]. A language model is the kind of AI program behind chat assistants.
 
 Inside, a language model is built from arithmetic. It multiplies and adds numbers, and letters cannot be added up, so text has to become numbers before the model can use it.
 
@@ -48,19 +48,19 @@ The simplest choice is to give the model the bytes themselves. The model then ne
 
 As many other terms in computer science, "vocabulary" is an analogy. It does not mean the words a person knows. It means the fixed list of entries a model can read and write, and an entry does not have to be a word.
 
-The problem is length. Take the sentence "the cat sat on the mat and the cat sat on the hat". It has <Fact of="wordCount" /> words but <Fact of="startPieces" /> bytes. A model that reads raw bytes has to work through sequences that are longer than the same text cut into words, which costs more computation <Cite n={8} />.
+The problem is length. Take the sentence "the cat sat on the mat and the cat sat on the hat". It has <Fact of="wordCount" /> words but <Fact of="startPieces" /> bytes. A model that reads raw bytes has to work through sequences that are longer than the same text cut into words, which costs more computation [@xueByt5].
 
 ## Why not whole words?
 
 The opposite choice is to cut text at spaces, so that every word gets its own entry in the vocabulary. That is easy, but the vocabulary then has to hold every form of every word. "Walk", "walks", "walked" and "walking" each need an entry, and so do names, typing mistakes and technical terms. A word that is missing from the vocabulary is called out-of-vocabulary, and a model with no entry for it cannot write it down.
 
-There is a deeper problem. Not every language is written with spaces between words. In Chinese, Japanese, Thai and Lao, for example, reliably finding where one word ends takes a dictionary or similar tools, not a simple cut at spaces <Cite n={9} />. A list of whole words would first need a way to find the words, and that differs from language to language. A language model that should handle text in any language cannot lean on spaces.
+There is a deeper problem. Not every language is written with spaces between words. In Chinese, Japanese, Thai and Lao, for example, reliably finding where one word ends takes a dictionary or similar tools, not a simple cut at spaces [@unicodeTr29]. A list of whole words would first need a way to find the words, and that differs from language to language. A language model that should handle text in any language cannot lean on spaces.
 
 ## Why not cut words into meaningful parts?
 
 A third idea is to cut words into morphemes, the smallest parts of a word that carry meaning. The word "unhelpful", for example, is "un" + "help" + "ful", three parts that each mean something. It sounds ideal, but getting a program to find morphemes is hard.
 
-Languages build words in very different ways. English adds a few endings, as in "walk", "walks", "walked" and "walking". Basque is called an agglutinative language, because it keeps attaching endings, one after another, to the same word <Cite n={10} />. A single Basque noun can take at least 135 different forms, and one word can say what takes a whole phrase in English: "amarengan" is "ama" (mother) + "aren" (of the) + "gan" (on), which together mean "on the mother" <Cite n={10} />. A program that had to cut every word into its meaningful parts would have to learn all of these endings for every language. Then the instructions for marking morpheme boundaries by hand, written to work for any language, need details that are specific to each language <Cite n={11} />. Machine learning approaches struggle as well: in one study, for the two languages with very little data, the best model was right less than half of the time <Cite n={12} />. Finding morphemes automatically is a research problem of its own <Cite n={13} />.
+Languages build words in very different ways. English adds a few endings, as in "walk", "walks", "walked" and "walking". Basque is called an agglutinative language, because it keeps attaching endings, one after another, to the same word [@aduriz2000]. A single Basque noun can take at least 135 different forms, and one word can say what takes a whole phrase in English: "amarengan" is "ama" (mother) + "aren" (of the) + "gan" (on), which together mean "on the mother" [@aduriz2000]. A program that had to cut every word into its meaningful parts would have to learn all of these endings for every language. Then the instructions for marking morpheme boundaries by hand, written to work for any language, include details that are specific to each language [@mott2020]. Machine learning approaches struggle as well: in one study, for the two languages with very little data, the best model was right less than half of the time [@mager2020]. Finding morphemes automatically is a research problem of its own [@creutz2007].
 
 ## A practical compromise: tokens
 
@@ -68,9 +68,9 @@ Engineers took a practical way out. Bytes make the text too long, whole words ne
 
 A program called a tokenizer cuts text into tokens from the vocabulary and turns them into numbers, called indices or ids (short for identifiers). It can also turn the ids back into text.
 
-Byte-pair encoding, or BPE, is one popular way to build such a vocabulary. It starts from the smallest tokens: single bytes, and counts which two neighbouring tokens occur together most often. It glues that pair into one new token and adds it to the vocabulary. Then it counts again and repeats. The idea comes from a data-compression method that replaces the most common pair of bytes with a byte that was not used in the original data <Cite n={[14, 15]} />. The encoding itself needs no knowledge of any language.
+Byte-pair encoding, or BPE, is one popular way to build such a vocabulary. It starts from the smallest tokens: single bytes, and counts which two neighbouring tokens occur together most often. It glues that pair into one new token and adds it to the vocabulary. Then it counts again and repeats. The idea comes from a data-compression method that replaces the most common pair of bytes with a byte that was not used in the original data [@gage1994; @sennrich2016]. The encoding itself needs no knowledge of any language.
 
-BPE is an engineering answer, not a linguistic one. It only counts, so it does not look for morphemes and needs none of the language knowledge that finding them takes. It is much simpler to build, and for many applications that is the practical choice. In the translation study that adapted it, the pieces it found worked better than looking unknown words up in a dictionary <Cite n={15} />. The price is that the tokens BPE finds often differ from morphemes, and one study argues that, for training language models, this makes BPE suboptimal <Cite n={16} />.
+BPE is an engineering answer, not a linguistic one. It only counts, so it does not look for morphemes and needs none of the language knowledge that finding them takes. It is much simpler to build, and for many applications that is the practical choice. In the translation study that adapted it, the pieces it found worked better than looking unknown words up in a dictionary [@sennrich2016]. The price is that the tokens BPE finds often differ from morphemes, and one study argues that, for training language models, this makes BPE suboptimal [@bostrom2020].
 
 ## Tokens are not words
 
@@ -92,23 +92,23 @@ Byte-pair encoding builds a tokenizer's list of tokens by reading lots of text a
 
 At every merge the example counted all the neighbouring pairs and joined the most common one. The first winner, `a + t`, was seen <Fact of="firstPairCount" /> times, and the new token got the next free id, <Fact of="firstNewId" />.
 
-Sometimes several pairs are tied for the most common. Our rule is: the pair with the smaller numeric values win. The code published by the author of the BPE-for-translation method settles ties differently: among the tied pairs it takes the one that sorts last as text <Cite n={17} />.
+Sometimes several pairs are tied for the most common. Our rule is: the pair with the smaller numeric values win. The code published by the author of the BPE-for-translation method settles ties differently: among the tied pairs it takes the one that sorts last as text [@subwordNmt].
 
-Merging does not go on forever. We chose in advance to stop after <Fact of="merges" /> merges. Every merge adds exactly one entry, so the vocabulary ended with <Fact of="byteValues" /> + <Fact of="merges" /> = <Fact of="vocabularySize" /> entries. This is how the method is defined: the final vocabulary is the starting set of symbols plus the number of merges, and that number is the only setting of the algorithm <Cite n={[15, 7]} />. The text, meanwhile, shrank from <Fact of="startPieces" /> tokens to <Fact of="endPieces" />.
+Merging does not go on forever. We chose in advance to stop after <Fact of="merges" /> merges. Every merge adds exactly one entry, so the vocabulary ended with <Fact of="byteValues" /> + <Fact of="merges" /> = <Fact of="vocabularySize" /> entries. This is how the method is defined: the final vocabulary is the starting set of symbols plus the number of merges, and that number is the only setting of the algorithm [@jurafskySlp3; @sennrich2016]. The text, meanwhile, shrank from <Fact of="startPieces" /> tokens to <Fact of="endPieces" />.
 
-That is the trade-off. A bigger vocabulary makes the text shorter, but the vocabulary grows, and many of its entries are rare tokens that are used far less often than the common ones <Cite n={18} />. A smaller vocabulary keeps the list small but leaves the text long, and the best size depends on how big the model is <Cite n={19} />.
+That is the trade-off. A bigger vocabulary makes the text shorter, but the vocabulary grows, and many of its entries are rare tokens that are used far less often than the common ones [@gowda2020]. A smaller vocabulary keeps the list small but leaves the text long, and the best size depends on how big the model is [@tao2024].
 
-What about a word the tokenizer never saw? In the example, the word "that" was built from tokens already in the vocabulary, and the cat emoji, which has no learned token, fell back to its raw bytes. That works because the vocabulary always holds every single byte: a byte-level version of BPE only needs a base vocabulary of <Fact of="byteValues" /> entries <Cite n={20} />, and it can write any text <Cite n={21} />. So with byte-level BPE no word is out-of-vocabulary. An unfamiliar word is simply cut into more, smaller tokens.
+What about a word the tokenizer never saw? In the example, the word "that" was built from tokens already in the vocabulary, and the cat emoji, which has no learned token, fell back to its raw bytes. That works because the vocabulary always holds every single byte: a byte-level version of BPE only needs a base vocabulary of <Fact of="byteValues" /> entries [@radford2019], and it can write any text [@wang2020]. So with byte-level BPE no word is out-of-vocabulary. An unfamiliar word is simply cut into more, smaller tokens.
 
 ## A real tokenizer: GPT-2
 
-The examples below use the real tokenizer of GPT-2, a language model that OpenAI published in 2019 <Cite n={20} />. It uses the same BPE algorithm as the miniature example, but it learned from a huge amount of text from web pages <Cite n={20} />. Many popular models use byte-pair encoding, though not all do.
+The examples below use the real tokenizer of GPT-2, a language model that OpenAI published in 2019 [@radford2019]. It uses the same BPE algorithm as the miniature example, but it learned from a huge amount of text from web pages [@radford2019]. Many popular models use byte-pair encoding, though not all do.
 
 Compared with the step by step example, real tokenizers differ in three ways. They learn from a huge amount of text, not from one sentence. They split text with a larger set of rules before merging, so tokens do not run across spaces and punctuation. And their vocabularies hold tens of thousands of tokens or more.
 
-The tokenizer of GPT-2 has 50,257 vocabulary entries <Cite n={[20, 22]} />. The tokenizer of GPT-4 has 100,257 <Cite n={[22, 23]} />, and the one of GPT-4o has 200,019 <Cite n={[22, 23]} />.
+The tokenizer of GPT-2 has 50,257 vocabulary entries [@radford2019; @tiktokenPublic]. The tokenizer of GPT-4 has 100,277 [@tiktokenPublic; @tiktokenModel], and the one of GPT-4o has 200,019 [@tiktokenPublic; @tiktokenModel].
 
-GPT-2 is an older tokenizer. I chose it because its tokenizer file is only about <Fact of="gpt2FileMb" /> megabytes, because it is released under a permissive licence <Cite n={24} />, and because its design is published openly <Cite n={20} />. Newer models cut text differently. For example, GPT-2's rule for splitting text before merging keeps a whole run of digits together, while the tokenizer of GPT-4 cuts a run of digits into short groups <Cite n={[22, 23]} />.
+GPT-2 is an older tokenizer. I chose it because its tokenizer file is only about <Fact of="gpt2FileMb" /> megabytes, because it is released under a permissive licence [@gpt2License], and because its design is published openly [@radford2019]. Newer models cut text differently. For example, GPT-2's rule for splitting text before merging keeps a whole run of digits together, while the tokenizer of GPT-4 cuts a run of digits into short groups [@tiktokenPublic; @tiktokenModel].
 
 Here is the same sentence as the step by step example, but tokenized by GPT-2.
 
@@ -130,7 +130,7 @@ Three things are worth remembering from this demo:
 
 ## How does GPT-2 compare with other models?
 
-GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with <Cite n={25} />. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for "unknown", which stands in for the whole sequence and hides what it said <Cite n={25} />. A token like this is "special" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start <Cite n={26} />.
+GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with [@hfWordpiece]. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for "unknown", which stands in for the whole sequence and hides what it said [@hfWordpiece]. A token like this is "special" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start [@hfBert].
 
 <Comparison client:visible {...comparisonProps} />
 
@@ -142,83 +142,4 @@ The same sentence, in six languages: its size in bytes, and its token count with
 
 ## References
 
-<References>
-<Reference n={1} url="https://ethw.org/Milestones:American_Standard_Code_for_Information_Interchange_ASCII,_1963" accessed="Oct. 6, 2026">
-IEEE Engineering and Technology History Wiki, "Milestones: American Standard Code for Information Interchange, ASCII, 1963."
-</Reference>
-<Reference n={2} url="https://en.wikipedia.org/wiki/Mojibake" accessed="Oct. 6, 2026">
-"Mojibake," Wikipedia, The Free Encyclopedia.
-</Reference>
-<Reference n={3} url="https://www.unicode.org/history/earlyyears.html" accessed="Oct. 6, 2026">
-Unicode Consortium, "Early years of Unicode."
-</Reference>
-<Reference n={4} url="https://www.rfc-editor.org/info/rfc3629">
-F. Yergeau, "UTF-8, a transformation format of ISO 10646," Internet Engineering Task Force, RFC 3629, Nov. 2003.
-</Reference>
-<Reference n={5} url="https://w3techs.com/technologies/overview/character_encoding" accessed="Oct. 6, 2026">
-W3Techs, "Usage statistics of character encodings for websites."
-</Reference>
-<Reference n={6} url="https://www.gutenberg.org/ebooks/1399" accessed="Oct. 6, 2026">
-L. Tolstoy, *Anna Karenina*, trans. C. Garnett. Project Gutenberg, ebook 1399.
-</Reference>
-<Reference n={7} url="https://web.stanford.edu/~jurafsky/slp3/" accessed="Oct. 6, 2026">
-D. Jurafsky and J. H. Martin, "Introduction" and "Words and Tokens," chs. 1 and 2 in *Speech and Language Processing*, 3rd ed. draft, Aug. 19, 2026.
-</Reference>
-<Reference n={8} url="https://aclanthology.org/2022.tacl-1.17">
-L. Xue et al., "ByT5: Towards a token-free future with pre-trained byte-to-byte models," *Trans. Assoc. Comput. Linguistics*, vol. 10, pp. 291-306, 2022.
-</Reference>
-<Reference n={9} url="https://www.unicode.org/reports/tr29/" accessed="Oct. 7, 2026">
-Unicode Consortium, "Unicode Standard Annex #29: Unicode text segmentation," Unicode 18.0.0, revision 49, Sep. 1, 2026.
-</Reference>
-<Reference n={10} url="https://aclanthology.org/C00-1001/">
-I. Aduriz et al., "A word-grammar based morphological analyzer for agglutinative languages," in *Proc. 18th Int. Conf. Comput. Linguistics (COLING 2000)*, vol. 1, 2000.
-</Reference>
-<Reference n={11} url="https://aclanthology.org/2020.lrec-1.493/">
-J. Mott et al., "Morphological segmentation for low resource languages," in *Proc. 12th Lang. Resour. Eval. Conf. (LREC)*, 2020.
-</Reference>
-<Reference n={12} url="https://arxiv.org/abs/2010.02804">
-M. Mager, Ö. Çetinoğlu, and K. Kann, "Tackling the low-resource challenge for canonical segmentation," arXiv:2010.02804, Oct. 2020.
-</Reference>
-<Reference n={13} url="https://doi.org/10.1145/1187415.1187418">
-M. Creutz and K. Lagus, "Unsupervised models for morpheme segmentation and morphology learning," *ACM Trans. Speech Lang. Process.*, vol. 4, no. 1, art. 3, Jan. 2007, doi: 10.1145/1187415.1187418.
-</Reference>
-<Reference n={14} url="https://jacobfilipp.com/DrDobbs/articles/CUJ/1994/9402/gage/gage.htm">
-P. Gage, "A new algorithm for data compression," *The C Users Journal*, vol. 12, no. 2, pp. 23-38, Feb. 1994.
-</Reference>
-<Reference n={15} url="https://aclanthology.org/P16-1162/">
-R. Sennrich, B. Haddow, and A. Birch, "Neural machine translation of rare words with subword units," in *Proc. 54th Annu. Meeting Assoc. Comput. Linguistics (Volume 1: Long Papers)*, Berlin, Germany, Aug. 2016, pp. 1715-1725, doi: 10.18653/v1/P16-1162.
-</Reference>
-<Reference n={16} url="https://aclanthology.org/2020.findings-emnlp.414">
-K. Bostrom and G. Durrett, "Byte pair encoding is suboptimal for language model pretraining," in *Findings Assoc. Comput. Linguistics: EMNLP 2020*, Nov. 2020, pp. 4617-4624.
-</Reference>
-<Reference n={17} url="https://github.com/rsennrich/subword-nmt/blob/master/subword_nmt/learn_bpe.py" accessed="Oct. 6, 2026">
-R. Sennrich, "subword-nmt," GitHub repository, learn_bpe.py, lines 373-378.
-</Reference>
-<Reference n={18} url="https://aclanthology.org/2020.findings-emnlp.352">
-T. Gowda and J. May, "Finding the optimal vocabulary size for neural machine translation," in *Findings Assoc. Comput. Linguistics: EMNLP 2020*, Nov. 2020, pp. 2650-2661.
-</Reference>
-<Reference n={19} url="https://arxiv.org/abs/2407.13623">
-C. Tao et al., "Scaling laws with vocabulary: Larger models deserve larger vocabularies," in *Adv. Neural Inf. Process. Syst. 37 (NeurIPS 2024)*, 2024.
-</Reference>
-<Reference n={20} url="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" accessed="Oct. 6, 2026">
-A. Radford, J. Wu, R. Child, D. Luan, D. Amodei, and I. Sutskever, "Language models are unsupervised multitask learners," OpenAI, 2019.
-</Reference>
-<Reference n={21} url="https://ojs.aaai.org/index.php/AAAI/article/view/6451">
-C. Wang, K. Cho, and J. Gu, "Neural machine translation with byte-level subwords," in *Proc. AAAI Conf. Artif. Intell.*, vol. 34, no. 5, Apr. 2020, pp. 9154-9160.
-</Reference>
-<Reference n={22} url="https://github.com/openai/tiktoken/blob/main/tiktoken_ext/openai_public.py" accessed="Oct. 6, 2026">
-OpenAI, "tiktoken: openai_public.py," GitHub repository.
-</Reference>
-<Reference n={23} url="https://github.com/openai/tiktoken/blob/main/tiktoken/model.py" accessed="Oct. 6, 2026">
-OpenAI, "tiktoken: model.py," GitHub repository.
-</Reference>
-<Reference n={24} url="https://github.com/openai/gpt-2/blob/master/LICENSE" accessed="Oct. 7, 2026">
-OpenAI, "gpt-2: LICENSE," GitHub repository.
-</Reference>
-<Reference n={25} url="https://huggingface.co/learn/llm-course/chapter6/6" accessed="Oct. 7, 2026">
-Hugging Face, "WordPiece tokenization," LLM Course, ch. 6.
-</Reference>
-<Reference n={26} url="https://huggingface.co/docs/transformers/model_doc/bert" accessed="Oct. 7, 2026">
-Hugging Face, "BERT," Transformers documentation.
-</Reference>
-</References>
+[^ref]

@@ -1,5 +1,6 @@
 ---
 import { Font } from "astro:assets";
+import SiteFooter from "../components/SiteFooter.astro";
 import SiteHeader from "../components/SiteHeader.astro";
 import "../styles/tokens.css";
 import "../styles/island.css";
@@ -22,12 +23,14 @@ const { title, description, canonical } = Astro.props;
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     {canonical && <link rel="canonical" href={canonical} />}
+    <link rel="icon" type="image/svg+xml" href={`${import.meta.env.BASE_URL}favicon.svg`} />
     <Font cssVariable="--font-serif" preload={[{ weight: 400, style: "normal" }]} />
     <Font cssVariable="--font-mono" />
   </head>
   <body>
     <SiteHeader />
     <main id="main"><slot /></main>
+    <SiteFooter />
     <!-- Failed-to-load watcher (D-09), for every interactive card (every [data-island]). Inline on
          purpose: it must not depend on any bundled asset that could itself fail to load. Each card
          gets its own observer and its own timer, started when that card first enters the viewport

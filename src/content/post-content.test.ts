@@ -4,12 +4,15 @@
 //
 // Plan 02-10 relaxed exactly these Phase 1 rules, each marked "02-10" below, and kept the rest:
 //   - "UTF-8" and "code point" may be named (defined in plain words at first use);
-//   - links are allowed only as numbered <Cite> links and as <Reference> entries;
+//   - links are allowed only as [@key] citations and the generated bibliography (quick task
+//     261014-ch0 replaced the <Cite> and <Reference> components with rehype-citation and
+//     src/data/references.bib);
 //   - numbers in prose are allowed only when derived from the engine (<Fact>), or cited, or 0 and 1;
 //   - the word ceiling is raised; the section order is the new article order; the tie rule wording
 //     is "the pair with the smaller numbers wins" (it matches comparePairs in src/core/bpe.ts).
 import { describe, expect, it } from "vitest";
 import raw from "./posts/what-is-a-token.mdx?raw";
+import bibRaw from "../data/references.bib?raw";
 import tokenYaml from "./glossary/token.yaml?raw";
 import embeddingYaml from "./glossary/embedding.yaml?raw";
 import contextYaml from "./glossary/context.yaml?raw";
@@ -24,9 +27,8 @@ const body = raw.replace(FRONTMATTER, "");
 
 const REFERENCES_HEADING = "## References";
 const referencesAt = body.indexOf(REFERENCES_HEADING);
-/** The article without its References list. */
+/** The article without its References heading and the bibliography placeholder after it. */
 const article = referencesAt === -1 ? body : body.slice(0, referencesAt);
-const referencesBlock = referencesAt === -1 ? "" : body.slice(referencesAt);
 
 const GARNETT = "Happy families are all alike; every unhappy family is unhappy in its own way.";
 
@@ -69,7 +71,7 @@ const REQUIRED_SENTENCES = [
   "Newer models cut text differently.",
   // the tie rule (plan 02-10): the same wording as the stepper's sentences and comparePairs
   "Our rule is: the pair with the smaller numeric values win.",
-  // checked against learn_bpe.py lines 373-378 on 2026-10-06 (plan 02-10 re-check)
+  // checked against learn_bpe.py lines 335 and 341 (commit 03caef2) on 2026-10-13 (plan 03-03 re-check; plan 02-10 had printed lines 373-378)
   "The code published by the author of the BPE-for-translation method settles ties differently: among the tied pairs it takes the one that sorts last as text",
 ];
 
@@ -79,7 +81,7 @@ const STEPPER_SLOT_SENTENCE =
 // Task 3 notes pass: the comparison is framed as GPT-2 set against other models (BERT now), not as
 // "real tokenizers" against each other, and the languages lead-in names the new Bytes column.
 const COMPARISON_SLOT_SENTENCE =
-  "GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with <Cite n={25} />. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for \"unknown\", which stands in for the whole sequence and hides what it said <Cite n={25} />. A token like this is \"special\" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start <Cite n={26} />.";
+  "GPT-2 is one way to cut text into tokens. Here it sits next to BERT, a model of about the same age that uses a different method. Pick a text, or type your own, and you can see where each one cuts. BERT uses a method called WordPiece. Unlike GPT-2, it does not work on bytes: its vocabulary holds only the characters and word pieces it was built with [@hfWordpiece]. A word it cannot build from that vocabulary is replaced by one special token, `[UNK]`, short for \"unknown\", which stands in for the whole sequence and hides what it said [@hfWordpiece]. A token like this is \"special\" because it is not a piece of text but a signal to the model. If you are curious about BERT, its documentation is a good place to start [@hfBert].";
 
 // Plan 02.2-06: the lead-in names no direction ("on the right", "below"), because the picker and the
 // results sit below the table band in the merged widget.
@@ -121,25 +123,34 @@ const HEADINGS = [
   "References",
 ];
 
-type Cite = { at: number; numbers: number[]; sentence: string };
+/** A group of citations as written in the prose: [@a] or [@a; @b]. Keys are alphanumeric. */
+const CITE_GROUP = /\[(@[A-Za-z0-9]+(?:; @[A-Za-z0-9]+)*)\]/g;
 
-/** Every <Cite n={...} /> in the article, with the sentence it ends. */
+type Cite = { at: number; keys: string[]; sentence: string };
+
+/** Every [@key] group in the text, with the sentence it ends. */
 function citesIn(text: string): Cite[] {
   const out: Cite[] = [];
-  for (const m of text.matchAll(/<Cite n=\{(\[[\d,\s]+\]|\d+)\} \/>/g)) {
-    const numbers = (m[1] as string).match(/\d+/g)?.map(Number) ?? [];
+  for (const m of text.matchAll(CITE_GROUP)) {
+    const keys = (m[1] as string).split("; ").map((k) => k.slice(1));
     const start = Math.max(text.lastIndexOf(". ", m.index ?? 0), text.lastIndexOf("\n", m.index ?? 0));
     const end = text.indexOf(".", m.index ?? 0);
-    out.push({ at: m.index ?? 0, numbers, sentence: text.slice(start + 1, end === -1 ? undefined : end + 1) });
+    out.push({ at: m.index ?? 0, keys, sentence: text.slice(start + 1, end === -1 ? undefined : end + 1) });
   }
   return out;
 }
 
-type Reference = { n: number; url: string; accessed: string | null };
+type Reference = { key: string; url: string | null; urldate: string | null };
 
-const references: Reference[] = [...referencesBlock.matchAll(/<Reference n=\{(\d+)\} url="([^"]+)"(?: accessed="([^"]+)")?>/g)].map(
-  (m) => ({ n: Number(m[1]), url: m[2] as string, accessed: m[3] ?? null }),
-);
+/** The BibTeX entries of src/data/references.bib: key, url and urldate (the file is parsed as text). */
+const references: Reference[] = bibRaw
+  .split(/^@/m)
+  .slice(1)
+  .map((entry) => ({
+    key: /^\w+\{([A-Za-z0-9]+),/.exec(entry)?.[1] ?? "",
+    url: /^\s*url\s*=\s*\{([^}]+)\}/m.exec(entry)?.[1] ?? null,
+    urldate: /^\s*urldate\s*=\s*\{([^}]+)\}/m.exec(entry)?.[1] ?? null,
+  }));
 
 describe("Post 1 content rules", () => {
   it("has the new article order: the headings written in Markdown, in order", () => {
@@ -440,9 +451,6 @@ describe("Post 1 content rules", () => {
       // static prose components (the PostLayout component map)
       "TokenFigure",
       "Fact",
-      "Cite",
-      "References",
-      "Reference",
       "TextAsNumbers",
       // the four islands, imported at the top of the MDX
       "Playground",
@@ -461,7 +469,9 @@ describe("Post 1 content rules", () => {
     }
   });
 
-  it("is between 350 and 3350 words including frontmatter and References", () => {
+  it("is between 350 and 3350 words including frontmatter, excluding the bibliography", () => {
+    // Since quick task 261014-ch0 the bibliography is generated from src/data/references.bib, so
+    // the post file holds only the [@key] citations and the References heading.
     // Phase 1 capped the post at 800, plan 02-09 at 950 (870 measured). The editorial rewrite of
     // plan 02-10 adds six narrative sections, the new stepper text and a References list; the
     // re-check of the cited claims then restored five sentences and two references, measured at
@@ -499,48 +509,69 @@ describe("Post 1 content rules", () => {
 
 describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
   const cites = citesIn(article);
-  const citedNumbers = cites.flatMap((c) => c.numbers);
+  const citedKeys = cites.flatMap((c) => c.keys);
+  const bibKeys = references.map((r) => r.key);
+  /** The number rehype-citation gives each key: its position in order of first citation. */
+  const numberOf = new Map<string, number>();
+  for (const key of citedKeys) if (!numberOf.has(key)) numberOf.set(key, numberOf.size + 1);
 
-  it("has a References section last, with one numbered entry per source", () => {
+  it("has a References heading last, followed only by the bibliography placeholder", () => {
     expect(referencesAt).toBeGreaterThan(-1);
-    expect(body.trimEnd().endsWith("</References>")).toBe(true);
+    expect(body.trimEnd().endsWith(`${REFERENCES_HEADING}\n\n[^ref]`)).toBe(true);
     expect(references.length).toBeGreaterThan(0);
-    expect(references.map((r) => r.n)).toEqual(references.map((_, i) => i + 1));
-    expect(body.match(/<Reference /g)?.length).toBe(references.length);
+    expect(bibKeys.every((k) => /^[A-Za-z0-9]+$/.test(k)), "keys are alphanumeric").toBe(true);
+    expect(new Set(bibKeys).size, "keys are unique").toBe(bibKeys.length);
   });
 
-  it("every cite has a reference, and every reference is cited", () => {
+  it("every cited key exists in the .bib file, and every .bib entry is cited", () => {
     expect(cites.length).toBeGreaterThan(0);
-    const cited = new Set(citedNumbers);
-    for (const n of cited) expect(references.some((r) => r.n === n), `cite [${n}] has no reference`).toBe(true);
-    for (const r of references) expect(cited.has(r.n), `reference [${r.n}] is never cited`).toBe(true);
+    for (const key of new Set(citedKeys)) expect(bibKeys, `[@${key}] has no entry in references.bib`).toContain(key);
+    for (const key of bibKeys) expect(numberOf.has(key), `references.bib entry ${key} is never cited`).toBe(true);
   });
 
-  it("numbers references in the order they are first cited", () => {
-    const firstSeen: number[] = [];
-    for (const n of citedNumbers) if (!firstSeen.includes(n)) firstSeen.push(n);
-    expect(firstSeen).toEqual(firstSeen.map((_, i) => i + 1));
+  it("numbers references by first citation 1..N, and writes every group in ascending number", () => {
+    // rehype-citation sorts the visible numbers of a group but leaves the links in written order,
+    // so a group written out of order would show the wrong number on each link.
+    expect([...numberOf.values()]).toEqual([...numberOf.values()].map((_, i) => i + 1));
+    expect(numberOf.size).toBe(bibKeys.length);
+    for (const c of cites) {
+      const numbers = c.keys.map((k) => numberOf.get(k) as number);
+      expect(numbers, `group [@${c.keys.join("; @")}] is not in ascending number`).toEqual([...numbers].sort((a, b) => a - b));
+      expect(new Set(c.keys).size, `group [@${c.keys.join("; @")}] repeats a key`).toBe(c.keys.length);
+    }
   });
 
-  it("allows links only as cites and reference entries, and only to https sources", () => {
-    // The one Markdown link is the 男 dictionary entry; every other source is a <Cite>.
+  it("allows links only as [@key] citations and the generated bibliography, and only to https sources", () => {
+    // The one Markdown link is the 男 dictionary entry; every other source is a [@key] citation.
     expect(article.replace("(https://en.wiktionary.org/wiki/%E7%94%B7)", "")).not.toMatch(/https?:\/\//i);
     expect(article.replace("](https://en.wiktionary.org/wiki/%E7%94%B7)", "]")).not.toMatch(/\]\(/);
+    // A bare @key would also be turned into a citation by rehype-citation, so no "@" may be left
+    // once the citation groups are taken out.
+    expect(article.replace(CITE_GROUP, "")).not.toContain("@");
     for (const r of references) {
-      const url = new URL(r.url);
-      expect(url.protocol, r.url).toBe("https:");
+      expect(r.url, `${r.key} has no url`).not.toBeNull();
+      expect(new URL(r.url as string).protocol, r.url as string).toBe("https:");
     }
     expect(new Set(references.map((r) => r.url)).size).toBe(references.length);
   });
 
   it("gives every web source an access date", () => {
-    // Most references were read on Oct. 6, 2026. The GPT-2 licence (24), the Unicode segmentation
-    // annex (9) and the two Hugging Face pages (25, 26) were read on Oct. 7, 2026, in plans
-    // 02.1-04 and 02.1-09; each entry keeps the day it was actually read.
-    const readOn: Record<number, string> = { 9: "Oct. 7, 2026", 24: "Oct. 7, 2026", 25: "Oct. 7, 2026", 26: "Oct. 7, 2026" };
-    const webHosts = ["web.stanford.edu", "github.com", "www.gutenberg.org", "cdn.openai.com", "www.unicode.org", "huggingface.co"];
+    // Plan 03-03 (D-19 as amended) re-opened every web source on Oct. 13, 2026 and refreshed all
+    // access dates to that day. Dates live only in references.bib, never in the prose.
+    const readOn = "2026-10-13";
+    const webHosts = [
+      "web.stanford.edu",
+      "github.com",
+      "www.gutenberg.org",
+      "cdn.openai.com",
+      "www.unicode.org",
+      "huggingface.co",
+      "w3techs.com",
+      "en.wikipedia.org",
+      "ethw.org",
+    ];
     for (const r of references) {
-      if (webHosts.includes(new URL(r.url).host)) expect(r.accessed, r.url).toBe(readOn[r.n] ?? "Oct. 6, 2026");
+      if (webHosts.includes(new URL(r.url as string).host)) expect(r.urldate, r.url as string).toBe(readOn);
     }
   });
 
@@ -559,14 +590,16 @@ describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
       "99": ["w3techs.com"],
       // Aduriz et al. 2000: a single Basque noun generates at least 135 inflected forms.
       "135": ["aclanthology.org/C00-1001"],
-      // The GPT-2 paper is dated 2019 (reference 15).
+      // The GPT-2 paper is dated 2019 (key radford2019).
       "2019": ["language_models_are_unsupervised"],
       "50,257": ["language_models_are_unsupervised", "openai/tiktoken"],
-      "100,257": ["openai/tiktoken"],
+      // GPT-4 (cl100k_base): the highest special-token id in the cited file (100276) plus one; plan
+      // 03-03 corrected the earlier 100,257, which is only the id of the end-of-text token.
+      "100,277": ["openai/tiktoken"],
       // GPT-4o's vocabulary: the highest special-token id in the cited file plus one (plan 02-10 re-check).
       "200,019": ["openai/tiktoken"],
     };
-    const urlOf = (n: number) => references.find((r) => r.n === n)?.url ?? "";
+    const urlOf = (key: string) => references.find((r) => r.key === key)?.url ?? "";
     // The 男 example is checked against the real encoding by a test above, and the names below
     // contain digits that are not claims.
     const plain = article
@@ -576,8 +609,10 @@ describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
     const sentences = plain.split(/(?<=[.!?])\s+|\n+/);
     const found: string[] = [];
     for (const sentence of sentences) {
-      const cited = citesIn(sentence).flatMap((c) => c.numbers);
+      const cited = citesIn(sentence).flatMap((c) => c.keys);
+      // The digits inside keys (aduriz2000, mott2020, ...) are not claims: take the groups out first.
       const text = sentence
+        .replace(CITE_GROUP, "")
         .replace(/<[A-Z]\w*\b[^>]*\/>/g, "")
         .replace(/<\/?[A-Z]\w*>/g, "")
         .replace(/\b(GPT-2|GPT-4o|GPT-4|UTF-8|cl100k|o200k)_/g, "");
@@ -586,7 +621,7 @@ describe("Post 1 citations (plan 02-10, T-02-28, T-02-29)", () => {
         if (number === "0" || number === "1") continue;
         const sources = CITED[number];
         expect(sources, `number "${number}" in: ${sentence.trim()}`).toBeDefined();
-        const ok = cited.some((n) => (sources as string[]).some((fragment) => urlOf(n).includes(fragment)));
+        const ok = cited.some((key) => (sources as string[]).some((fragment) => urlOf(key).includes(fragment)));
         expect(ok, `number "${number}" needs a citation to one of ${sources?.join(", ")} in: ${sentence.trim()}`).toBe(true);
       }
     }
@@ -603,7 +638,7 @@ describe("Post 1 literary example and the retired sample text (plan 02-10)", () 
   it("shows the Garnett line, credits the translator and matches the playground example", () => {
     expect(article).toContain(`> ${GARNETT}`);
     expect(article).toContain(`<TextAsNumbers text="${GARNETT}" />`);
-    expect(article.replace(/\*/g, "")).toContain("translation by Constance Garnett <Cite n={6} />)");
+    expect(article.replace(/\*/g, "")).toContain("translation by Constance Garnett [@karenina])");
     expect(EXAMPLES.find((e) => e.id === "literature")?.text).toBe(GARNETT);
   });
 

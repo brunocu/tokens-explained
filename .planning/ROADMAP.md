@@ -197,21 +197,21 @@ Plans:
   5. Every quoted split, vendor fact and definition in Post 1 has been re-verified against current sources and dated, and `npm audit` has been re-checked
   6. At least two non-programmers have read Post 1 and their confusion points are resolved or recorded
 
-**Plans:** 0/8 plans complete
+**Plans:** 5/8 plans executed
 
 Plans:
 **Wave 1**
-- [ ] 03-01-PLAN.md — History baseline: squash rehearsal, identity and lock-file decisions, per-phase baseline commits, local archive, phase branch
+- [x] 03-01-PLAN.md — History baseline: squash rehearsal, identity and lock-file decisions, per-phase baseline commits, local archive, phase branch
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 03-02-PLAN.md — Release tracer: favicon under the production base, licences, README, font notice, licence footer
-- [ ] 03-03-PLAN.md — Fact re-verification of the 26 references, tokenizer facts and numbers; refreshed access dates in References
+- [x] 03-02-PLAN.md — Release tracer: favicon under the production base, licences, README, font notice, licence footer
+- [x] 03-03-PLAN.md — Fact re-verification of the 26 references, tokenizer facts and numbers; refreshed access dates in References
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 03-04-PLAN.md — Deploy workflow (test gates deploy), gitleaks in the dev shell, remote-base e2e mode, local-squash release runbook
+- [x] 03-04-PLAN.md — Deploy workflow (test gates deploy), gitleaks in the dev shell, remote-base e2e mode, local-squash release runbook
 
 **Wave 4** *(blocked on Wave 3 completion)*
-- [ ] 03-05-PLAN.md — Hardening evidence (budget, reflow/print/dark, freeze guard, audit) and manual-check kits with reader questionnaire
+- [x] 03-05-PLAN.md — Hardening evidence (budget, reflow/print/dark, freeze guard, audit) and manual-check kits with reader questionnaire
 
 **Wave 5** *(blocked on Wave 4 completion)*
 - [ ] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step)
@@ -270,6 +270,6 @@ MVP phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3. Phases 4 and
 | 2. BPE Stepper & Real-Tokenizer Comparison | 10/10 | Complete    | 2026-10-06 |
 | 2.1. Replace the toy with GPT-2 | 10/10 | Complete    | 2026-10-07 |
 | 2.2. Rework widgets | 8/8 | Complete    | 2026-10-13 |
-| 3. Harden & Release | 0/8 | Planned | - |
+| 3. Harden & Release | 5/8 | In Progress|  |
 | 4. Embeddings, Context & Reasoning Posts (v1.1) | 0/TBD | Deferred | - |
 | 5. Hub, Disambiguation & Glossary (v1.1) | 0/TBD | Deferred | - |

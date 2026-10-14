@@ -3,19 +3,19 @@ gsd_state_version: "1.0"
 milestone: v1.1
 milestone_name: ) — deferred from the MVP on 2026-10-13
 current_phase: 03
-current_phase_name: harden-release
+current_phase_name: Harden & Release
 status: executing
-stopped_at: Phase 3 context gathered
-last_updated: "2026-10-13T19:38:52.136Z"
-last_activity: 2026-10-13
-last_activity_desc: Phase 02.2 complete, transitioned to Phase 3
-state_head: 30de19d08906fd0a49ef7ed65f7bd76d12bd6412
+stopped_at: Completed 03-05-PLAN.md
+last_updated: "2026-10-14T16:11:24.719Z"
+last_activity: 2026-10-14
+last_activity_desc: Phase 03 execution started
+state_head: 58ccc3065b73f56b524cbfe227b1f05422dd5808
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 43
-  completed_plans: 35
-  percent: 20
+  completed_plans: 40
+  percent: 80
 ---
 
 # Project State
@@ -25,16 +25,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-10-02)
 
 **Core value:** A non-programmer can play with a tokenizer in the browser and come away with a correct mental model of what a token is, and how it differs from a word, an embedding, context, and reasoning.
-**Current focus:** Phase 2.2 — rework widgets (INSERTED)
+**Current focus:** Phase 03 — Harden & Release
 
 ## Current Position
 
-Phase: 03 (harden-release) — READY TO EXECUTE
-Plan: Not started
+Phase: 03 (Harden & Release) — EXECUTING
+Plan: 6 of 8 (03-05 complete)
 Status: Ready to execute
-Last activity: 2026-10-13 — Roadmap revised: MVP pivoted to Post 1 only
+Last activity: 2026-10-14 — Completed 03-05 (bundle report, hardening record, manual-check kits, plain audit fix)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -92,6 +92,11 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02.2 P06 | 35 min | 2 tasks | 11 files |
 | Phase 2.2 P07 | 11 min | 3 tasks | 3 files |
 | Phase 02.2 P08 | 10min | 3 tasks | 3 files |
+| Phase 03 P01 | 75min | 3 tasks | 4 files |
+| Phase 03 P02 | 20min | 3 tasks | 8 files |
+| Phase 03 P03 | 30 min | 2 tasks | 4 files |
+| Phase 03 P04 | 10 min | 3 tasks | 4 files |
+| Phase 03 P05 | 9 min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -155,6 +160,14 @@ Recent decisions affecting current work:
 - [Phase 02.2]: 02.2-06: languages widget height is 1040px (cap) with 4fr/8fr columns and a 4px bar gap, set from measurement; 1024px is the ready-state minimum, 1040px keeps the failed state inside the card; open for the author (A-LANG-H)
 - [Phase 2.2]: 02.2-07: word ceiling 3350 (measured 3290 plus 50, rounded up); check-dist runs checkWidgetsHtml on both built pages; human visual check, read-through and A-LANG-H decision left pending for verify-work
 - [Phase 02.2]: 02.2-08: stacked layouts below 1024px are the base form; TokenRows fill/subgrid and the languages 6-column table apply from 1024px; sentence gets its own line via a 4-track grid per row with explicit ARIA table roles
+- [Phase 03]: Publishing identity is brunocu / brunocu@msn.com (real address, author's explicit choice); milestone.lock untracked; single gating build job; report-only budget; playground keeps client:load
+- [Phase 03]: History squashed to six commits; pre-squash hashes in earlier STATE/SUMMARY commits: references exist only in archive/pre-publish and the off-repo bundle
+- [Phase 03]: 03-02: licence texts downloaded not retyped; MIT holder brunocu 2026; OFL notice cites both Adobe and google/fonts copyright lines for Source Serif 4
+- [Phase 03]: 03-03: GPT-4 tokenizer size printed as 100,277 (highest id plus one), one rule for all three sizes; 100,257 was only the end-of-text id
+- [Phase 03]: 03-03: details true but beyond the cited page (ASCII line ends, 'thousands of characters') and the UN reuse terms left as is for the author (E4, E5, E7 in 03-FACT-CHECK.md)
+- [Phase 03]: 03-04: deploy workflow is one gating test job that builds once and uploads the tested dist; gitleaks action pinned to 8.30.1 via GITLEAKS_VERSION to match the dev shell; E2E_BASE_URL remote mode for the live smoke run
+- [Phase 03]: 03-04: gitleaks-action scans nothing on the first push (range starts before the root commit); the local gitleaks git and dir before the first push cover the first publish
+- [Phase 03]: 03-05: npm audit fix (plain) applied for http-cache-semantics 4.2.0 to 4.3.0; budget stays report only and Playground stays client:load
 
 ### Pending Todos
 
@@ -176,6 +189,7 @@ None yet.
 | 261011-twx | Relax e2e text assertions so prose/UI copy can change without syncing tests | 2026-10-11 | ef43903 | [261011-twx-relax-e2e-text-assertions](./quick/261011-twx-relax-e2e-text-assertions/) |
 | 261011-unh | Make TokenDisplay chips a semantic list with spoken labels (FOUND-04) | 2026-10-12 | cdd5b9a | [261011-unh-make-tokendisplay-chips-a-semantic-list-](./quick/261011-unh-make-tokendisplay-chips-a-semantic-list-/) |
 | 261011-uww | Close remaining Phase 2.2 verification gaps (check-dist hooks, D-08/TOK-02/FOUND-04 amendments, stale STATE) | 2026-10-12 | f30114f | [261011-uww-close-remaining-phase-2-2-verification-g](./quick/261011-uww-close-remaining-phase-2-2-verification-g/) |
+| 261014-ch0 | Use rehype-citation (vancouver, references.bib, unified pipeline) for Post 1 citations | 2026-10-14 | b736960 | [261014-ch0-use-rehype-citation](./quick/261014-ch0-use-rehype-citation/) |
 
 ### Roadmap Evolution
 
@@ -193,6 +207,6 @@ Items acknowledged and deferred at milestone close, most recent first:
 
 ## Session Continuity
 
-Last session: 2026-10-13T18:48:17.554Z
-Stopped at: Phase 3 context gathered
-Resume file: .planning/phases/03-harden-release/03-CONTEXT.md
+Last session: 2026-10-14T16:11:24.678Z
+Stopped at: Completed 03-05-PLAN.md
+Resume file: None

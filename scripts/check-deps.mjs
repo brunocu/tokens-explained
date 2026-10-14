@@ -3,14 +3,18 @@
 // edit ALLOW after a legitimacy review.
 // "@huggingface/tokenizers" was added after the human legitimacy check of plan 02-02
 // (T-02-03): exact pin, no install script, Apache-2.0, maintained by the Hugging Face org.
+// "@astrojs/markdown-remark" and "rehype-citation" were approved at the checkpoint of quick task
+// 261014-ch0 (T-01-SC): exact pins, MIT, no install scripts of their own.
 import { readFileSync } from "node:fs";
 
 const ALLOW = {
   dependencies: {
     astro: "7.3.5",
     "@astrojs/mdx": "8.0.2",
+    "@astrojs/markdown-remark": "7.3.2",
     "@astrojs/svelte": "9.0.1",
     "@huggingface/tokenizers": "0.2.0",
+    "rehype-citation": "2.3.2",
     svelte: "5.57.1",
   },
   devDependencies: {
