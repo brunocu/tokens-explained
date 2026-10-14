@@ -197,7 +197,7 @@ Plans:
   5. Every quoted split, vendor fact and definition in Post 1 has been re-verified against current sources and dated, and `npm audit` has been re-checked
   6. At least two non-programmers have read Post 1 and their confusion points are resolved or recorded
 
-**Plans:** 5/8 plans executed
+**Plans:** 6/8 plans executed
 
 Plans:
 **Wave 1**
@@ -214,7 +214,7 @@ Plans:
 - [x] 03-05-PLAN.md — Hardening evidence (budget, reflow/print/dark, freeze guard, audit) and manual-check kits with reader questionnaire
 
 **Wave 5** *(blocked on Wave 4 completion)*
-- [ ] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step)
+- [ ] 03-06-PLAN.md — Full local gate, squash-merge to main, empty public repository and Pages source (human step) (Tasks 1-2 done; Task 3 human step pending)
 
 **Wave 6** *(blocked on Wave 5 completion)*
 - [ ] 03-07-PLAN.md — Remote read-back, publish go/no-go, push main only, first deployment and live URL
@@ -270,6 +270,6 @@ MVP phases execute in numeric order: 1 → 2 → 2.1 → 2.2 → 3. Phases 4 and
 | 2. BPE Stepper & Real-Tokenizer Comparison | 10/10 | Complete    | 2026-10-06 |
 | 2.1. Replace the toy with GPT-2 | 10/10 | Complete    | 2026-10-07 |
 | 2.2. Rework widgets | 8/8 | Complete    | 2026-10-13 |
-| 3. Harden & Release | 5/8 | In Progress|  |
+| 3. Harden & Release | 6/8 | In Progress|  |
 | 4. Embeddings, Context & Reasoning Posts (v1.1) | 0/TBD | Deferred | - |
 | 5. Hub, Disambiguation & Glossary (v1.1) | 0/TBD | Deferred | - |
