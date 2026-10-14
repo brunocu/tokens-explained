@@ -31,11 +31,11 @@ completed: 2026-10-14
 
 # Phase 3 Plan 06: Local gate, squash-merge, repository handoff Summary
 
-The full local gate passed on the phase branch under the production base, Phase 3 is one commit on main with a tree identical to the branch and clean scans, and the author created the public repository brunocu/tokens-explained (Pages source unconfirmed by the user).
+The full local gate passed on the phase branch under the production base, Phase 3 is one commit on main with a tree identical to the branch and clean scans, and the author created the public repository brunocu/tokens-explained (Pages source confirmed by the user as "GitHub Actions").
 
 ## Status
 
-All three tasks are done. Task 3 (`checkpoint:human-action`) is complete: the author replied "created https://github.com/brunocu/tokens-explained". The author did not say whether the Pages source shows "GitHub Actions", so that setting is **unconfirmed by the user**; plan 03-07 must verify it before the push. FOUND-01 is not re-marked: REQUIREMENTS.md already lists it Complete for the static build, and its deployed verification belongs to plan 03-07. `commits: 3` counts the executor's commits (`33974b6`, `23e1106`, `b66061b`); `f72eb4e` is the author's squash commit. `plan_head_before..HEAD` is not a valid range on main after the squash, so the count is by listing.
+All three tasks are done. Task 3 (`checkpoint:human-action`) is complete: the author replied "created https://github.com/brunocu/tokens-explained". In a follow-up message the user confirmed that the Pages source shows "GitHub Actions". Plan 03-07 still reads the remote back and checks it is empty before the push. FOUND-01 is not re-marked: REQUIREMENTS.md already lists it Complete for the static build, and its deployed verification belongs to plan 03-07. `commits: 3` counts the executor's commits (`33974b6`, `23e1106`, `b66061b`); `f72eb4e` is the author's squash commit. `plan_head_before..HEAD` is not a valid range on main after the squash, so the count is by listing.
 
 ## Accomplishments
 
@@ -75,7 +75,7 @@ None.
 
 ## Next
 
-Plan 03-07: read back the remote, check that the repository is empty and that Pages shows "GitHub Actions" (unconfirmed by the user), add the remote, dry-run, push `main` only.
+Plan 03-07: read back the remote, check that the repository is empty (Pages source already confirmed by the user as "GitHub Actions"), add the remote, dry-run, push `main` only.
 
 ## Self-Check: PASSED
 

@@ -68,7 +68,8 @@ Tree of `main` and of `archive/pre-publish`: `989f84d50b9a158f5bcffd48b18d1e740c
 ## Remote repository (2026-10-14, plan 03-06 Task 3)
 
 - The author reported: "created https://github.com/brunocu/tokens-explained" (public, created empty by the author in the web UI).
-- **Unconfirmed by the user:** that the repository is empty and that Settings, Pages, Source shows "GitHub Actions". The author did not state it. Plan 03-07 must verify both (`git ls-remote --heads origin` prints nothing; Pages source) before the push.
+- **Confirmed by the user (follow-up message):** Settings, Pages, Source shows "GitHub Actions".
+- The repository being empty is the author's report only; plan 03-07 still reads it back (`git ls-remote --heads origin` must print nothing) before the push.
 - No remote is configured locally and nothing has been pushed.
 
 ## Standing rule
